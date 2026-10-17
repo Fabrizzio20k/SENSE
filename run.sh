@@ -49,7 +49,7 @@ exec llama-server --model "$MODEL_FILE" --port "$PORT" --ctx-size "$CTX_SIZE" \
   --mmproj "$MMPROJ_FILE" --no-mmproj-offload \
   --jinja \
   --reasoning off \
-  -ngl 0 \
+  --device none -ngl 0 \
   --threads "$THREADS" --threads-batch "$THREADS" -fa on \
   --cache-type-k q8_0 --cache-type-v q8_0 \
   --cont-batching
