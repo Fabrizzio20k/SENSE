@@ -1,0 +1,16 @@
+[Unit]
+Description=Publicador MQTT de sensores para RustIO
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fabrizzio
+WorkingDirectory=/home/fabrizzio/RustIO/iot-mqtt
+ExecStart=/home/fabrizzio/tesis/prueba/.venv/bin/python /home/fabrizzio/RustIO/iot-mqtt/sensor_publisher.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
