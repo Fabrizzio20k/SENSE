@@ -2,20 +2,27 @@
 set -eu
 
 MODE=full
-case "$#" in
-  0) ;;
-  2)
-    if [ "$1" != "--mode" ]; then
-      echo "Uso: sh run.sh [--mode full|limit]" >&2
-      exit 1
-    fi
-    MODE=$2
-    ;;
-  *)
-    echo "Uso: sh run.sh [--mode full|limit]" >&2
-    exit 1
-    ;;
-esac
+HOST=127.0.0.1
+usage() {
+  echo "Uso: sh run.sh [--mode full|limit] [--host DIRECCION]" >&2
+  exit 1
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --mode|--host)
+      [ "$#" -ge 2 ] || usage
+      [ -n "$2" ] || usage
+      case "$2" in --*) usage ;; esac
+      case "$1" in
+        --mode) MODE=$2 ;;
+        --host) HOST=$2 ;;
+      esac
+      shift 2
+      ;;
+    *) usage ;;
+  esac
+done
 
 case "$MODE" in
   full) THREADS=$(getconf _NPROCESSORS_ONLN) ;;
@@ -45,7 +52,7 @@ mkdir -p "$MODEL_DIR"
 download "$MODEL_FILE" "$MODEL_URL"
 download "$MMPROJ_FILE" "$MMPROJ_URL"
 
-exec llama-server --model "$MODEL_FILE" --port "$PORT" --ctx-size "$CTX_SIZE" \
+exec llama-server --model "$MODEL_FILE" --host "$HOST" --port "$PORT" --ctx-size "$CTX_SIZE" \
   --mmproj "$MMPROJ_FILE" --no-mmproj-offload \
   --jinja \
   --reasoning off \
