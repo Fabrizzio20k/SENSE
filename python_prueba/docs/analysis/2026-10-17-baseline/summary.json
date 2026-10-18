@@ -1,0 +1,183 @@
+{
+  "source_sha256": "2b47eda963f45490bedda4590f637f8cd6a700a47e6e0ee2f313c7eb920a3ce7",
+  "source_bytes": 192716,
+  "valid_records": 490,
+  "rejected_lines": [
+    {
+      "line": 491,
+      "reason": "Unterminated string starting at: line 1 column 152 (char 151)",
+      "treatment": "excluded_unparseable_tail_not_repaired"
+    }
+  ],
+  "schema": "rustio.iot.telemetry.v1",
+  "device_id": "rpi5-01",
+  "first_source_timestamp": "2026-10-17T22:08:47.164056+00:00",
+  "last_source_timestamp": "2026-10-17T22:25:12.102559+00:00",
+  "duration_s": 984.938503,
+  "interval_s": {
+    "n": 489,
+    "min": 2.014014,
+    "median": 2.014112,
+    "mean": 2.0141891676891617,
+    "p95": 2.0141912,
+    "p99": 2.01771112,
+    "max": 2.020576,
+    "population_stdev": 0.0005302535378629113
+  },
+  "excess_over_assumed_2s_grid_s": 6.938502999999969,
+  "duplicate_timestamps": 0,
+  "backwards_timestamps": 0,
+  "intervals_above_1_5_median": 0,
+  "metrics": {
+    "temperature_c": {
+      "n": 490,
+      "min": 27.02,
+      "median": 27.32,
+      "mean": 27.358714285714285,
+      "p95": 27.7755,
+      "p99": 27.81,
+      "max": 27.82,
+      "population_stdev": 0.19784290820378325,
+      "first": 27.8,
+      "last": 27.02,
+      "endpoint_delta": -0.7800000000000011,
+      "absolute_adjacent_step": {
+        "n": 489,
+        "min": 0.0,
+        "median": 0.010000000000001563,
+        "mean": 0.013742331288343615,
+        "p95": 0.03999999999999915,
+        "p99": 0.0400000000000027,
+        "max": 0.07000000000000028,
+        "population_stdev": 0.011569257420616137
+      }
+    },
+    "humidity_percent": {
+      "n": 490,
+      "min": 60.89,
+      "median": 63.015,
+      "mean": 62.86934693877551,
+      "p95": 63.81,
+      "p99": 63.86,
+      "max": 63.9,
+      "population_stdev": 0.7354085231760759,
+      "first": 60.99,
+      "last": 63.64,
+      "endpoint_delta": 2.6499999999999986,
+      "absolute_adjacent_step": {
+        "n": 489,
+        "min": 0.0,
+        "median": 0.03999999999999915,
+        "mean": 0.04492842535787319,
+        "p95": 0.11600000000000074,
+        "p99": 0.16119999999999726,
+        "max": 0.21999999999999886,
+        "population_stdev": 0.03558516081917626
+      }
+    },
+    "tvoc_ppb": {
+      "n": 490,
+      "min": 24,
+      "median": 72.0,
+      "mean": 72.62448979591836,
+      "p95": 103.0,
+      "p99": 109.0,
+      "max": 121,
+      "population_stdev": 19.086318752321045,
+      "first": 65,
+      "last": 52,
+      "endpoint_delta": -13,
+      "absolute_adjacent_step": {
+        "n": 489,
+        "min": 0,
+        "median": 6,
+        "mean": 7.560327198364008,
+        "p95": 18.0,
+        "p99": 22.120000000000005,
+        "max": 36,
+        "population_stdev": 5.55479680835427
+      }
+    },
+    "eco2_ppm": {
+      "n": 490,
+      "min": 401,
+      "median": 500.5,
+      "mean": 499.6551020408163,
+      "p95": 554.55,
+      "p99": 565.0,
+      "max": 583,
+      "population_stdev": 35.841166396520315,
+      "first": 487,
+      "last": 462,
+      "endpoint_delta": -25,
+      "absolute_adjacent_step": {
+        "n": 489,
+        "min": 0,
+        "median": 12,
+        "mean": 14.157464212678937,
+        "p95": 33.599999999999966,
+        "p99": 43.120000000000005,
+        "max": 67,
+        "population_stdev": 10.386092169011297
+      }
+    }
+  },
+  "state_counts": {
+    "0": 50,
+    "1": 1,
+    "2": 413,
+    "3": 26
+  },
+  "state_labels": {
+    "0": "Sin presencia",
+    "1": "Persona en movimiento",
+    "2": "Persona estática",
+    "3": "Movimiento y presencia estática"
+  },
+  "aqi_counts": {
+    "1": 160,
+    "2": 330
+  },
+  "raw_state_changes": 42,
+  "binary_presence_changes": 4,
+  "absence_to_presence_changes": 2,
+  "aqi_changes": 69,
+  "radar_field_changes": {
+    "motion_distance_cm": 134,
+    "motion_energy": 55,
+    "static_distance_cm": 268,
+    "static_energy": 436,
+    "total_distance_cm": 339
+  },
+  "static_state_with_positive_motion_energy": 8,
+  "zero_total_distance_with_presence": 19,
+  "radar_ranges": {
+    "motion_distance_cm": [
+      30,
+      455
+    ],
+    "motion_energy": [
+      0,
+      100
+    ],
+    "static_distance_cm": [
+      30,
+      457
+    ],
+    "static_energy": [
+      18,
+      100
+    ],
+    "total_distance_cm": [
+      0,
+      254
+    ]
+  },
+  "method": {
+    "quantiles": "linear interpolation at (n-1)*p",
+    "stdev": "population",
+    "timestamps": "source only, no receipt or per-sensor measurement time",
+    "segments": "observed labels; hold-last-value durations are not physical ground truth",
+    "large_gap_heuristic": "interval > 1.5 * median; does not prove delivery completeness"
+  }
+}

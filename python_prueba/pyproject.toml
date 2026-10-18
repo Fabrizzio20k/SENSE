@@ -1,0 +1,16 @@
+[project]
+name = "rustio-sense"
+version = "0.1.0"
+description = "Prototipo experimental de contexto MQTT y reglas temporales"
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["app", "context", "orchestrator", "mqtt_ingest", "store", "experiment", "runtime", "actions", "vision", "slm", "prepare"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
