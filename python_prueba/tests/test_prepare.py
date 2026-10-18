@@ -20,6 +20,7 @@ from prepare import ensure_yolo
 from runtime import Runtime, Settings
 from slm import CompletedResponseError, NoRequestError, SLM
 from vision import validate_ncnn
+from helpers import mark_ready
 
 
 def export_fixture(path, size=320):
@@ -211,8 +212,16 @@ class AdmissionTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.runtime = Runtime(Settings(data_dir=Path(self.directory.name)))
+        mark_ready(self.runtime)
+        async def hardware(report):
+            mark_ready(self.runtime)
+            report["camera"] = self.runtime.preflight["camera"]
+            report["sensors"] = self.runtime.sensor_report()
+        self.hardware_patch = patch.object(self.runtime, "_verify_hardware", side_effect=hardware)
+        self.hardware_patch.start()
 
     async def asyncTearDown(self):
+        self.hardware_patch.stop()
         await self.runtime.close()
         self.directory.cleanup()
 
@@ -221,7 +230,7 @@ class AdmissionTests(unittest.IsolatedAsyncioTestCase):
         async def preparation(**kwargs):
             entered.set()
             await release.wait()
-            self.runtime.preflight = {"yolo": {"status": "ready"}, "gemma": {"status": "ready"}}
+            mark_ready(self.runtime)
         request = RunCommand(variant="C").model_dump()
         with patch.object(self.runtime, "_prepare_dependencies", side_effect=preparation) as prepare:
             first = asyncio.create_task(self.runtime.admit(request, "first"))
@@ -253,14 +262,13 @@ class AdmissionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kill.call_args_list[1].args, (12345, signal.SIGKILL))
         self.assertFalse(self.runtime.admission_lock.locked())
 
-    async def test_health_refreshes_status_and_skips_probe_inside_session(self):
-        self.runtime.preflight = {"status": "ready", "yolo": {"status": "ready"}, "gemma": {"status": "ready"}}
-        with patch.object(self.runtime.actions.slm, "probe", new_callable=AsyncMock, return_value={"status": "unavailable"}) as probe:
-            self.assertEqual((await self.runtime.dependency_health())["status"], "degraded")
+    async def test_health_does_not_probe_or_warm_models(self):
+        with patch.object(self.runtime.actions.slm, "probe", new_callable=AsyncMock) as probe:
+            self.assertEqual((await self.runtime.dependency_health())["status"], "ready")
             await self.runtime.admit(RunCommand().model_dump())
             report = await self.runtime.dependency_health()
-            self.assertIn("gemma_probe_skipped", report)
-            probe.assert_awaited_once()
+            self.assertEqual(report["status"], "ready")
+            probe.assert_not_awaited()
 
     async def test_warmup_is_outside_run_and_not_repeated_on_each_admission(self):
         request = RunCommand(variant="D").model_dump()

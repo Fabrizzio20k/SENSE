@@ -48,6 +48,20 @@ def validate_ncnn(model_dir, input_size):
             "files_sha256": {path.name: file_hash(path) for path in files}, "inference_verified": False}
 
 
+def validate_count_capture(path, result):
+    """Comprobar el archivo producido y el contrato del conteo antes de admitir sesiones."""
+    from PIL import Image
+    with Image.open(path) as photo:
+        photo.load()
+        if photo.format != "JPEG" or list(photo.size) != result.get("image_size"):
+            raise ValueError("la foto de comprobación no coincide con el resultado del worker")
+    count, boxes = result.get("visible_person_count"), result.get("boxes")
+    if type(count) is not int or count < 0 or not isinstance(boxes, list) or count != len(boxes):
+        raise ValueError("el detector no devolvió un conteo válido")
+    if not result.get("model_ref") or file_hash(path) != result.get("sha256"):
+        raise ValueError("hash de foto o referencia del detector inválidos")
+
+
 def fuse_boxes(boxes, threshold):
     """Fusión entre mosaicos; utiliza el argumento, no un umbral global."""
     kept = []

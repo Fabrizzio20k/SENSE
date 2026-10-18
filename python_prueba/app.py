@@ -206,7 +206,7 @@ def create_app(settings=None):
 
     @application.get("/")
     async def index():
-        return FileResponse(ROOT/"static/index.html")
+        return FileResponse(ROOT/"static/index.html", headers={"Cache-Control": "no-cache"})
 
     @application.get("/health")
     async def health():
@@ -215,11 +215,13 @@ def create_app(settings=None):
         data = {"status": "failed" if runtime.failure else ("degraded" if dependencies.get("status") not in ("ready", "not_required") else "ok"), "failure": runtime.failure,
                 "mode": runtime.settings.mode, "mqtt_connected": runtime.input.connected if runtime.input else None,
                 "active_run_id": runtime.engine.run_id, "profile": PROFILE,
-                "camera": "configured" if runtime.settings.vision_model else "capture_available_detector_not_configured",
+                "camera": dependencies.get("camera", {"status": "not_required"}),
                 "slm": dependencies.get("gemma", {"status": "not_required"}), "preflight": dependencies,
                 "heavy_slot_reserved": runtime.store.flag("slm_busy") or runtime.store.flag("camera_busy"),
                 "camera_stop_unconfirmed": runtime.actions.camera.failed_stop,
-                "queued_jobs": len(runtime.actions.queue), "current_job": runtime.actions.current["job_id"] if runtime.actions.current else None}
+                "queued_jobs": len(runtime.actions.queue), "current_job": runtime.actions.current["job_id"] if runtime.actions.current else None,
+                "preparing": runtime.preparing,
+                "can_start_session": not runtime.failure and not runtime.engine.run_id and not runtime.preparing and dependencies.get("status") in ("ready", "not_required")}
         return JSONResponse(data, status_code=503 if runtime.failure else 200)
 
     @application.get("/v1/runs")
@@ -350,6 +352,8 @@ def create_app(settings=None):
 
     @application.post("/v1/runtime/confirm-idle")
     async def confirm_idle(command: IdleConfirmation):
+        if rt().preparing:
+            raise Conflict("hay una comprobación inicial en curso; no se libera el slot")
         if rt().actions.task and not rt().actions.task.done():
             raise Conflict("todavía existe una llamada local activa; no se libera el slot")
         if rt().actions.camera.failed_stop:
@@ -364,9 +368,9 @@ def create_app(settings=None):
             rt().engine.emit("runtime.idle_confirmed", confirmation)
         return confirmation
 
-    @application.post("/v1/runtime/prepare")
+    @application.post("/v1/runtime/prepare", status_code=202)
     async def prepare_runtime(command: Command):
-        return await rt().prepare_dependencies()
+        return rt().request_preparation()
 
     @application.post("/v1/artifacts", status_code=201)
     async def upload_artifact(request: Request):

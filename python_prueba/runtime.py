@@ -16,10 +16,11 @@ import time
 from dataclasses import dataclass
 from contextlib import suppress
 from pathlib import Path
+from uuid import uuid4
 
 from dotenv import load_dotenv
 
-from context import ACQUISITION_PROFILE, PROFILE, aware_time, digest
+from context import ACQUISITION_PROFILE, MQTT_SOURCES, PROFILE, aware_time, digest, parse_message, source_values
 from actions import Actions
 from experiment import Sampler
 from mqtt_ingest import MQTTInput
@@ -136,6 +137,7 @@ class Runtime:
         self.input = MQTTInput(settings.mqtt_host, settings.mqtt_port, settings.mqtt_username, settings.mqtt_password) if settings.mode == "live" else None
         self.task = None
         self.replay_task = None
+        self.preparation_task = None
         self.failure = None
         self.start_monotonic = None
         self.sampler = Sampler()
@@ -144,25 +146,153 @@ class Runtime:
         self.actions = Actions(self)
         self.preflight = {"status": "not_checked"}
         self.admission_lock = asyncio.Lock()
+        self.sensor_readings = {}
+        self.sensor_timestamps = {}
+        self.sensor_check_started = 0
 
     async def open(self):
-        if self.settings.mode == "live":
-            await self.prepare_dependencies()
-        else:
-            self.preflight = {"status": "not_required", "reason": "mqtt_only_replay"}
         if self.input:
             self.input.start()
         self.task = asyncio.create_task(self.loop())
+        if self.settings.mode == "live":
+            self.request_preparation()
+        else:
+            self.preflight = {"status": "not_required", "reason": "mqtt_only_replay"}
+
+    @property
+    def preparing(self):
+        return bool(self.preparation_task and not self.preparation_task.done())
+
+    def request_preparation(self):
+        if self.preparing:
+            return self.readiness_report()
+        self._check_preparation()
+        if self.admission_lock.locked():
+            raise Conflict("la comprobación solo se permite fuera de una sesión y de otra admisión")
+        self.preflight["status"] = "preparing"
+        self.preparation_task = asyncio.create_task(self._prepare_background())
+        return self.readiness_report()
+
+    async def _prepare_background(self):
+        try:
+            await self.prepare_dependencies()
+        except asyncio.CancelledError:
+            raise
+        except sqlite3.Error as error:
+            await self.fail(error)
+        except Exception as error:
+            logging.exception("Comprobación inicial fallida")
+            self.preflight.update(status="failed", error=f"{type(error).__name__}: {error}"[:700])
+            self._save_preflight()
+
+    def _save_preflight(self):
+        (self.settings.data_dir/"preflight.json").write_text(json.dumps(self.preflight, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
 
     async def prepare_dependencies(self, need_yolo=True, need_gemma=True):
         async with self.admission_lock:
-            return await self._prepare_dependencies(need_yolo, need_gemma, warmup=True)
+            self._check_preparation()
+            self.sensor_check_started = time.monotonic()
+            self.preflight.update(status="preparing", camera={"status": "pending"}, sensors=self.sensor_report())
+            self.preflight.pop("error", None)
+            report = await self._prepare_dependencies(need_yolo, need_gemma, warmup=True)
+            if report["status"] != "blocked":
+                report["status"] = "preparing"
+                self.preflight = report
+                await self._verify_hardware(report)
+            if report["status"] == "blocked":
+                report["sensors"] = self.sensor_report()
+            report["status"] = self._preflight_status(report)
+            self.preflight = report
+            self._save_preflight()
+            return report
 
-    async def _prepare_dependencies(self, need_yolo=True, need_gemma=True, warmup=False):
+    def record_sensor_receipt(self, raw, received_mono, received_at, retained):
+        if retained:
+            return
+        try:
+            message = parse_message(raw)
+            timestamp = aware_time(message["timestamp"])
+        except (ValueError, TypeError, RecursionError):
+            return
+        for source in MQTT_SOURCES:
+            if source in self.sensor_timestamps and timestamp <= self.sensor_timestamps[source]:
+                continue
+            try:
+                values = source_values(message, source)
+            except (ValueError, TypeError) as error:
+                self.sensor_readings[source] = {"status": "invalid", "error": str(error)}
+            else:
+                self.sensor_timestamps[source] = timestamp
+                self.sensor_readings[source] = {"status": "ready", "values": values, "received_at": received_at,
+                    "received_monotonic": received_mono, "source_timestamp": message["timestamp"],
+                    "sensor_quality": "unverified", "measurement_freshness": "unknown"}
+
+    def sensor_report(self):
+        result = {}
+        for source in MQTT_SOURCES:
+            reading = dict(self.sensor_readings.get(source, {"status": "pending"}))
+            received = reading.pop("received_monotonic", None)
+            reading["receipt_age_s"] = max(0, time.monotonic()-received) if received is not None else None
+            if reading["status"] == "ready":
+                if received < self.sensor_check_started:
+                    reading["status"] = "pending"
+                elif reading["receipt_age_s"] >= PROFILE["telemetry_silence_s"]:
+                    reading["status"] = "stale"
+            result[source] = reading
+        return result
+
+    async def _verify_hardware(self, report):
+        from vision import validate_count_capture
+        if report.get("yolo", {}).get("status") != "ready":
+            report["camera"] = {"status": "unavailable", "error": "Preparar YOLO antes de comprobar captura y conteo."}
+        elif self.store.flag("slm_busy") or self.store.flag("camera_busy") or self.actions.camera.failed_stop:
+            report["camera"] = {"status": "blocked", "error": "Cómputo pesado con detención no confirmada."}
+        else:
+            report["camera"] = {"status": "running", "started_at": utc_now()}
+            output = self.settings.data_dir/("preflight-"+uuid4().hex+".jpg")
+            started = time.monotonic()
+            self.store.flag("camera_busy", {"state": "preflight_capture_and_count"}, write=True)
+            try:
+                result = await self.actions.camera.run({"kind": "count", "output_path": str(output),
+                                                       "artifact_id": "preflight", "input_path": None}, ACQUISITION_PROFILE["vision_timeout_s"])
+                self.store.flag("camera_busy", None, write=True)
+                await asyncio.to_thread(validate_count_capture, output, result)
+                report["camera"] = {"status": "ready", "inference_verified": True, "completed_at": utc_now(),
+                    "duration_s": time.monotonic()-started, "visible_person_count": result["visible_person_count"],
+                    "image_sha256": result["sha256"], "image_size": result["image_size"], "timing": result["timing"],
+                    "model_ref": result["model_ref"], "image_retained": False, "measurement_scope": "setup_outside_experimental_runs"}
+                report["yolo"]["inference_verified"] = True
+            except BaseException as error:
+                if self.actions.camera.process is None and not self.actions.camera.failed_stop:
+                    self.store.flag("camera_busy", None, write=True)
+                report["camera"] = {"status": "failed", "error": f"{type(error).__name__}: {error}"[:700],
+                                    "duration_s": time.monotonic()-started}
+                if not isinstance(error, Exception):
+                    raise
+            finally:
+                output.unlink(missing_ok=True)
+        deadline = time.monotonic()+ACQUISITION_PROFILE["startup_sensor_timeout_s"]
+        while True:
+            report["sensors"] = self.sensor_report()
+            if self.input and self.input.connected and all(v["status"] == "ready" for v in report["sensors"].values()):
+                break
+            if time.monotonic() >= deadline:
+                for reading in report["sensors"].values():
+                    if reading["status"] != "ready":
+                        reading["error"] = reading.get("error", "No llegó una lectura nueva válida dentro de 30 s.")
+                break
+            await asyncio.sleep(.1)
+
+    def _check_preparation(self):
         if self.settings.mode != "live":
             raise Conflict("el replay MQTT no prepara modelos de hardware")
+        if self.failure:
+            raise Conflict("backend detenido por error de registro; reiniciar antes de comprobar")
         if self.engine.run_id or (self.actions.task and not self.actions.task.done()):
             raise Conflict("la preparación solo se permite fuera de una sesión")
+
+    async def _prepare_dependencies(self, need_yolo=True, need_gemma=True, warmup=False):
+        self._check_preparation()
         if self.store.flag("slm_busy") or self.store.flag("camera_busy") or self.actions.camera.failed_stop:
             self.preflight = {**self.preflight, "status": "blocked", "reason": "heavy_slot_reserved_confirm_idle_before_preparation"}
             return self.preflight
@@ -219,7 +349,7 @@ class Runtime:
                 await self._warmup_gemma(report)
         report["status"] = self._preflight_status(report)
         self.preflight = report
-        (self.settings.data_dir/"preflight.json").write_text(json.dumps(report, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+        self._save_preflight()
         logging.info("SENSE preparación previa: %s", report)
         return report
 
@@ -248,27 +378,38 @@ class Runtime:
                 raise
 
     def _preflight_status(self, report):
+        if self.failure or report.get("error"):
+            return "failed"
         if self.store.flag("slm_busy") or self.store.flag("camera_busy") or self.actions.camera.failed_stop:
             return "blocked"
-        ready = all(report.get(name, {}).get("status") == "ready" for name in ("gemma", "yolo"))
+        ready = all(report.get(name, {}).get("status") == "ready" for name in ("gemma", "yolo", "camera"))
+        ready = ready and bool(self.input and self.input.connected)
+        ready = ready and all(report.get("sensors", {}).get(source, {}).get("status") == "ready" for source in MQTT_SOURCES)
         if self.settings.slm_warmup:
             ready = ready and report.get("gemma_warmup", {}).get("status") == "ready"
         return "ready" if ready else "degraded"
 
     async def dependency_health(self):
-        if self.settings.mode != "live":
-            return dict(self.preflight)
-        if self.admission_lock.locked() or self.engine.run_id or self.store.flag("slm_busy"):
-            return {**self.preflight, "gemma_probe_skipped": "preparation_active_session_or_unconfirmed_stop; last_result_only"}
-        async with self.admission_lock:
-            self.preflight["gemma"] = await self.actions.slm.probe()
-            if self.preflight["gemma"]["status"] != "ready":
-                self.preflight["gemma_warmup"] = {"status": "not_run", "reason": "gemma_unavailable", "generation_verified": False}
-            self.preflight["status"] = self._preflight_status(self.preflight)
-            return dict(self.preflight)
+        return self.readiness_report()
+
+    def readiness_report(self):
+        report = dict(self.preflight)
+        if self.settings.mode == "live":
+            sensors = self.sensor_report()
+            for source, reading in sensors.items():
+                previous = report.get("sensors", {}).get(source, {})
+                if reading["status"] != "ready" and previous.get("error") and not reading.get("error"):
+                    reading["error"] = previous["error"]
+            report["sensors"] = sensors
+            report["status"] = "preparing" if self.preparing or self.preflight.get("status") == "preparing" else self._preflight_status(report)
+        return report
 
     async def admit(self, request, key=None):
         # Preparación y admisión comparten exclusión para no contaminar otra sesión.
+        if key and self.store.by_key(key):
+            return self.start(request, key)
+        if self.preparing:
+            raise Conflict("comprobación inicial en curso; consultar /health")
         async with self.admission_lock:
             if key and self.store.by_key(key):
                 return self.start(request, key)
@@ -290,6 +431,8 @@ class Runtime:
             raise Conflict("slot pesado reservado hasta confirmar detención del runtime anterior")
         if self.engine.run_id:
             raise Conflict("ya existe una sesión activa")
+        if self.settings.mode == "live" and self.readiness_report().get("status") != "ready":
+            raise Conflict("sistema sin comprobación completa: revisar /health y repetir la comprobación inicial")
 
     def start(self, request, key=None):
         if key and self.store.by_key(key):
@@ -325,7 +468,7 @@ class Runtime:
                             "image_side": self.settings.slm_image_side, "thinking_effective_verified": False,
                             "warmup_enabled": self.settings.slm_warmup},
                     "camera_model_resident_before_run": bool(self.actions.camera.process and self.actions.camera.process.is_alive()),
-                    "preflight": self.preflight,
+                    "preflight": self.readiness_report(),
                     "last_idle_confirmation": self.store.flag("last_idle_confirmation"),
                     "radar_time_declared_measurement": self.settings.radar_timestamp_is_measurement,
                     "radar_uncertainty_s": self.settings.radar_uncertainty_s, "camera_uncertainty_s": self.settings.camera_uncertainty_s,
@@ -381,6 +524,7 @@ class Runtime:
                             raw, received_mono, received_at, retained, qos = self.input.queue.get_nowait()
                         except queue.Empty:
                             break
+                        self.record_sensor_receipt(raw, received_mono, received_at, retained)
                         if self.engine.run_id and received_mono >= self.start_monotonic:
                             elapsed = received_mono-self.start_monotonic
                             if elapsed > self.engine.request["duration_s"]:
@@ -417,10 +561,10 @@ class Runtime:
             await asyncio.sleep(.1)
 
     async def close(self):
-        for task in (self.task, self.replay_task):
+        for task in (self.preparation_task, self.task, self.replay_task):
             if task:
                 task.cancel()
-        await asyncio.gather(*(task for task in (self.task, self.replay_task) if task), return_exceptions=True)
+        await asyncio.gather(*(task for task in (self.preparation_task, self.task, self.replay_task) if task), return_exceptions=True)
         await self.actions.close()
         if self.engine.run_id:
             self.engine.finish("interrupted", "backend_shutdown")

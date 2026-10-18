@@ -10,6 +10,7 @@
 - Inferencia siempre local. MQTT, LiteRT-LM y cámara son dependencias de la Pi; no sustituirlos por servicios de nube. La descarga inicial de pesos es preparación, separada de la inferencia y las mediciones.
 - Documentar cada decisión material con motivo, procedencia, límite de afirmación y verificación pendiente. Diferenciar requisito del PDF, instrucción posterior del autor, dato observado y elección de ingeniería.
 - No afirmar que «ya funciona», está validado o produjo ahorro/precisión por haber escrito el código. Hasta este corte **no hay resultados comunicados de pruebas integradas en la Pi**.
+- Último reporte del autor: `crypto.randomUUID is not a function` en la interfaz. Se corrigió por lectura con alternativas para HTTP sobre IP; el autor pidió además captura/conteo reales y lectura de cada sensor antes de admitir sesiones, y ordenar la pantalla. No se reprodujo ni verificó la corrección ejecutándola aquí.
 
 ## Dónde retomar
 
@@ -33,8 +34,8 @@ Algunos documentos de diseño conservan texto histórico como «pendiente de imp
 | Registro de telemetría | Original preservado, análisis descriptivo y derivados existentes en docs/data y docs/analysis; explicación en 15. No se recalculó durante este traspaso. |
 | Núcleo anterior | Antes de la instrucción de no ejecutar, se instalaron dependencias en un `.venv` del Mac y se comprobó una versión anterior de sensores/reglas. Eso no verifica la entrega ampliada. |
 | Prototipo ampliado | Código escrito y revisado por lectura: MQTT, FSM, políticas, visión, SLM, API/SSE, persistencia, controles y exportación. **Arranque integrado y hardware pendientes de prueba.** |
-| Incorporaciones recientes | Preparación automática de YOLO, comprobación de Gemma, calentamiento multimodal, requirements sin versiones fijadas y carga automática de `.env`. No instaladas ni ejecutadas aquí. |
-| Pruebas | Escritas en `python_prueba/tests/`: system, actions, prepare y settings. No ejecutadas sobre esta versión ampliada por instrucción del autor. |
+| Incorporaciones recientes | Preparación automática, calentamiento multimodal, requirements/`.env`, comprobación real de captura/conteo y sensores, diagnóstico en segundo plano y panel ordenado. No instaladas ni ejecutadas aquí. |
+| Pruebas | Escritas en `python_prueba/tests/`: system, actions, prepare, settings y startup; `test_ui.cjs` para alternativas a randomUUID, Node opcional solo para esa prueba. No ejecutadas sobre esta versión ampliada por instrucción del autor. |
 
 ## Mapa de responsabilidades
 
@@ -83,6 +84,7 @@ Son **`pilot_candidate`**, no parámetros calibrados ni límites de seguridad. V
 - Debounce radar 2 s; watchdog de recepción MQTT 7 s. El watchdog no demuestra cadencia física ni sensor interno congelado.
 - Perfil operativo: visión periódica/TTL visual 30 s, cooldown 5 s, visión hasta 90 s, SLM hasta 120 s, episodio hasta 240 s incluyendo cola; concurrencia pesada 1, cola 8; máximo dos seguimientos cada 30 s dentro de 180 s; salida SLM principal hasta 384 tokens.
 - Guardas candidatas: reserva 512 MiB y temperatura CPU menor que 80 °C cuando existe lectura. Verificar en piloto; no demuestran RAM suficiente ni plazos correctos.
+- Arranque: esperar hasta 30 s adicionales, después de los chequeos pesados, para recibir datos válidos recientes de los tres sensores y conectar MQTT; `startup_sensor_timeout_s` en el perfil operativo. No es TTL físico ni tiempo de estabilización del ENS160.
 
 ### Comparación y límites del experimento
 
@@ -103,10 +105,14 @@ Son **`pilot_candidate`**, no parámetros calibrados ni límites de seguridad. V
 - **YOLO:** destino predeterminado `data/models/yolo26n_320_ncnn_model`, pesos `data/models/yolo26n.pt` bajo `python_prueba/` o `SENSE_DATA_DIR`. Rutas opcionales `SENSE_VISION_MODEL`/`SENSE_VISION_WEIGHTS`. Exporta solo si falta: NCNN, `imgsz=320`, `quantize=16` (FP16 solicitado, no INT8), CPU. El tamaño 640 necesita artefacto/configuración coincidentes.
 - Reutilizar export válido; exigir archivos no vacíos `.param`, `.bin`, `metadata.yaml`, tamaño compatible y clase 0 `person`. Una carpeta existente inválida se conserva y rechaza. Validar archivos no demuestra inferencia real. El peso estándar ausente puede descargarse; el preparador no instala paquetes.
 - **Calentamiento vigente:** `gemma-image-warmup-v1` reemplaza el antiguo «OK» de texto. Envía `static/image.png`, pide una palabra en español sobre lo visible, máximo 16 tokens, temperatura 0, `reasoning_effort=none`. Comparte transformación con consultas: RGB, JPEG calidad 85, lado mayor 480 por defecto (`SENSE_SLM_IMAGE_SIDE`). No abre cámara ni usa YOLO.
-- Calentamiento una vez al arrancar o al pedir preparación explícita; no por cada sesión después de éxito. Si Gemma faltaba, se prepara antes de la primera admisión que lo necesite. `SENSE_SLM_WARMUP=0` permite omitirlo para ensayos de frío controlados; omitirlo no garantiza estado frío. Tras reiniciar LiteRT-LM aparte, repetir preparación: el catálogo no identifica su nueva instancia.
+- Calentamiento una vez al arrancar o al pedir preparación explícita; no por cada sesión después de éxito. Si Gemma faltaba, corregir y repetir la comprobación antes de iniciar. `SENSE_SLM_WARMUP=0` permite omitirlo para ensayos de frío controlados de Gemma; no garantiza estado frío. Tras reiniciar LiteRT-LM aparte, repetir preparación: el catálogo no identifica su nueva instancia.
 - Preflight/manifiesto registran resultado, duración, prompt, respuesta, hashes original/JPEG, dimensiones y versiones. El hash de adquisición incluye perfil e imagen de calentamiento. `image_request_completed=true` no certifica corrección semántica ni operaciones internas del encoder; `visual_encoder_verified=false` sigue explícito.
-- Conversión/calentamiento fuera del reloj experimental y serializados con admisión. Pueden modificar temperatura/cachés: fijar condición inicial y estabilización, iguales entre comparadores.
-- `/health` sondea el catálogo sin generar; durante sesión/preparación/reserva pendiente presenta el último chequeo. `POST /v1/runtime/prepare` con `{}` repite preparación fuera de sesión. Detalle en `data/preflight.json`, procedencia nueva del export en su `preparation.json`.
+- **Comprobación funcional nueva:** conectar ingesta antes de preparar, capturar con Picamera2 y contar con YOLO (90 s), validar JPEG/hash/dimensiones/conteo/cajas; cero personas es válido. Eliminar la foto temporal y conservar resumen en `preflight.camera`, con `inference_verified=true` solo tras éxito. No alimenta el conteo ni las historias de una sesión.
+- Exigir publicaciones válidas de SHT40/ENS160/radar posteriores al inicio de la comprobación y de menos de 7 s al admitir, excluyendo retenidos/repetidos/fuera de orden. La calidad física sigue sin verificar. El diagnóstico muestra recepción actual incluso sin sesión.
+- Conversión, calentamiento y captura/conteo de prueba fuera del reloj experimental y serializados con admisión. El worker YOLO normalmente queda cargado: las sesiones posteriores no son primera inferencia fría. Fijar condición inicial/estabilización iguales entre comparadores.
+- **Admisión viva estricta:** todas las variantes, incluido `rules-v1`, requieren broker, tres sensores, captura/conteo y Gemma listos, con calentamiento si está habilitado. Sustituye la admisión anterior de reglas con modelos incompletos. Replay mantiene su excepción sin hardware. Si fallan componentes, la página diagnóstica sigue disponible, sin admitir sesiones.
+- `/health` es pasivo: último chequeo de modelos/cámara más recepción actual de sensores; no sondea ni infiere. Informa `preparing` y `can_start_session`. `POST /v1/runtime/prepare` con `{}` devuelve 202 e inicia/reutiliza la misma comprobación en segundo plano, solo fuera de sesión. El panel consulta el progreso; no hay bucle automático de reintentos pesados. Detalle en `data/preflight.json`, procedencia del export en `preparation.json`.
+- Panel en tres etapas: comprobación, configuración de sesión y lecturas/decisiones. Inicio bloqueado tanto en navegador como en backend. Clave de idempotencia con alternativas sin `randomUUID`/`crypto`; conservarla al perder respuesta de creación. Actualizar archivos en la Pi, reiniciar API y recargar la página para retirar el script anterior.
 - **Reservas:** timeout/cancelación HTTP no demuestra detención remota. `slm_busy`/`camera_busy` persisten incluso tras reinicio; no borrarlos automáticamente. Verificar detención antes de `POST /v1/runtime/confirm-idle` con confirmación y nota del operador. Un fallo local previo al envío o respuesta completa rechazada libera la reserva correspondiente. Un worker sin salida confirmada mantiene el bloqueo.
 
 ## Evidencia de telemetría que ya existe
@@ -120,7 +126,7 @@ Son **`pilot_candidate`**, no parámetros calibrados ni límites de seguridad. V
 
 1. Retomar el estado de la Pi con lo que comunique el autor; no asumir una ejecución exitosa ni repetir instalaciones por iniciativa propia.
 2. El autor debe trasladar `python_prueba/` completo (incluidos `static/image.png` y el fixture de replay), preparar el entorno de la Pi y levantar Gemma/MQTT según el README. No trasladar el `.venv` del Mac.
-3. Primera aceptación: API arranca, `/health` informa MQTT y preflight, YOLO se reutiliza/exporta correctamente y el calentamiento devuelve una palabra. Verificar errores de modelo, imagen ausente y reserva pendiente sin bucles automáticos.
+3. Primera aceptación: página diagnóstica visible durante preparación; seis componentes listos, lectura válida por sensor, foto/conteo real (incluido cero) y calentamiento de una palabra. Verificar que el botón se habilite solo entonces y que no aparezca el error de randomUUID en el navegador de uso. Comprobar errores de cámara/modelo, imagen ausente y reserva pendiente sin bucles automáticos.
 4. Probar primero `rules-v1`: sensores por fuente, ventanas, debounce, silencio/restauración y exportación. Después C con `monitor_count=true`: captura, colores, conteo y tiempos. Luego D: interpretación con evidencia; `E_visual` por separado.
 5. Ejecutar las pruebas preparadas **en el entorno que el autor habilite para ello**, y verificar hardware real aparte. Hasta entonces no cambiar «escritas» por «pasadas». Ante fallos, pedir logs concretos, `/health`, versiones y petición usada, sin credenciales, y corregir en la capa responsable.
 6. Validar continuidad de MQTT bajo carga, cola/cancelación, cierre de procesos, flags tras reinicio, exportación consistente e instrumentación. Archivar versión resuelta de dependencias y modalidad de calentamiento.

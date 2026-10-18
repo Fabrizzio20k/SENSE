@@ -25,8 +25,8 @@ Propuesta de despliegue: API de orquestación en puerto 8000, LiteRT-LM en loopb
 | `GET /v1/runs/{id}/export.zip` | Paquete de CSV, manifiesto, diccionario y eventos originales. |
 | `GET /v1/context` | Snapshot actual de solo lectura, con tiempo y calidad. |
 | `POST /v1/artifacts` | Cargar una imagen de prueba con límites y validación. |
-| `GET /health` | Estado del proceso y disponibilidad de dependencias sin activar cámara/modelo. |
-| `POST /v1/runtime/prepare` | Implementado en la primera versión: repetir comprobación local de Gemma, preparación NCNN y calentamiento con `static/image.png` habilitado fuera de sesión; cuerpo `{}`. |
+| `GET /health` | Diagnóstico pasivo, resultado previo de cámara/modelos, sensores recientes y `can_start_session`; sin sondear/inferir. |
+| `POST /v1/runtime/prepare` | Comprobación completa en segundo plano: Gemma, NCNN, calentamiento habilitado, captura/conteo reales y lecturas nuevas de sensores; cuerpo `{}`, respuesta 202 y progreso en `/health`. |
 
 La exportación CSV y los controles de experimentación son requisitos explícitos del autor. [10 — controles y CSV](10-controles-y-csv.md) fija sus contratos y [11 — escenarios y repeticiones](11-escenarios-y-repeticiones.md) define cómo utilizarlos de forma comparable. Estos endpoints son diseño pendiente de implementación.
 

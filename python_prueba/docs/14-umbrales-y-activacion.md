@@ -8,6 +8,8 @@ Cada parámetro del perfil futuro debe guardar valor, unidad, estado (`pilot_can
 
 **Actualización de implementación:** la primera versión ya contiene estos umbrales y un perfil operativo candidato en `context.py`. [16](16-version-python.md) documenta su procedencia y las pruebas pendientes. Como valores iniciales ejecutables se eligieron visión periódica/TTL visual de 30 s, cooldown 5 s, timeouts visual/SLM de 90/120 s, episodio 240 s, cola 8 y hasta dos seguimientos cada 30 s durante 180 s. Las filas pendientes de piloto se refieren a su calibración definitiva; la versión escrita aún no se ejecutó en la Pi. El TTL físico por sensor y el desfase radar–cámara continúan desconocidos.
 
+La comprobación inicial posterior añade `startup_sensor_timeout_s=30`: espera máxima adicional por conexión y lecturas nuevas válidas de los tres sensores después de los chequeos pesados. Limita una espera de arranque que de otro modo sería indefinida; es un margen de ingeniería por verificar, no un valor calibrado ni un TTL físico. Reusa el watchdog de recepción de 7 s para no admitir con lecturas anteriores vencidas. Captura/conteo y calentamiento iniciales se registran fuera de los episodios; ver 16.
+
 ## 1. Detección de cambios y vigencia
 
 | Parámetro | Qué controla | Estado / dato necesario |

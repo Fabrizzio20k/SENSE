@@ -12,6 +12,7 @@ from orchestrator import Conflict
 from runtime import Runtime, Settings
 from slm import validate_interpretation
 from vision import fuse_boxes, tile_origins
+from helpers import mark_ready
 
 
 class ToolContractTests(unittest.TestCase):
@@ -44,8 +45,7 @@ class PolicyTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.runtime = Runtime(Settings(data_dir=Path(self.directory.name)))
-        self.runtime.preflight = {"status": "ready", "yolo": {"status": "ready"}, "gemma": {"status": "ready"},
-                                  "gemma_warmup": {"status": "ready"}}
+        mark_ready(self.runtime)
         self.request = RunCommand(variant="C", monitor_count=True).model_dump()
         self.runtime.start(self.request)
 

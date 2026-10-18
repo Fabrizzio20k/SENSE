@@ -19,7 +19,7 @@ El ejemplo exporta `imgsz=320`, pero luego solicita `imgsz=640` al modelo export
 
 `quantize=16` corresponde a FP16 en la documentación actual de NCNN; no significa INT8. Fijar versión de Ultralytics y registrar precisión real y hash del artefacto. No volver a exportar pesos durante una medición.
 
-En la primera versión Python, `prepare.py` automatiza esa exportación antes de aceptar sesiones si falta la carpeta; reutiliza una carpeta válida y conserva/rechaza una inválida. El preparador registra parámetros y versiones; `vision.py` y el arranque comparten validación de artefacto. No se ejecuta una inferencia para validarlo. Rutas, comandos y límites están en el [README](../README.md#preparación-en-la-raspberry) y la justificación en [16](16-version-python.md#preparación-automática-y-justificación-de-las-decisiones).
+En la primera versión Python, `prepare.py` automatiza esa exportación antes de aceptar sesiones si falta la carpeta; reutiliza una carpeta válida y conserva/rechaza una inválida. El preparador registra parámetros y versiones; `vision.py` y el arranque comparten validación de artefacto. Esa validación por sí sola no ejecuta una inferencia. Por instrucción posterior del autor, el arranque además comprueba una captura real y su conteo antes de admitir sesiones, con imagen temporal eliminada y resumen en preflight. Rutas, comandos y límites están en el [README](../README.md#preparación-en-la-raspberry) y la justificación en [16](16-version-python.md#corrección-comunicada-por-el-autor-arranque-funcional-e-interfaz).
 
 ### Mosaicos y costo
 

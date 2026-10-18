@@ -41,6 +41,7 @@ ACQUISITION_PROFILE = {
     "heavy_queue_capacity": 8, "max_followups": 2, "followup_interval_s": 30,
     "slm_max_completion_tokens": 384, "max_followup_lifetime_s": 180,
     "reserve_memory_bytes": 512*1024**2, "max_cpu_temperature_c": 80,
+    "startup_sensor_timeout_s": 30,
 }
 
 
