@@ -45,3 +45,6 @@ llama-server.err.log
 *.db
 
 .DS_Store
+# Credenciales y telemetría local de la integración MQTT.
+iot-mqtt/.env
+iot-mqtt/data/
