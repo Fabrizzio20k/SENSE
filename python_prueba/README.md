@@ -4,6 +4,43 @@ Prototipo independiente de Rust para la Raspberry Pi. Consume los productores MQ
 
 **Estado:** implementación escrita, pendiente de verificar integralmente en la Raspberry. Después de la instrucción del autor de no ejecutar, no se iniciaron servicios, no se instalaron más paquetes ni se ejecutaron las pruebas de esta versión ampliada. Las verificaciones anteriores del núcleo no validan las incorporaciones de cámara/SLM ni sustituyen pruebas de hardware.
 
+## Ver y trabajar la interfaz sin hardware
+
+Desde `python_prueba/`, puedes servir solo la interfaz con Python estándar, sin instalar las dependencias del prototipo:
+
+```bash
+python3 -m http.server 8000 --bind 127.0.0.1 --directory static
+```
+
+Abre **http://127.0.0.1:8000/?preview=1**. También puedes abrir `static/index.html` directamente: las direcciones `file:` activan la misma vista previa. Edita ese archivo y recarga el navegador para ver los cambios. Los comandos son instrucciones para el autor; no se ejecutaron aquí.
+
+La vista previa permite recorrer las cuatro etapas y editar los campos, **sin peticiones HTTP a la API, SSE ni temporizadores de sondeo**. No inicia verificaciones, modelos, MQTT, cámara ni sesiones; tampoco muestra mediciones ficticias. Inicio, intervenciones, guardado y exportación permanecen bloqueados. Usa el arranque normal de abajo para trabajar con datos reales. Abrir `?preview=1` en una API ya iniciada solo desconecta esa página: no detiene el backend ni su preparación.
+
+## Recorrido del panel
+
+1. **Preparar:** seis componentes, estado de comprobación y diagnóstico técnico desplegable. Puedes revisar el siguiente paso mientras termina; la API sigue controlando la admisión.
+2. **Configurar:** explicación de cada variante, conteo A–D, escenario/guion, duración, bloque, espacio y fase. El escenario es una etiqueta, no un plan de acciones automático. El perfil solo admite desarrollo o piloto.
+3. **Monitorear:** reloj, ambiente, radar, conteo, respuestas, cronología y recursos. Un aviso persistente muestra las W pendientes y la próxima lectura. **Preparar cierre** lleva a la lectura final; **Guardar W y detener** registra esa lectura y solicita la detención. **Detener sin lectura de cierre** siempre permite parar y deja la tarea pendiente. Cancelar también conserva los pendientes.
+4. **Registro:** cola de lecturas, observaciones humanas, fallos desplegables y exportaciones. **Cerrar medición** solo se habilita tras confirmar la detención y resolver las tareas; la API aplica la misma guarda. El historial permite volver a revisar mediciones pendientes y descargar las últimas 20 ejecuciones. Una descarga con adquisición o revisión pendientes es provisional.
+
+La guía recuerda historia ambiental mínima, cobertura, comparación por bloque y separación de `E_visual`. No automatiza el guion, la aleatorización, la calificación ciega ni el análisis estadístico. Las observaciones anteriores y su referencia completa están en las exportaciones; el panel resume la última entrada enviada desde la página. El diseño es claro, adaptable a móvil y sin fuentes, iconos ni librerías remotas. La nueva interfaz y sus pruebas siguen pendientes de ejecución y revisión visual autorizadas.
+
+### Lecturas W obligatorias y cierre
+
+Las nuevas sesiones vivas guardan el plan `manual-power-v1`: lectura inicial, cada 30 s y final. La cola se deriva del plan y de eventos SQLite; persiste al recargar, cerrar el navegador o reiniciar el backend. Este último caso sigue marcando la adquisición como interrumpida, con su último tiempo persistido. No se crean obligaciones retrospectivas para sesiones anteriores sin ese plan ni para replay.
+
+- **Lectura actual:** pulsa Registrar, observa W y guarda. Dejar el instante vacío usa recepción como aproximación, identificada como tal.
+- **Lectura atrasada:** solo introduce el valor si lo habías observado/anotado, indicando su instante real. La tarea periódica acepta tiempos en su intervalo `[instante previsto, siguiente instante previsto)`, limitados por la adquisición. No acepta W actuales para rellenar una tarea vieja.
+- **Lectura olvidada:** pulsa **No la observé** y escribe un motivo. La tarea queda omitida, sin inventar una muestra ni eliminar el hueco. No se permiten omisiones masivas automáticas.
+- **Final:** guarda W inmediatamente antes de solicitar detener. La tarea de cierre exige una lectura distinta de las periódicas, dentro de los últimos 30 s de adquisición. Una detención lenta puede dejar esa lectura fuera del intervalo y exigir revisión; si no hubo otra observación anotada, declara la omisión.
+- **Cierre:** el vencimiento de duración y los comandos de detención no esperan al formulario. Después, resuelve pendientes y pulsa **Cerrar medición**. El registro queda `closed` o `closed_with_omissions`; desde entonces se bloquean modificaciones de potencia. Esto es cierre administrativo, no validación científica. Una adquisición fallida/interrumpida conserva ese estado aunque se cierre su registro.
+
+Los intervalos son reglas administrativas candidatas del piloto, no precisión temporal certificada del vatímetro. Se conserva el tiempo observado y la incertidumbre; no se desplazan muestras al instante previsto. La estimación de energía sigue usando tiempos reales y hueco máximo de 60 s. Un contador Wh/kWh no cumple una tarea de W. La UI bloquea comenzar otra medición desde un registro pendiente; la API conserva su admisión independiente de adquisición y exige las tareas al cerrar cada registro.
+
+`GET /v1/runs/{id}` incluye `measurement` con tareas, estados, pendientes, omisiones y `can_close`. `POST .../power-readings` admite `task_id` (`power-0`, `power-30`, … o `final`); si se omite, una W se asigna por su tiempo al intervalo periódico. Las correcciones conservan su tarea. Para resolver sin valor, `POST .../power-tasks/{task_id}/omit` recibe `{"reason":"No observé el vatímetro"}`; para cerrar, `POST .../measurement-close` recibe `{}` y devuelve 409 si faltan requisitos. Los comandos de cierre y la repetición de la misma omisión son idempotentes.
+
+Se mantienen las doce tablas CSV: `runs.csv` añade `measurement_status`, `power_pending_count` y `power_omitted_count`; `power_readings.csv` añade `task_id`. `manifest.json` incluye plan y cola completa, y `events.jsonl` conserva motivos de omisión y cierre. `partial=true` también identifica revisiones pendientes. Descargar nunca se bloquea para evitar pérdida de acceso a datos. Las pruebas nuevas en `tests/test_measurement.py` y `tests/test_ui.cjs` están escritas, no ejecutadas.
+
 ## Preparación en la Raspberry
 
 Los siguientes comandos son instrucciones para ejecutarlas allí; no fueron ejecutados en esta entrega. Usar Raspberry Pi OS de 64 bits y Python del sistema **3.11 o posterior** compatible con Picamera2/libcamera. No copiar `.venv` de macOS.
@@ -51,7 +88,7 @@ No hace falta definir URL ni modelo de Gemma: los valores internos son `http://1
 
 Abrir `http://127.0.0.1:8000`; el contrato interactivo HTTP está en `/docs`. Una sola instancia, sin `--reload` durante mediciones. Para acceso desde otro equipo, usar un túnel SSH o un proxy autenticado y restringido; esta API local no implementa cuentas ni permisos separados de evaluador. No exponerla directamente a internet.
 
-La pantalla ya se puede abrir mientras se comprueba el equipo. Está organizada en **1. Comprobación del sistema**, **2. Sesión experimental** y **3. Lecturas y decisiones**, con consultas, fuentes, controles de fallos y registro del investigador. El inicio de sesión se habilita solo al terminar correctamente la comprobación; el backend aplica la misma guarda. Si conservabas abierta una versión anterior, recarga la página después de copiar los cambios y reiniciar la API. La clave de idempotencia del navegador tiene alternativas cuando `crypto.randomUUID` no existe (por ejemplo, HTTP sobre una IP); no requiere HTTPS para generarla ni se utiliza como credencial.
+La pantalla puede abrirse mientras se comprueba el equipo. La navegación separa **Preparar, Configurar, Monitorear y Registro y datos**, según el recorrido anterior. El inicio de sesión se habilita solo al terminar correctamente la comprobación; el backend aplica la misma guarda. Si conservabas abierta una versión anterior, recarga la página después de copiar los cambios; no hace falta reiniciar la API por editar únicamente `static/index.html`, que se sirve sin caché. La clave de idempotencia del navegador tiene alternativas cuando `crypto.randomUUID` no existe (por ejemplo, HTTP sobre una IP); no requiere HTTPS para generarla ni se utiliza como credencial.
 
 El backend **carga automáticamente `python_prueba/.env` al arrancar**, mediante `python-dotenv`, antes de validar su configuración. La ruta se resuelve desde el código, independientemente del directorio de trabajo; no busca otros `.env` en carpetas superiores. Las variables ya definidas en el sistema tienen prioridad sobre el archivo. Si no existe `.env`, usa el entorno y los valores predeterminados; `.env.example` es solo la plantilla. No hace falta ejecutar `source` ni `set -a`. Reiniciar el backend después de editar el archivo.
 

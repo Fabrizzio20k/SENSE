@@ -94,6 +94,12 @@ class PowerCommand(Command):
     observer_id: str = Field(default="operator-01", min_length=1, max_length=100)
     note: str = Field(default="", max_length=500)
     supersedes_reading_id: str | None = Field(default=None, max_length=100)
+    task_id: str | None = Field(default=None, max_length=100, pattern=r"^(power-\d+|final)$")
+
+
+class PowerOmission(Command):
+    reason: str = Field(min_length=5, max_length=500)
+    observer_id: str = Field(default="operator-01", min_length=1, max_length=100)
 
 
 class Annotation(Command):
@@ -197,10 +203,13 @@ def create_app(settings=None):
 
     def public_run(run_id):
         run = rt().store.run(run_id)
+        elapsed = rt().engine.elapsed if rt().engine.run_id == run_id else None
+        measurement = rt().store.measurement(run_id, elapsed)
         rows = rt().store.db.execute("SELECT event_json FROM events WHERE run_id=? AND type='answer.validated' ORDER BY sequence DESC LIMIT 1", (run_id,)).fetchone()
         return {"run_id": run_id, "status": run["status"], "started_at": run["started_at"], "ended_at": run["ended_at"],
                 "manifest": run["manifest"], "last_sequence": rt().store.last_sequence(run_id),
                 "last_answer": json.loads(rows[0])["payload"] if rows else None,
+                "measurement": measurement,
                 "closing_requested": bool(rt().engine.run_id == run_id and rt().actions.stop_reason),
                 "urls": {"events": f"/v1/runs/{run_id}/events", "export": f"/v1/runs/{run_id}/export.zip"}}
 
@@ -305,6 +314,34 @@ def create_app(settings=None):
             raise HTTPException(422, "instante observado fuera del intervalo registrado de la sesión")
         return supplied if supplied is not None else limit, limit, run
 
+    @application.post("/v1/runs/{run_id}/measurement-close")
+    async def close_measurement(run_id: str, command: Command):
+        state = rt().store.measurement(run_id)
+        if state["status"] in ("closed", "closed_with_omissions"):
+            return public_run(run_id)
+        if not state["can_close"]:
+            raise Conflict("detener la adquisición y resolver las lecturas W pendientes antes de cerrar la medición")
+        rt().store.append(run_id, "measurement.closed", {"omitted_count": state["omitted_count"]}, state["elapsed_s"], rt().engine.boot_id)
+        return public_run(run_id)
+
+    @application.post("/v1/runs/{run_id}/power-tasks/{task_id}/omit")
+    async def omit_power(run_id: str, task_id: str, command: PowerOmission):
+        state = rt().store.measurement(run_id, rt().engine.elapsed if rt().engine.run_id == run_id else None)
+        task = next((task for task in state["tasks"] if task["task_id"] == task_id), None)
+        if not task:
+            raise Conflict("tarea no disponible")
+        if len(command.reason.strip()) < 5:
+            raise HTTPException(422, "indicar un motivo de omisión")
+        if task["status"] == "omitted" and task["reason"] == command.reason.strip():
+            return public_run(run_id)
+        if state["status"] in ("closed", "closed_with_omissions"):
+            raise Conflict("medición ya cerrada")
+        if task["status"] != "pending":
+            raise Conflict("la tarea ya está resuelta")
+        rt().store.append(run_id, "power.task_omitted", {"task_id": task_id, "reason": command.reason.strip(),
+                          "observer_id": command.observer_id}, state["elapsed_s"], rt().engine.boot_id)
+        return public_run(run_id)
+
     @application.post("/v1/runs/{run_id}/power-readings")
     async def power(run_id: str, command: PowerCommand):
         observed, limit, run = observed_time(run_id, command.observed_elapsed_s)
@@ -312,16 +349,35 @@ def create_app(settings=None):
             raise Conflict("no registrar W físicos sobre el reloj simulado de un replay")
         if (command.quantity == "power") != (command.unit == "W"):
             raise HTTPException(422, "unidad incompatible con quantity")
+        state = rt().store.measurement(run_id, limit)
+        if state["status"] in ("closed", "closed_with_omissions"):
+            raise Conflict("medición cerrada: no se modifica su registro de potencia")
         readings = history(run_id, "power.reading_recorded")
         active = active_readings(readings)
+        task_id = command.task_id
         if command.supersedes_reading_id:
             previous = next((r for r in active if r["reading_id"] == command.supersedes_reading_id), None)
             if previous is None or not command.note.strip() or previous["quantity"] != command.quantity:
                 raise HTTPException(422, "corrección requiere lectura activa de la misma cantidad y motivo")
+            if task_id is not None and task_id != previous.get("task_id"):
+                raise HTTPException(422, "una corrección conserva la tarea de la lectura original")
+            task_id = previous.get("task_id")
+        if run["manifest"].get("power_protocol") and command.quantity == "power":
+            period = run["manifest"]["power_protocol"]["interval_s"]
+            task_id = task_id or f"power-{int(observed)//period*period}"
+            task = next((task for task in state["tasks"] if task["task_id"] == task_id), None)
+            if task_id == "final" and run["status"] == "running":
+                task = {"window_start_s": max(0, limit-run["manifest"]["power_protocol"]["final_window_s"])}
+            if not task or observed < task["window_start_s"] or (task_id != "final" and observed >= task["due_elapsed_s"]+period):
+                raise HTTPException(422, "el instante observado no pertenece a esta tarea; registrar el tiempo real o declarar omisión")
+            if task_id != "final" and not command.supersedes_reading_id and any(r.get("task_id") == task_id for r in active):
+                raise Conflict("la tarea ya tiene lectura; usar corrección si fue una transcripción errónea")
+        elif task_id is not None:
+            raise HTTPException(422, "task_id requiere protocolo de W manuales, no contador ni sesión anterior")
         if command.quantity == "power" and any(r["quantity"] == "power" and r["observed_elapsed_s"] == observed
                                                and r["reading_id"] != command.supersedes_reading_id for r in active):
             raise Conflict("ya existe una lectura W activa para ese instante; usar corrección")
-        reading = {**command.model_dump(), "reading_id": str(uuid4()), "observed_elapsed_s": observed,
+        reading = {**command.model_dump(), "task_id": task_id, "reading_id": str(uuid4()), "observed_elapsed_s": observed,
                    "recorded_elapsed_s": time.monotonic()-rt().start_monotonic if rt().start_monotonic is not None and rt().engine.run_id == run_id else None,
                    "time_basis": "operator_elapsed" if command.observed_elapsed_s is not None else "entry_time_proxy",
                    "normalized_unit": "W" if command.quantity == "power" else "Wh",

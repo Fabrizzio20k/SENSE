@@ -17,7 +17,8 @@ def utc_now():
 
 
 TABLES = {
-    "runs": ["status", "started_at", "ended_at", "source_mode", "profile_json", "block_id", "space_id", "scenario_id", "phase", "protocol_deviation"],
+    "runs": ["status", "started_at", "ended_at", "source_mode", "profile_json", "block_id", "space_id", "scenario_id", "phase", "protocol_deviation",
+             "measurement_status", "power_pending_count", "power_omitted_count"],
     "observations": ["observation_id", "source_id", "metric", "value", "unit", "source_timestamp",
                      "received_at", "received_elapsed_s", "accepted", "reason", "quality_flags"],
     "decisions": ["episode_id", "snapshot_id", "from_state", "to_state", "reason"],
@@ -26,7 +27,7 @@ TABLES = {
     "faults": ["fault_id", "source_id", "mode", "status", "start_elapsed_s", "end_elapsed_s", "reason"],
     "power_readings": ["reading_id", "quantity", "value", "unit", "normalized_value", "normalized_unit", "observed_elapsed_s",
                        "recorded_elapsed_s", "time_basis", "time_uncertainty_s", "instrument_id", "observer_id",
-                       "note", "supersedes_reading_id"],
+                       "note", "supersedes_reading_id", "task_id"],
     "annotations": ["annotation_id", "label", "presence", "count", "observed_elapsed_s", "observer_id"],
     "resource_samples": ["sample_id", "interval_s", "system_cpu_percent", "per_cpu_percent", "ram_used_bytes",
                          "ram_available_bytes", "swap_used_bytes", "cpu_temperature_c", "cpu_frequency_mhz", "scope"],
@@ -61,6 +62,7 @@ class Store:
           CREATE TABLE IF NOT EXISTS events (
             run_id TEXT NOT NULL REFERENCES runs(run_id), sequence INTEGER NOT NULL,
             type TEXT NOT NULL, event_json TEXT NOT NULL, PRIMARY KEY(run_id,sequence));
+          CREATE INDEX IF NOT EXISTS events_by_type ON events(run_id,type,sequence);
           CREATE TABLE IF NOT EXISTS runtime_flags (key TEXT PRIMARY KEY, value_json TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS artifacts (
             artifact_id TEXT PRIMARY KEY, path TEXT NOT NULL, metadata_json TEXT NOT NULL);
@@ -115,20 +117,36 @@ class Store:
             "SELECT event_json FROM events WHERE run_id=? AND sequence>? ORDER BY sequence LIMIT ?",
             (run_id, after, limit))]
 
+    def measurement(self, run_id, elapsed=None, events=None):
+        from experiment import measurement_state
+        run = self.run(run_id)
+        if events is None:
+            events = [json.loads(row[0]) for row in self.db.execute(
+                "SELECT event_json FROM events WHERE run_id=? AND type IN ('power.reading_recorded','power.task_omitted','measurement.closed',?) ORDER BY sequence",
+                (run_id, "run."+run["status"]))]
+        if elapsed is None:
+            last = self.events(run_id, after=max(0, self.last_sequence(run_id)-1))
+            elapsed = last[-1]["elapsed_s"] if last else 0
+        return measurement_state(run, events, elapsed)
+
     def export(self, run_id):
         run = self.run(run_id)
         cutoff = self.last_sequence(run_id)
         if cutoff > 100000:
             raise ValueError("exportación excede límite de 100000 eventos del prototipo")
         events = self.events(run_id, limit=cutoff+1)
+        measurement = self.measurement(run_id, elapsed=events[-1]["elapsed_s"] if events else 0, events=events)
         manifest = {**run["manifest"], "run_id": run_id, "status": run["status"],
                     "started_at": run["started_at"], "ended_at": run["ended_at"],
                     "export_id": str(uuid4()), "exported_at": utc_now(), "cutoff_sequence": cutoff,
-                    "partial": run["status"] == "running", "csv_text_profile": "spreadsheet_safe",
+                    "partial": run["status"] == "running" or measurement["status"] == "pending_review",
+                    "measurement": measurement, "csv_text_profile": "spreadsheet_safe",
                     "csv_transformation": "prefix apostrophe on formula-like untrusted text; JSONL unchanged"}
         rows = {name: [] for name in TABLES}
         rows["runs"].append({"status": run["status"], "started_at": run["started_at"], "ended_at": run["ended_at"],
                              "source_mode": manifest["source_mode"], "profile_json": manifest["profile"],
+                             "measurement_status": measurement["status"], "power_pending_count": measurement["pending_count"],
+                             "power_omitted_count": measurement["omitted_count"],
                              **{k: manifest.get("request", {}).get(k) for k in ("block_id", "space_id", "scenario_id", "phase")},
                              "protocol_deviation": any(e["type"] == "protocol.deviation" for e in events)})
         mapping = {"state.changed": "decisions", "answer.validated": "answers", "power.reading_recorded": "power_readings",

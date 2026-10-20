@@ -2,6 +2,8 @@
 
 Este documento fija las aclaraciones de la conversación. Se utilizará como guía de operación de la futura interfaz. Describe experimentos guiados; no afirma que el software ya implemente estas funciones.
 
+**Actualización del panel (19/10/2026):** se escribió la cola obligatoria de W y el cierre administrativo descritos en el [README](../README.md#lecturas-w-obligatorias-y-cierre) y en [16](16-version-python.md). Solicita W iniciales, cada 30 s y finales, conserva olvidos y exige lectura con tiempo real o motivo de omisión antes de cerrar. No se ejecutó ni valida el protocolo. La adquisición se detiene independientemente de esa revisión. La interfaz no automatiza el resto del guion físico, la referencia humana ni la evaluación final.
+
 ## 1. Alcance y distinciones obligatorias
 
 **Escenario** es lo que ocurre o se introduce: ingreso de personas, cambio ambiental, cámara no disponible, etc. **A–D son configuraciones del programa**, no cuatro escenarios físicos. Se repite un guion comparable con cada configuración.

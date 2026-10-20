@@ -9,6 +9,57 @@ import psutil
 from context import PROFILE
 
 
+POWER_PROTOCOL = {"id": "manual-power-v1", "interval_s": 30,
+                  "periodic_window": "due_inclusive_next_due_exclusive", "final_window_s": 30}
+
+
+def measurement_state(run, events, elapsed):
+    """Cola derivada del plan persistido y sus resoluciones; nunca inventa W."""
+    protocol = run["manifest"].get("power_protocol")
+    if run["manifest"]["source_mode"] != "live" or not protocol:
+        return {"status": "not_required" if run["manifest"]["source_mode"] != "live" else "legacy",
+                "tasks": [], "pending_count": 0, "omitted_count": 0, "can_close": False}
+    stopped = run["status"] != "running"
+    if stopped:
+        terminal = next(e for e in reversed(events) if e["type"] == "run."+run["status"])
+        elapsed = terminal["elapsed_s"]
+    period = protocol["interval_s"]
+    duration = run["manifest"]["request"]["duration_s"]
+    tasks = []
+    for due in range(0, int(min(elapsed, duration))//period*period+1, period):
+        if due >= duration or (stopped and due >= elapsed and due != 0):
+            continue
+        tasks.append({"task_id": f"power-{due}", "due_elapsed_s": due,
+                      "window_start_s": due, "window_end_s": min(due+period, elapsed),
+                      "status": "pending"})
+    if stopped:
+        tasks.append({"task_id": "final", "due_elapsed_s": elapsed,
+                      "window_start_s": max(0, elapsed-protocol["final_window_s"]),
+                      "window_end_s": elapsed, "status": "pending"})
+    by_id = {task["task_id"]: task for task in tasks}
+    readings = active_readings([e["payload"] for e in events if e["type"] == "power.reading_recorded"])
+    active_ids = {r["reading_id"] for r in readings}
+    for event in events:
+        value = event["payload"]
+        task = by_id.get(value.get("task_id"))
+        if not task:
+            continue
+        if event["type"] == "power.task_omitted":
+            task.update(status="omitted", reason=value["reason"], observer_id=value["observer_id"])
+        elif event["type"] == "power.reading_recorded" and value["reading_id"] in active_ids and value["quantity"] == "power":
+            observed = value["observed_elapsed_s"]
+            if task["window_start_s"] <= observed <= elapsed and (task["task_id"] == "final" or observed < task["due_elapsed_s"]+period):
+                task.update(status="recorded", reading_id=value["reading_id"], observed_elapsed_s=observed)
+                task.pop("reason", None)
+    pending = sum(task["status"] == "pending" for task in tasks)
+    omitted = sum(task["status"] == "omitted" for task in tasks)
+    closed = any(e["type"] == "measurement.closed" for e in events)
+    return {"status": ("closed_with_omissions" if omitted else "closed") if closed else "recording" if not stopped else "pending_review",
+            "elapsed_s": elapsed, "interval_s": period, "tasks": tasks, "pending_count": pending, "omitted_count": omitted,
+            "next_due_elapsed_s": min((int(elapsed)//period+1)*period, duration) if not stopped and elapsed < duration else None,
+            "can_close": stopped and not pending and not closed}
+
+
 def active_readings(readings):
     superseded = {r["supersedes_reading_id"] for r in readings if r.get("supersedes_reading_id")}
     return [r for r in readings if r["reading_id"] not in superseded]

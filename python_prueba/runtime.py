@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 
 from context import ACQUISITION_PROFILE, MQTT_SOURCES, PROFILE, aware_time, digest, parse_message, source_values
 from actions import Actions
-from experiment import Sampler
+from experiment import POWER_PROTOCOL, Sampler
 from mqtt_ingest import MQTTInput
 from orchestrator import Conflict, Engine
 from slm import CompletedResponseError, NoRequestError, WARMUP_PROFILE
@@ -447,7 +447,8 @@ class Runtime:
             raise Conflict("calentamiento de Gemma sin completar: consultar /health y repetir la preparación")
         profile = {**PROFILE, "variant": variant, "camera_enabled": variant != "rules-v1",
                    "slm_enabled": variant in ("D", "E_visual"), "acquisition": ACQUISITION_PROFILE,
-                   "camera_config": self.settings.camera_config()}
+                   "camera_config": self.settings.camera_config(),
+                   "power_protocol": dict(POWER_PROTOCOL) if self.settings.mode == "live" else None}
         manifest = {"schema_version": 1, "application_version": "0.1.0", "profile": profile,
                     "profile_hash": digest(profile), "acquisition_hash": digest({"thresholds": PROFILE, "acquisition": ACQUISITION_PROFILE,
                         "camera": self.settings.camera_config(), "monitor_count": request.get("monitor_count"),
@@ -456,6 +457,7 @@ class Runtime:
                         "slm_warmup_profile": WARMUP_PROFILE,
                         "slm_warmup_image_sha256": self.preflight.get("gemma_warmup", {}).get("image_input", {}).get("sha256")}),
                     "source_mode": self.settings.mode,
+                    "power_protocol": profile["power_protocol"],
                     "measurement_class": "exploratory_live" if self.settings.mode == "live" else "simulation",
                     "request": request, "python": platform.python_version(), "platform": platform.platform(),
                     "packages": {name: package_version(name) for name in (

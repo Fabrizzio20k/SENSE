@@ -1,6 +1,6 @@
 # Continuidad de RustIO / SENSE
 
-Último estado documentado: **17 de octubre de 2026**. Este archivo permite continuar el trabajo sin depender del historial del chat. Actualizarlo cuando cambien decisiones, evidencia de pruebas o próximos pasos.
+Último estado documentado: **19 de octubre de 2026**. Este archivo permite continuar el trabajo sin depender del historial del chat. Actualizarlo cuando cambien decisiones, evidencia de pruebas o próximos pasos.
 
 ## Objetivo y acuerdos con el autor
 
@@ -141,6 +141,25 @@ Son **`pilot_candidate`**, no parámetros calibrados ni límites de seguridad. V
 - Compatibilidad real de LiteRT-LM con campos enviados, thinking desactivado, imagen y cancelación; validar efectos del calentamiento, no suponerlos por recibir una palabra.
 - Objetivos/antigüedad aceptable, guion, referencia humana independiente, rúbrica, retención de imágenes y autorización aplicable. Las propuestas de bloques/escenarios de docs 07/11 aún no prueban potencia estadística.
 - Actualizar las diferencias documentales del PDF antes de la evaluación final; no modificar la tesis ni presentar inferencias como resultados sin solicitud/evidencia.
+
+## Rediseño de interfaz — 19 de octubre de 2026
+
+- Por petición del autor, se releyeron docs 01–16 y se reorganizó `python_prueba/static/index.html` en cuatro etapas: **Preparar, Configurar, Monitorear y Registro y datos**. Sustituye la organización anterior en tres etapas. Base blanca/negra; color solo para estados y alertas, navegación accesible y diseño adaptable.
+- Explicación de variantes, bloque/espacio/fase con los campos ya admitidos por la API, reloj de sesión, conteo visual con edad de evidencia, respuestas legibles con detalle completo y registro manual separado. Fallos y diagnóstico técnico desplegables; historial descargable de las últimas 20 ejecuciones. No automatiza guiones ni habilita evaluación final.
+- `?preview=1` o abrir `static/index.html` como archivo permite recorrer la UI sin API, SSE ni sondeo; no crea sesiones, guarda datos, comprueba componentes ni muestra mediciones ficticias. El README explica cómo servir solo `static/` con Python estándar. Abrir vista previa en una API ya iniciada no detiene la preparación del backend.
+- Se conservan admisión estricta, políticas, idempotencia, evidencia desconocida frente a cero, resultados históricos, cierre confirmado, exclusión de W físicos en replay y texto del modelo sin interpretar HTML. Sin nuevas dependencias ni cambios del backend.
+- Actualizados README y docs 16; ampliadas pruebas UI con DOM mínimo. Revisión por lectura y `git diff --check` sin errores. **No se ejecutaron app, servidor estático, pruebas, modelos ni instalaciones; no hubo revisión visual en navegador.** Los cambios ajenos de LoRA observados en git se conservaron.
+- Próximo paso: el autor puede abrir la vista previa, revisar escritorio/móvil y teclado; después ejecutar las pruebas UI en el entorno autorizado y comprobar el recorrido completo con la API y hardware. Sigue sin evidencia integrada comunicada de la Pi.
+
+## W obligatorias y revisión de medición — 19 de octubre de 2026
+
+- Petición posterior del autor: menos texto y guía operativa que exija lecturas de potencia, conserve olvidos y bloquee finalizar con pendientes. Se simplificó el texto visible y se añadió aviso global, contador y cola Registrar / No la observé.
+- Nuevas sesiones vivas guardan `manual-power-v1` en manifiesto y perfil: inicio, cada 30 s y final. `experiment.measurement_state` deriva las tareas de plan y eventos; `store.measurement` las recupera con índice por tipo. Sin tabla de tareas, dependencias nuevas ni temporizadores del navegador como fuente de verdad. Sesiones antiguas siguen `legacy`; replay no exige ni admite W físicos.
+- Se separa detener adquisición de cerrar registro: duración, cancelación y `POST .../finish` conservan su detención; `POST .../measurement-close` exige adquisición terminada y cero pendientes. No prolonga el ensayo para llenar formularios. Una omisión con motivo resuelve la tarea sin añadir valores y produce `closed_with_omissions`, sin afirmar calidad ni adquisición exitosa. Después se bloquean cambios de potencia.
+- `PowerCommand.task_id`, `POST .../power-tasks/{task_id}/omit` y `measurement` en la representación del run. W actuales no rellenan intervalos pasados; una transcripción exige tiempo real. Ventanas administrativas candidatas: periódica [t,t+30), cierre en los últimos 30 s, con observación distinta. Un cierre pesado lento puede exigir revisión de la lectura final. No son precisión instrumental ni compensación de relojes.
+- UI: Preparar cierre → Guardar W y detener, o Detener sin lectura de cierre y resolver después. Se pueden completar anotaciones de W pendientes tras detener; el historial permite retomar revisiones. La UI bloquea iniciar otra medición desde el registro pendiente; la API mantiene admisión de adquisición independiente y valida el cierre por run.
+- Se mantienen 12 CSV: columnas de estado/pendientes/omisiones en runs y task_id en power_readings; manifiesto y JSONL guardan plan, cola y motivos. Exportaciones con revisión pendiente son provisionales y siguen descargables. Recursos y cálculo energético conservan tiempos reales y hueco máximo 60 s.
+- Archivos: app, experiment, runtime, store, static/index.html, README y docs 13/16; tests/test_measurement.py nuevo y tests/test_ui.cjs ampliado. Revisión por lectura y git diff --check sin errores. **No se ejecutaron app, pruebas, modelos, instalaciones ni navegador.** Próximo paso: trasladar código, reiniciar API y revisar el flujo en entorno autorizado, incluyendo reload, dos pestañas, recuperación, omisiones, cierre automático/lento y exportación.
 
 ## Al cerrar la próxima sesión
 
