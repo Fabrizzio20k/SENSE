@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
+import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -13,12 +15,11 @@ from pathlib import Path
 import paho.mqtt.client as mqtt
 import psutil
 import requests
-from flask import Flask, Response, jsonify, request, send_from_directory
+from flask import Flask, Response, jsonify, request, send_file, send_from_directory
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
 PREPARE_IMAGE = PUBLIC / "prepare_image.png"
-CAPTURE_IMAGE = PUBLIC / "capture.jpg"
 YOLO_MODEL = ROOT / "yolo26n.pt"
 YOLO_NCNN = ROOT / "yolo26n_ncnn_model"
 LITERT_URL = os.environ.get("LITERT_URL", "http://127.0.0.1:8080/v1/chat/completions")
@@ -40,6 +41,7 @@ state = {
     "tasks": {},
 }
 yolo = None
+last_capture: bytes | None = None
 MODEL_NOT_RUNNING = "El modelo no está ejecutándose. Inicia run.sh y vuelve a intentar."
 
 
@@ -61,11 +63,13 @@ def error_detail(error: Exception) -> str:
     return str(error)
 
 
-def completion(prompt: str, image: Path | None = None) -> str:
+def completion(prompt: str, image: Path | bytes | None = None) -> str:
     content: list[dict[str, object]] = [{"type": "text", "text": prompt}]
     if image:
-        encoded = base64.b64encode(image.read_bytes()).decode()
-        content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}})
+        image_bytes = image.read_bytes() if isinstance(image, Path) else image
+        mime_type = "image/png" if isinstance(image, Path) else "image/jpeg"
+        encoded = base64.b64encode(image_bytes).decode()
+        content.append({"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}})
     response = requests.post(
         LITERT_URL,
         json={"model": LITERT_MODEL, "messages": [{"role": "user", "content": content}], "max_tokens": 64},
@@ -75,11 +79,15 @@ def completion(prompt: str, image: Path | None = None) -> str:
     return response.json()["choices"][0]["message"]["content"].strip()
 
 
-def count_people(image: Path) -> int:
+def count_people(image: Path | bytes) -> int:
     global yolo
     if yolo is None:
         raise RuntimeError("YOLO todavía no está listo")
-    results = yolo(str(image), imgsz=640, classes=[0], conf=0.15, device="cpu", verbose=False)
+    if isinstance(image, bytes):
+        from PIL import Image
+
+        image = Image.open(io.BytesIO(image))
+    results = yolo(str(image) if isinstance(image, Path) else image, imgsz=640, classes=[0], conf=0.15, device="cpu", verbose=False)
     boxes = results[0].boxes
     return 0 if boxes is None else len(boxes)
 
@@ -126,19 +134,42 @@ def warm_all() -> None:
     warm_vision()
 
 
-def capture() -> Path:
+def capture() -> bytes:
+    global last_capture
     from picamera2 import Picamera2
 
+    temporary = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+    temporary.close()
+    photo = Path(temporary.name)
     camera = Picamera2()
     try:
         camera.configure(camera.create_still_configuration(main={"size": (3280, 2464)}))
         camera.start()
         time.sleep(2)
-        camera.capture_file(str(CAPTURE_IMAGE))
+        camera.capture_file(str(photo))
     finally:
         camera.stop()
         camera.close()
-    return CAPTURE_IMAGE
+    try:
+        image = photo.read_bytes()
+    finally:
+        photo.unlink(missing_ok=True)
+    with lock:
+        last_capture = image
+    return image
+
+
+def current_capture() -> bytes:
+    with lock:
+        image = last_capture
+    if image is None:
+        raise RuntimeError("Primero toma una foto.")
+    return image
+
+
+def optional_capture() -> bytes | None:
+    with lock:
+        return last_capture
 
 
 def timed_task(name: str, action) -> None:
@@ -182,6 +213,7 @@ def snapshot() -> dict:
         "memory_percent": psutil.virtual_memory().percent,
         "memory_used_mb": round(psutil.virtual_memory().used / 1024 / 1024),
     }
+    payload["has_capture"] = last_capture is not None
     return payload
 
 
@@ -199,31 +231,30 @@ def events():
     return Response(stream(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache"})
 
 
+@app.route("/api/capture", methods=["GET", "POST"])
+def camera():
+    if request.method == "GET":
+        try:
+            return send_file(io.BytesIO(current_capture()), mimetype="image/jpeg", max_age=0)
+        except RuntimeError:
+            return jsonify(error="No hay foto disponible."), 404
+    worker.submit(timed_task, "capture", lambda: (capture(), "Foto lista.")[1])
+    return jsonify(ok=True), 202
+
+
 @app.post("/api/yolo")
 def test_yolo():
-    def action():
-        photo = capture()
-        return f"{count_people(photo)} persona(s) detectada(s)."
-    worker.submit(timed_task, "yolo", action)
+    worker.submit(timed_task, "yolo", lambda: f"{count_people(current_capture())} persona(s) detectada(s).")
     return jsonify(ok=True), 202
 
 
-@app.post("/api/text")
-def test_text():
+@app.post("/api/chat")
+def chat():
     prompt = request.get_json(silent=True) or {}
-    question = str(prompt.get("question", "Responde brevemente: ¿estás listo?"))[:1000]
-    worker.submit(timed_task, "text", lambda: completion(question))
-    return jsonify(ok=True), 202
-
-
-@app.post("/api/vision")
-def test_vision():
-    prompt = request.get_json(silent=True) or {}
-    question = str(prompt.get("question", "Describe la imagen brevemente."))[:1000]
-    def action():
-        photo = capture()
-        return completion(question, photo)
-    worker.submit(timed_task, "vision", action)
+    question = str(prompt.get("question", ""))[:1000].strip()
+    if not question:
+        return jsonify(error="Escribe una pregunta."), 400
+    worker.submit(timed_task, "chat", lambda: completion(question, optional_capture()))
     return jsonify(ok=True), 202
 
 
