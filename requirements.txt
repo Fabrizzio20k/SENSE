@@ -27,6 +27,7 @@ opencv-python==5.0.0.93
 packaging==26.3
 paho-mqtt==2.1.0
 pillow==13.0.0
+pnnx==20261020
 polars==2.0.0
 polars-runtime-32==2.0.0
 portalocker==4.4.1

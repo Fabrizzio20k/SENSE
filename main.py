@@ -40,6 +40,7 @@ state = {
     "tasks": {},
 }
 yolo = None
+MODEL_NOT_RUNNING = "El modelo no está ejecutándose. Inicia run.sh y vuelve a intentar."
 
 
 def set_phase(name: str, status: str, detail: str) -> None:
@@ -50,6 +51,14 @@ def set_phase(name: str, status: str, detail: str) -> None:
 def set_task(name: str, status: str, detail: str, seconds: float | None = None) -> None:
     with lock:
         state["tasks"][name] = {"status": status, "detail": detail, "seconds": seconds}
+
+
+def error_detail(error: Exception) -> str:
+    if isinstance(error, (requests.ConnectionError, requests.Timeout)):
+        return MODEL_NOT_RUNNING
+    if isinstance(error, ModuleNotFoundError) and error.name == "pnnx":
+        return "Falta pnnx para exportar NCNN. Ejecuta: uv pip install pnnx"
+    return str(error)
 
 
 def completion(prompt: str, image: Path | None = None) -> str:
@@ -90,7 +99,7 @@ def warm_yolo() -> None:
         people = count_people(PREPARE_IMAGE)
         set_phase("yolo", "ready", f"Listo; imagen de prueba: {people} persona(s).")
     except Exception as error:
-        set_phase("yolo", "error", str(error))
+        set_phase("yolo", "error", error_detail(error))
 
 
 def warm_text() -> None:
@@ -99,7 +108,7 @@ def warm_text() -> None:
         answer = completion("Responde exactamente OK.")
         set_phase("text", "ready", f"Listo; respondió: {answer[:80]}")
     except Exception as error:
-        set_phase("text", "error", str(error))
+        set_phase("text", "error", error_detail(error))
 
 
 def warm_vision() -> None:
@@ -108,7 +117,7 @@ def warm_vision() -> None:
         answer = completion("¿Cuántas personas hay? Responde solo con el número.", PREPARE_IMAGE)
         set_phase("vision", "ready", f"Listo; prueba: {answer[:80]}")
     except Exception as error:
-        set_phase("vision", "error", str(error))
+        set_phase("vision", "error", error_detail(error))
 
 
 def warm_all() -> None:
@@ -139,7 +148,7 @@ def timed_task(name: str, action) -> None:
         detail = action()
         set_task(name, "ready", detail, time.monotonic() - started)
     except Exception as error:
-        set_task(name, "error", str(error), time.monotonic() - started)
+        set_task(name, "error", error_detail(error), time.monotonic() - started)
 
 
 def mqtt_message(_client, _userdata, message) -> None:
