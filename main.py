@@ -2,7 +2,6 @@
 """Panel local para sensores, cámara y modelos de la Raspberry Pi."""
 from __future__ import annotations
 
-import base64
 import io
 import json
 import os
@@ -17,6 +16,10 @@ import psutil
 import requests
 from flask import Flask, Response, jsonify, request, send_file, send_from_directory
 
+from sense.contracts import utc_now
+from sense.inference import request_completion
+from sense.service import ExperimentService
+
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
 PREPARE_IMAGE = PUBLIC / "prepare_image.png"
@@ -28,6 +31,7 @@ MQTT_HOST = os.environ.get("MQTT_HOST", "127.0.0.1")
 MQTT_TOPIC = os.environ.get("MQTT_TOPIC", "rustio/rpi5-01/telemetry")
 
 app = Flask(__name__, static_folder=str(PUBLIC), static_url_path="/public")
+app.config["MAX_CONTENT_LENGTH"] = 65536
 lock = threading.Lock()
 worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="rustio-work")
 state = {
@@ -43,6 +47,8 @@ state = {
 }
 yolo = None
 last_capture: bytes | None = None
+experiments: ExperimentService | None = None
+service_lock = threading.Lock()
 MODEL_NOT_RUNNING = "El modelo no está ejecutándose. Inicia run.sh y vuelve a intentar."
 
 
@@ -66,19 +72,7 @@ def error_detail(error: Exception) -> str:
 
 
 def completion(prompt: str, image: Path | bytes | None = None) -> str:
-    content: list[dict[str, object]] = [{"type": "text", "text": prompt}]
-    if image:
-        image_bytes = image.read_bytes() if isinstance(image, Path) else image
-        mime_type = "image/png" if isinstance(image, Path) else "image/jpeg"
-        encoded = base64.b64encode(image_bytes).decode()
-        content.append({"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}})
-    response = requests.post(
-        LITERT_URL,
-        json={"model": LITERT_MODEL, "messages": [{"role": "user", "content": content}], "max_tokens": 64},
-        timeout=180,
-    )
-    response.raise_for_status()
-    return response.json()["choices"][0]["message"]["content"].strip()
+    return request_completion(LITERT_URL, LITERT_MODEL, prompt, image)["content"]
 
 
 def count_people(image: Path | bytes) -> int:
@@ -136,27 +130,36 @@ def warm_all() -> None:
     warm_vision()
 
 
-def capture() -> bytes:
-    global last_capture
+def capture_evidence() -> tuple[bytes, str]:
     from picamera2 import Picamera2
 
     temporary = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
     temporary.close()
     photo = Path(temporary.name)
-    camera = Picamera2()
+    camera = None
     try:
+        camera = Picamera2()
         # YOLO procesa a 640 px; 1280×960 conserva detalle útil y evita transferir una foto de 8 MP.
         camera.configure(camera.create_still_configuration(main={"size": (1280, 960)}))
         camera.start()
         time.sleep(2)
+        captured_at = utc_now()
         camera.capture_file(str(photo))
+        return photo.read_bytes(), captured_at
     finally:
-        camera.stop()
-        camera.close()
-    try:
-        image = photo.read_bytes()
-    finally:
-        photo.unlink(missing_ok=True)
+        try:
+            if camera is not None:
+                try:
+                    camera.stop()
+                finally:
+                    camera.close()
+        finally:
+            photo.unlink(missing_ok=True)
+
+
+def capture() -> bytes:
+    global last_capture
+    image, _ = capture_evidence()
     with lock:
         last_capture = image
     return image
@@ -182,6 +185,8 @@ def timed_task(name: str, action) -> None:
 
 def enqueue_sandbox_task(name: str, action) -> str | None:
     with lock:
+        if experiments is not None and experiments.reserved.is_set():
+            return "Finaliza la medición y espera a que terminen sus workers antes de usar el sandbox."
         if not all(phase["status"] == "ready" for phase in state["phases"].values()):
             return "El sandbox estará disponible cuando terminen las tres preparaciones."
         if state["sandbox_busy"]:
@@ -200,13 +205,41 @@ def enqueue_sandbox_task(name: str, action) -> str | None:
 
 
 def mqtt_message(_client, _userdata, message) -> None:
-    try:
-        telemetry = json.loads(message.payload)
-    except json.JSONDecodeError:
+    if len(message.payload) > 65536:
         return
+    try:
+        def invalid_constant(value):
+            raise ValueError("Número JSON no finito: " + value)
+
+        telemetry = json.loads(message.payload, parse_constant=invalid_constant)
+    except (ValueError, UnicodeDecodeError):
+        return
+    if not isinstance(telemetry, dict):
+        return
+    received, wall = time.monotonic(), time.time()
     with lock:
         state["telemetry"] = telemetry
-        state["telemetry_at"] = time.time()
+        state["telemetry_at"] = wall
+    if experiments is not None:
+        experiments.ingest(telemetry, received, wall)
+
+
+def get_experiments() -> ExperimentService:
+    global experiments
+    with service_lock:
+        if experiments is None:
+            def readiness():
+                with lock:
+                    return {key: value["status"] for key, value in state["phases"].items()}
+
+            experiments = ExperimentService(
+                ROOT, Path(os.environ.get("SENSE_DATA_DIR", str(ROOT / "data"))),
+                Path(os.environ.get("SENSE_CONFIG", str(ROOT / "sense" / "pilot.yaml"))),
+                capture_evidence, count_people,
+                lambda prompt, image, **options: request_completion(LITERT_URL, LITERT_MODEL, prompt, image, temperature=0, **options),
+                LITERT_MODEL, readiness,
+            )
+        return experiments
 
 
 def start_mqtt() -> None:
@@ -235,7 +268,103 @@ def snapshot() -> dict:
         "memory_percent": psutil.virtual_memory().percent,
         "memory_used_mb": round(psutil.virtual_memory().used / 1024 / 1024),
     }
+    payload["measurement"] = experiments.snapshot() if experiments is not None else {"running": False, "enabled_modes": list("ABCDE")}
     return payload
+
+
+@app.post("/api/experiments/start")
+def start_experiment():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or body.get("mode") not in list("ABCDE"):
+        return jsonify(error="Selecciona un modo A–E."), 400
+    for name in ("session_id", "scenario_id"):
+        if name in body and (not isinstance(body[name], str) or not 1 <= len(body[name]) <= 100):
+            return jsonify(error=f"{name} debe contener entre 1 y 100 caracteres."), 400
+    try:
+        service = get_experiments()
+        with lock:
+            if state["sandbox_busy"]:
+                return jsonify(error="Espera a que termine la operación del sandbox."), 409
+            service.reserve()
+        run = service.call("start", body)
+        return jsonify(run_id=run["run_id"]), 202
+    except (ValueError, OSError, TimeoutError) as error:
+        return jsonify(error=str(error)), 409
+
+
+@app.post("/api/experiments/stop")
+def stop_experiment():
+    try:
+        return jsonify(get_experiments().call("stop")), 202
+    except (ValueError, TimeoutError) as error:
+        return jsonify(error=str(error)), 409
+
+
+@app.post("/api/experiments/query")
+def query_experiment():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify(error="Se requiere question_id."), 400
+    try:
+        return jsonify(get_experiments().call("query", body)), 202
+    except (ValueError, TimeoutError) as error:
+        return jsonify(error=str(error)), 409
+
+
+@app.get("/api/experiments")
+def experiment_history():
+    return jsonify(runs=get_experiments().log.runs())
+
+
+@app.get("/api/experiments/<run_id>")
+def experiment_details(run_id):
+    log = get_experiments().log
+    run = log.run(run_id)
+    if run is None:
+        return jsonify(error="Ejecución no encontrada."), 404
+    try:
+        after = max(0, int(request.args.get("after", 0)))
+    except ValueError:
+        return jsonify(error="Cursor inválido."), 400
+    return jsonify(run=run, events=log.events(run_id, after))
+
+
+@app.get("/api/experiments/<run_id>/export")
+def export_experiment(run_id):
+    log = get_experiments().log
+    if log.run(run_id) is None:
+        return jsonify(error="Ejecución no encontrada."), 404
+    return Response(log.export(run_id), mimetype="application/x-ndjson",
+                    headers={"Content-Disposition": f'attachment; filename="sense-{run_id}.ndjson"'})
+
+
+@app.post("/api/experiments/<run_id>/human-records")
+def record_ground_truth(run_id):
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or body.get("kind") not in ("GROUND_TRUTH", "EXTERNAL_ENERGY"):
+        return jsonify(error="Usa kind GROUND_TRUTH o EXTERNAL_ENERGY y un payload separado."), 400
+    payload = body.get("payload")
+    if not isinstance(payload, dict) or len(json.dumps(payload)) > 10000:
+        return jsonify(error="payload debe ser un objeto de hasta 10 kB."), 400
+    log = get_experiments().log
+    if log.run(run_id) is None:
+        return jsonify(error="Ejecución no encontrada."), 404
+    try:
+        from sense.context import timestamp
+
+        timestamp(payload.get("observed_at"))
+        if body["kind"] == "EXTERNAL_ENERGY":
+            value = payload.get("value")
+            if type(value) not in (int, float) or not 0 <= value < float("inf") or payload.get("unit") not in ("Wh", "J") or payload.get("scope") != "whole_run":
+                raise ValueError("Energía externa: valor finito no negativo, unidad Wh o J y scope whole_run.")
+        elif not isinstance(payload.get("region"), str) or not payload["region"]:
+            raise ValueError("El ground truth debe indicar su región.")
+        elif "visible_people" in payload and (type(payload["visible_people"]) is not int or payload["visible_people"] < 0):
+            raise ValueError("visible_people debe ser un entero no negativo.")
+        record_id = log.human_record(run_id, body["kind"], payload)
+    except (ValueError, TypeError) as error:
+        return jsonify(error=str(error)), 400
+    return jsonify(record_id=record_id), 201
 
 
 @app.get("/")
@@ -301,4 +430,8 @@ if __name__ == "__main__":
     PUBLIC.mkdir(exist_ok=True)
     start_mqtt()
     worker.submit(warm_all)
-    app.run(host="0.0.0.0", port=5000, threaded=True)
+    try:
+        app.run(host="0.0.0.0", port=5000, threaded=True)
+    finally:
+        if experiments is not None:
+            experiments.close()

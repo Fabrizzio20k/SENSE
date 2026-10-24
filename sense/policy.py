@@ -1,0 +1,192 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from collections import deque
+from dataclasses import dataclass
+
+from .contracts import Snapshot, identifier
+
+QUESTIONS = {
+    "Q1": "¿Hay presencia humana en la región monitoreada?",
+    "Q2": "¿Cuántas personas son visibles actualmente?",
+    "Q3": "¿Cuáles son las condiciones ambientales actuales?",
+    "Q4": "¿Ha ocurrido un cambio ambiental relevante?",
+    "Q5": "¿La información disponible es suficiente y consistente?",
+    "Q6": "¿Qué relación contextual puede describirse entre ocupación y condiciones ambientales?",
+    "Q7": "¿Qué información adicional aporta la imagen sobre la situación del aula?",
+}
+
+
+def semantic_key(question: str, snapshot: dict, model: str, image_id: str | None = None) -> str:
+    relevant = {key: {"value": value["value"], "status": value["status"], "region": value["region"]}
+                for key, value in snapshot["observations"].items()}
+    content = {"question": question, "evidence": relevant, "model": model, "image_id": image_id,
+               "episodes": [event["event_id"] for event in snapshot["environment_events"]]}
+    return hashlib.sha256(json.dumps(content, sort_keys=True).encode()).hexdigest()
+
+
+def answer_questions(snapshot: Snapshot, mode: str, alignment_seconds: float = 60) -> dict:
+    document = snapshot.document()
+    observations = document["observations"]
+    answers = {}
+
+    def result(q: str, status: str, answer, keys=(), limitations=(), pending=()):
+        answers[q] = {"question_id": q, "question": QUESTIONS[q], "status": status, "answer": answer,
+                      "evidence_ids": [observations[key]["observation_id"] for key in keys if key in observations],
+                      "evaluated_at": snapshot.created_at, "snapshot_id": snapshot.snapshot_id,
+                      "limitations": list(limitations), "pending_information": list(pending)}
+
+    presence = observations.get("presence", {})
+    valid_presence = presence.get("status") == "VALID"
+    result("Q1", "RESOLVED" if valid_presence else "ABSTAINED",
+           ("Presencia detectada" if presence["value"] else "Sin presencia detectada") if valid_presence else "Radar sin evidencia vigente.",
+           ("presence",), ("Solo cobertura del radar; no representa toda el aula ni proporciona conteo.",),
+           () if valid_presence else ("PRESENCE_REQUIRED",))
+    count = observations.get("count", {})
+    valid_count = count.get("status") == "VALID"
+    result("Q2", "RESOLVED" if valid_count else "PENDING", count["value"] if valid_count else None,
+           ("count",), ("Personas visibles en la región de cámara; estimación YOLO.",),
+           () if valid_count else ("VISUAL_COUNT_REQUIRED",))
+    env_keys = ("temperature", "humidity", "aqi", "tvoc", "eco2")
+    environment = {key: {"value": observations.get(key, {}).get("value"), "unit": observations.get(key, {}).get("unit"),
+                         "status": observations.get(key, {}).get("status", "UNKNOWN")} for key in env_keys}
+    result("Q3", "RESOLVED" if all(v["status"] == "VALID" for v in environment.values()) else "PARTIAL", environment, env_keys,
+           ("eCO₂ es estimado; AQI es el índice del ENS160. No constituye una alerta certificada.",),
+           tuple(key for key, value in environment.items() if value["status"] != "VALID"))
+    events = document["environment_events"]
+    warming = any(not value["evaluable"]
+                  for key, value in document["environment_conditions"].items() if key != "eco2")
+    result("Q4", "PARTIAL" if warming or answers["Q3"]["status"] != "RESOLVED" else "RESOLVED",
+           [{"event_type": e["event_type"], "magnitude": e["magnitude"], "captured_at": e["captured_at"]} for e in events], env_keys,
+           ("Cambios confirmados de esta sesión; referencia de ventana y rearme documentados. No implica causalidad.",),
+           ("Ventana de comparación incompleta o en rearme.",) if warming else ())
+    missing = [key for key in (*env_keys, "presence", "count") if observations.get(key, {}).get("status") != "VALID"]
+    result("Q5", "RESOLVED" if not missing else "ABSTAINED",
+           "Evidencia vigente dentro de sus regiones." if not missing else "Información incompleta, vencida o no comparable.",
+           tuple(observations), ("Radar y cámara solo se comparan si su cobertura fue declarada comparable.",), missing)
+    related = bool(events and valid_count and valid_presence)
+    latest_episode = events[-1] if events else None
+    # La relación requiere evidencia próxima al episodio; la simultaneidad no prueba causalidad.
+    if related:
+        from .context import timestamp
+
+        related = all(abs(timestamp(observations[key]["captured_at"]) - timestamp(latest_episode["captured_at"])) <= alignment_seconds
+                      for key in ("count", "presence"))
+    complex_episode = related and len({event["event_type"] for event in events[-4:]}) >= 2
+    result("Q6", "PARTIAL" if complex_episode else "RESOLVED" if related else "ABSTAINED",
+           "Coincidencia temporal de cambios ambientales y evidencia de ocupación; no demuestra causalidad." if related
+           else "No hay un episodio ambiental y evidencia de ocupación temporalmente comparables.",
+           (*env_keys, "presence", "count"), ("No se puede atribuir el cambio ambiental a las personas.",),
+           ("TEXT_INTERPRETATION_REQUIRED",) if complex_episode and mode in ("D", "E") else ())
+    result("Q7", "PENDING" if mode == "E" else "NOT_APPLICABLE",
+           "Pendiente de imagen pertinente y necesidad visual adicional." if mode == "E" else "Capacidad exclusiva del modo E.",
+           ("count",), ("Descripción inferida; sin identificación ni reconocimiento facial.",),
+           ("MULTIMODAL_INTERPRETATION_REQUIRED",) if mode == "E" else ())
+    return answers
+
+
+@dataclass(frozen=True)
+class Decision:
+    action: str | None
+    question_id: str
+    reason: str
+
+
+class PolicyEngine:
+    def __init__(self, config: dict, mode: str, started: float):
+        self.config, self.mode = config, mode
+        self.next_period = started
+        self.reactive_pending = False
+        self.last_visual = float("-inf")
+        self.visual_requests = deque()
+        self.slm_requests = {"text": deque(), "multimodal": deque()}
+        self.last_slm = {"text": float("-inf"), "multimodal": float("-inf")}
+        self.needs = {}
+
+    def information_needs(self, answers: dict, snapshot: dict) -> list[dict]:
+        from datetime import datetime, timedelta
+
+        types = {"Q1": "PRESENCE_REQUIRED", "Q2": "VISUAL_COUNT_REQUIRED", "Q3": "ENVIRONMENT_STATUS_REQUIRED",
+                 "Q5": "CONFLICT_RESOLUTION_REQUIRED", "Q6": "TEXT_INTERPRETATION_REQUIRED", "Q7": "MULTIMODAL_INTERPRETATION_REQUIRED"}
+        for qid, kind in types.items():
+            answer = answers[qid]
+            needed = bool(answer["pending_information"]) and answer["status"] != "NOT_APPLICABLE"
+            previous = self.needs.get(qid)
+            if needed and (previous is None or previous["status"] == "RESOLVED"):
+                self.needs[qid] = {"need_id": identifier(), "type": kind, "question_id": qid, "question": QUESTIONS[qid],
+                                   "origin": "CONTEXT_EVALUATION", "region": self.config["regions"]["camera_region"] if qid in ("Q2", "Q7") else "source_regions",
+                                   "created_at": snapshot["created_at"],
+                                   "expires_at": (datetime.fromisoformat(snapshot["created_at"]) + timedelta(seconds=self.config["runtime"]["max_run_seconds"])).isoformat(),
+                                   "priority": 1 if qid in ("Q1", "Q3") else 2, "status": "PENDING"}
+            if qid in self.needs:
+                self.needs[qid].update(status="PENDING" if needed else "RESOLVED", evidence_ids=answer["evidence_ids"],
+                                       missing_information=answer["pending_information"])
+        return list(self.needs.values())
+
+    def vision(self, snapshot: dict, now: float, events: list[dict], available: bool, busy: bool, resource_reason: str | None) -> Decision:
+        if any(event["event_type"] == "PRESENCE_CHANGED" for event in events):
+            self.reactive_pending = True
+        count = snapshot["observations"].get("count", {})
+        if self.mode == "A":
+            if now < self.next_period:
+                return Decision(None, "Q2", "PERIOD_NOT_DUE")
+            reason = "PERIODIC_SCHEDULE"
+        elif self.mode == "B":
+            if not self.reactive_pending:
+                return Decision(None, "Q2", "NO_REACTIVE_TRIGGER")
+            reason = "PRESENCE_CHANGED"
+        else:
+            if count.get("status") == "VALID":
+                return Decision(None, "Q2", "ALREADY_FRESH")
+            reason = "RESOLVABLE_CONFLICT" if snapshot["conflict"] else "COUNT_UNKNOWN" if not count else "COUNT_STALE"
+        if self.mode == "A":
+            due = int((now - self.next_period) // self.config["modes"]["periodic_interval_seconds"]) + 1
+            self.next_period += due * self.config["modes"]["periodic_interval_seconds"]
+        if busy:
+            return Decision(None, "Q2", "DUPLICATE_REQUEST" if self.mode != "A" else "MISSED_PERIOD_BUSY")
+        if not available:
+            return Decision(None, "Q2", "CAMERA_UNAVAILABLE")
+        if resource_reason:
+            return Decision(None, "Q2", resource_reason)
+        cooldown = self.config["modes"]["reactive_min_interval_seconds"] if self.mode == "B" else self.config["vision"]["cooldown_seconds"]
+        if self.mode != "A" and now - self.last_visual < cooldown:
+            return Decision(None, "Q2", "COOLDOWN_ACTIVE")
+        requests = self.visual_requests
+        while requests and now - requests[0] >= self.config["vision"]["request_window_seconds"]:
+            requests.popleft()
+        if len(requests) >= self.config["vision"]["max_requests_per_window"]:
+            return Decision(None, "Q2", "RATE_LIMIT")
+        return Decision("vision", "Q2", reason)
+
+    def accepted_vision(self, now: float) -> None:
+        self.last_visual = now
+        self.visual_requests.append(now)
+        self.reactive_pending = False
+
+    def interpretation(self, kind: str, answer: dict, now: float, semantic: str, attempted: set,
+                       available: bool, resource_reason: str | None) -> Decision:
+        question = "Q6" if kind == "text" else "Q7"
+        if self.mode not in (("D", "E") if kind == "text" else ("E",)):
+            return Decision(None, question, "MODE_CAPABILITY_DISABLED")
+        if kind == "text" and "TEXT_INTERPRETATION_REQUIRED" not in answer["pending_information"]:
+            return Decision(None, question, "NOT_REQUIRED_FOR_QUESTION")
+        if semantic in attempted:
+            return Decision(None, question, "DUPLICATE_REQUEST")
+        if not available:
+            return Decision(None, question, "MODEL_UNAVAILABLE")
+        if resource_reason:
+            return Decision(None, question, resource_reason)
+        budget = self.config["interpretation"]["textual" if kind == "text" else "multimodal"]
+        if now - self.last_slm[kind] < budget["cooldown_seconds"]:
+            return Decision(None, question, "COOLDOWN_ACTIVE")
+        history = self.slm_requests[kind]
+        while history and now - history[0] >= budget["request_window_seconds"]:
+            history.popleft()
+        if len(history) >= budget["max_requests_per_window"]:
+            return Decision(None, question, "RATE_LIMIT")
+        return Decision(kind, question, "UNRESOLVED_CONTEXTUAL_NEED")
+
+    def accepted_interpretation(self, kind: str, now: float) -> None:
+        self.last_slm[kind] = now
+        self.slm_requests[kind].append(now)
