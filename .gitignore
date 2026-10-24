@@ -219,3 +219,4 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 yolo26n.pt
+yolo26n_ncnn_model/
