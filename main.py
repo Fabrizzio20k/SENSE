@@ -53,6 +53,7 @@ def set_phase(name: str, status: str, detail: str) -> None:
 
 def set_task(name: str, status: str, detail: str, seconds: float | None = None) -> None:
     with lock:
+        state["tasks"].pop(name, None)
         state["tasks"][name] = {"status": status, "detail": detail, "seconds": seconds}
 
 
@@ -144,7 +145,8 @@ def capture() -> bytes:
     photo = Path(temporary.name)
     camera = Picamera2()
     try:
-        camera.configure(camera.create_still_configuration(main={"size": (3280, 2464)}))
+        # YOLO procesa a 640 px; 1280×960 conserva detalle útil y evita transferir una foto de 8 MP.
+        camera.configure(camera.create_still_configuration(main={"size": (1280, 960)}))
         camera.start()
         time.sleep(2)
         camera.capture_file(str(photo))
@@ -166,11 +168,6 @@ def current_capture() -> bytes:
     if image is None:
         raise RuntimeError("Primero toma una foto.")
     return image
-
-
-def optional_capture() -> bytes | None:
-    with lock:
-        return last_capture
 
 
 def timed_task(name: str, action) -> None:
@@ -282,7 +279,19 @@ def chat():
     question = str(prompt.get("question", ""))[:1000].strip()
     if not question:
         return jsonify(error="Escribe una pregunta."), 400
-    error = enqueue_sandbox_task("chat", lambda: completion(question, optional_capture()))
+    error = enqueue_sandbox_task("chat", lambda: completion(question))
+    if error:
+        return jsonify(error=error), 409
+    return jsonify(ok=True), 202
+
+
+@app.post("/api/vision")
+def vision_chat():
+    prompt = request.get_json(silent=True) or {}
+    question = str(prompt.get("question", ""))[:1000].strip()
+    if not question:
+        return jsonify(error="Escribe una pregunta sobre la foto."), 400
+    error = enqueue_sandbox_task("vision", lambda: completion(question, current_capture()))
     if error:
         return jsonify(error=error), 409
     return jsonify(ok=True), 202
