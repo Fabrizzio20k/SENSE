@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rasp · Panel local</title>
+<style>
+  :root { color-scheme: dark; --ink:#eceeea; --muted:#a5aaa5; --line:#333834; --panel:#171a18; --base:#0e100f; }
+  * { box-sizing:border-box } body { margin:0; font:15px/1.45 system-ui,sans-serif; background:var(--base); color:var(--ink) }
+  main { max-width:1200px; margin:auto; padding:28px 18px 56px } header { display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:18px } h1,h2,p { margin:0 } h1 { font-size:21px } h2 { font-size:16px; margin-bottom:14px } .sub { color:var(--muted) }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(245px,1fr)); gap:12px; margin:12px 0 24px }.card { background:var(--panel); border:1px solid var(--line); padding:16px; min-height:116px }.metric { font-size:30px; font-variant-numeric:tabular-nums }.row { display:flex; justify-content:space-between; gap:12px; align-items:center }.status { color:var(--muted); min-height:42px; white-space:pre-wrap; overflow-wrap:anywhere } .loading::before { content:""; display:inline-block; width:10px; height:10px; border:2px solid #777; border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; margin-right:8px } .ready { color:#d5e8d5 }.error { color:#ffb9b0 } @keyframes spin { to { transform:rotate(360deg) } }
+  section { margin-top:24px } button,input { font:inherit; border:1px solid #555; background:#eceeea; color:#111; padding:9px 11px; border-radius:2px } button { cursor:pointer } input { background:#111; color:var(--ink); width:100%; margin:9px 0 }.sandbox { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px }.sandbox .card { min-height:180px } .time { color:var(--muted); font-variant-numeric:tabular-nums } pre { margin:10px 0 0; max-height:260px; overflow:auto; color:#cbd0cb; font-size:12px; white-space:pre-wrap } img { width:100%; max-height:260px; object-fit:contain; margin-top:10px; display:none; background:#090a09 }
+  @media(max-width:520px) { main { padding:18px 12px } header { display:block } }
+</style>
+<main>
+  <header><div><h1>Rasp / administración local</h1><p class="sub">Flujo en tiempo real · <span id="connection">conectando</span></p></div><span class="sub">:5000</span></header>
+  <h2>Sistema</h2><div class="grid"><article class="card"><p class="sub">CPU</p><p class="metric" id="cpu">—</p></article><article class="card"><p class="sub">Memoria</p><p class="metric" id="memory">—</p><p class="sub" id="memory-detail"></p></article></div>
+  <h2>Sensores MQTT</h2><div class="grid"><article class="card"><p class="sub">SHT40</p><p class="metric" id="sht">Sin datos</p></article><article class="card"><p class="sub">ENS160</p><p class="metric" id="ens">Sin datos</p></article><article class="card"><p class="sub">Presencia</p><p class="metric" id="presence">Sin datos</p></article></div>
+  <h2>Preparación</h2><div class="grid" id="phases"></div>
+  <section><h2>Pruebas</h2><div class="sandbox">
+    <article class="card"><h2>Personas / YOLO</h2><p class="status" id="task-yolo">Toma una foto y cuenta personas.</p><button data-task="yolo">Tomar foto y contar personas</button><p class="time" id="time-yolo"></p><img id="capture" alt="Última foto tomada"></article>
+    <article class="card"><h2>Texto / Gemma</h2><input id="text-question" value="Responde brevemente: ¿estás listo?" aria-label="Pregunta para Gemma"><p class="status" id="task-text">Envía una pregunta al modelo.</p><button data-task="text">Simular chat</button><p class="time" id="time-text"></p></article>
+    <article class="card"><h2>Imagen / Gemma</h2><input id="vision-question" value="¿Qué ves? Responde de forma resumida." aria-label="Pregunta sobre la foto"><p class="status" id="task-vision">Toma una foto y pregunta al modelo.</p><button data-task="vision">Tomar foto y preguntar</button><p class="time" id="time-vision"></p></article>
+  </div></section><section><h2>Telemetría recibida</h2><pre id="raw">Esperando MQTT…</pre></section>
+</main>
+<script>
+  const $ = id => document.getElementById(id), phaseNames = {yolo:'YOLO / NCNN',text:'Gemma texto',vision:'Gemma imagen'};
+  document.querySelectorAll('button').forEach(button => button.onclick = async () => { const name = button.dataset.task; const question = $(name + '-question'); await fetch('/api/' + name, {method:'POST', headers:{'Content-Type':'application/json'}, body:question ? JSON.stringify({question:question.value}) : null}); });
+  new EventSource('/events').onmessage = event => { const d = JSON.parse(event.data), t = d.telemetry || {}, e = t.environment || {}, p = t.presence || {}; $('connection').textContent = 'en línea'; $('cpu').textContent = d.system.cpu_percent + '%'; $('memory').textContent = d.system.memory_percent + '%'; $('memory-detail').textContent = d.system.memory_used_mb + ' MB en uso'; $('sht').textContent = e.sht40 ? e.sht40.temperature_c + ' °C · ' + e.sht40.humidity_percent + '%' : 'Sin datos'; $('ens').textContent = e.ens160 ? 'AQI ' + e.ens160.aqi + ' · ' + e.ens160.eco2_ppm + ' ppm' : 'Sin datos'; $('presence').textContent = p.state || 'Sin datos'; $('raw').textContent = Object.keys(t).length ? JSON.stringify(t, null, 2) : 'Esperando MQTT…'; $('phases').replaceChildren(...Object.entries(d.phases).map(([name,v]) => { const x=document.createElement('article'), title=document.createElement('h2'), detail=document.createElement('p'); x.className='card'; title.textContent=phaseNames[name]; detail.className='status '+v.status; detail.textContent=v.detail; x.append(title, detail); return x })); Object.entries(d.tasks).forEach(([name,v]) => { const out=$('task-'+name); if(out) { out.className='status '+v.status; out.textContent=v.detail; $('time-'+name).textContent=v.seconds == null ? '' : 'Tiempo: '+v.seconds.toFixed(2)+' s'; } }); if(d.tasks.yolo?.status==='ready' || d.tasks.vision?.status==='ready') { const image=$('capture'); image.src='/public/capture.jpg?t='+Date.now(); image.style.display='block'; } };
+</script>
+</html>
