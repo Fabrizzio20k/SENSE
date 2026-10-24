@@ -1,5 +1,5 @@
 # Valores iniciales para caracterización, NO parámetros científicamente validados.
-config_version: sense-pilot-1
+config_version: sense-pilot-2-radar-proximity
 hardware_profile: Raspberry Pi 5 / 8 GB / IMX219 / SHT40 / ENS160 / LD2410C
 enabled_modes: [A, B, C, D, E]
 regions:
@@ -68,3 +68,5 @@ modes:
   periodic_interval_seconds: 30
   reactive_debounce_samples: 3
   reactive_min_interval_seconds: 30
+  reactive_enter_below_cm: 30
+  reactive_exit_at_or_above_cm: 50

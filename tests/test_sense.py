@@ -205,9 +205,8 @@ class PolicyTests(unittest.TestCase):
 
     def test_b_never_uses_unknown_count_as_trigger(self):
         policy = PolicyEngine(self.config, "B", 0)
-        self.assertEqual(self.decision(policy, 0).reason, "NO_REACTIVE_TRIGGER")
-        self.assertEqual(self.decision(policy, 1, [{"event_type": "PRESENCE_CHANGED"}]).action, "vision")
-        policy.accepted_vision(1)
+        self.assertEqual(self.decision(policy, 0).reason, "RADAR_DISTANCE_UNKNOWN")
+        self.assertIsNone(self.decision(policy, 1, [{"event_type": "PRESENCE_CHANGED"}]).action)
         self.assertIsNone(self.decision(policy, 40).action)
 
     def test_cde_exact_visual_equivalence(self):
@@ -479,6 +478,26 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(len(self.captures), 1)
         self.assertEqual(self.controller.cycle["requests"], 1)
         self.assertEqual(self.controller.fsm, "WAIT")
+
+    def test_b_near_zone_command_is_linked_to_confirmed_evidence(self):
+        run = self.start("B")
+        wall = time.time()
+        for second in range(3):
+            at = datetime.fromtimestamp(wall + second, timezone.utc).isoformat()
+            packet = telemetry(at)
+            packet["presence"].update(static_distance_cm=20, motion_distance_cm=300, total_distance_cm=5)
+            self.controller.ingest(packet, self.now + second, wall + second)
+            self.controller.tick(self.now + second, resources())
+            if second < 2:
+                self.assertIsNone(self.tasks.active["vision"])
+        command = self.tasks.active["vision"].command
+        self.assertEqual(command.reason, "RADAR_NEAR_CONFIRMED")
+        events = self.log.events(run["run_id"])
+        event = next(row["payload"] for row in events if row["type"] == "RADAR_NEAR_CONFIRMED")
+        self.assertEqual(command.parameters["trigger_event_id"], event["event_id"])
+        self.assertEqual(len(event["evidence_ids"]), 3)
+        self.assertEqual(self.controller.context.observations["presence"].value, 1)
+        self.assertEqual(self.controller.view(self.now + 2)["reactive_trigger"]["state"], "NEAR")
 
     def test_trace_contains_config_snapshot_reason_and_transitions(self):
         run = self.start("C")

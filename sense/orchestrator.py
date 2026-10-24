@@ -104,6 +104,7 @@ class SenseOrchestrator:
             environment = EnvironmentAgent.observe(payload, received_at, self.config["regions"]["environment_region"])
             presence = PresenceAgent.observe(payload, received_at, self.config["regions"]["radar_region"])
             events = self.context.ingest(environment, presence, now, wall)
+            events.extend(self.policy.observe_presence(presence, wall))
         except (ValueError, TypeError, OverflowError, KeyError) as error:
             self.record("OBSERVATION_REJECTED", {"reason": str(error)})
             return
@@ -194,7 +195,8 @@ class SenseOrchestrator:
         self.record_decision("VISION", decision)
         if decision.action:
             command = self.command("VisionAgent", "vision", "Q2", decision.reason, self.config["vision"]["timeout_seconds"],
-                                   {"region": self.config["regions"]["camera_region"], "snapshot_id": snapshot.snapshot_id})
+                                   {"region": self.config["regions"]["camera_region"], "snapshot_id": snapshot.snapshot_id,
+                                    "trigger_event_id": self.policy.reactive_pending["event_id"] if self.run["mode"] == "B" else None})
             error = self.tasks.submit("vision", command,
                                       lambda: self.vision_agent.execute(command, self.config["vision"]["max_image_bytes"]),
                                       "vision:" + self.run["run_id"], now, self.config["vision"]["timeout_seconds"])
@@ -362,4 +364,5 @@ class SenseOrchestrator:
                 "needs": list(self.policy.needs.values()) if self.run else [], "tasks": self.tasks.view(now),
                 "interpretations": list(self.interpretations), "decisions": list(self.decisions),
                 "errors": list(self.errors), "resources": self.resources, "enabled_modes": self.config["enabled_modes"],
-                "config_version": self.config["config_version"], "questions": {key: value["question"] for key, value in self.answers.items()}}
+                "config_version": self.config["config_version"], "questions": {key: value["question"] for key, value in self.answers.items()},
+                "reactive_trigger": self.policy.reactive_view(context) if self.run and self.run["mode"] == "B" else None}

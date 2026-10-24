@@ -1,12 +1,17 @@
 #measurement { --measure-active:#a9d8ff; --measure-done:#b9ef88 }
+#measurement .measurement-intro { margin-bottom:20px }
+#measurement .measurement-intro h2 { font-size:22px; margin-bottom:4px }
 #measurement .measurement-toolbar { display:flex; align-items:end; gap:12px; flex-wrap:wrap; margin-bottom:20px }
 #measurement label { display:grid; gap:6px; color:var(--muted); font-size:13px }
-#measurement select { font:inherit; color:var(--ink); background:var(--panel); border:1px solid #606960; border-radius:6px; padding:10px 12px; min-width:200px }
-#measurement button:focus-visible,#measurement select:focus-visible,#measurement summary:focus-visible { outline:3px solid var(--measure-active); outline-offset:3px }
-#measurement .measurement-run { flex:1; min-width:160px; font-size:13px; color:var(--muted); overflow-wrap:anywhere }
-#measurement .pipeline-card { padding:22px 18px }
-#measurement .pipeline-heading { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:20px }
-#measurement .pipeline-heading h2 { margin:0 }
+#measurement select { font:inherit; color:var(--ink); background:var(--panel); border:1px solid #606960; border-radius:6px; padding:10px 12px; min-width:200px; max-width:100% }
+#measurement button:focus-visible,#measurement select:focus-visible,#measurement summary:focus-visible,#measurement a:focus-visible { outline:3px solid var(--measure-active); outline-offset:3px }
+#measurement .measurement-run { flex:1; min-width:160px; font-size:13px; color:var(--muted); overflow-wrap:anywhere; align-self:center }
+#measurement .measurement-section { margin-top:28px; border-top:1px solid var(--line); padding-top:24px }
+#measurement .measurement-section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px }
+#measurement .measurement-section-heading h2 { display:flex; align-items:center; gap:9px; margin:0; font-size:17px }
+#measurement .section-number { display:inline-grid; place-items:center; width:24px; height:24px; border:1px solid var(--line); border-radius:50%; color:var(--muted); font-size:12px }
+#measurement .measurement-update { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums }
+#measurement .pipeline-card { padding:22px 18px; margin-top:16px }
 #measurement .pipeline { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:20px; padding:0; margin:0; list-style:none }
 #measurement .pipeline-node { position:relative; padding:14px 8px; text-align:center; border:1px solid var(--line); border-radius:8px; background:var(--base); min-width:0 }
 #measurement .pipeline-node:not(:last-child)::after { content:'→'; position:absolute; right:-17px; top:25px; color:var(--muted) }
@@ -18,23 +23,35 @@
 #measurement .pipeline-node.done .node-icon { border-color:var(--measure-done); color:var(--measure-done) }
 #measurement .pipeline-node.skipped { opacity:.55; border-style:dashed }
 #measurement .pipeline-note { margin-top:16px; font-size:12px; color:var(--muted) }
-#measurement .degraded-node { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12px; color:var(--muted) }
-#measurement .degraded-node.active { color:#ffb9b0 }
+#measurement .degraded-node { margin-top:12px; font-size:13px; color:#ffb9b0 }
 #measurement .measurement-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:12px; margin-top:16px }
 #measurement .measurement-value { font-size:23px; margin:5px 0; font-variant-numeric:tabular-nums; overflow-wrap:anywhere }
-#measurement .evidence-age { font-size:12px; color:var(--muted) }
+#measurement .evidence-age { font-size:12px; color:var(--muted); white-space:pre-line }
 #measurement .evidence-status { font-size:11px; display:inline-block; padding:2px 5px; border-radius:3px; background:#292e29; margin-top:8px }
 #measurement .evidence-status[data-status="VALID"] { color:var(--measure-done) }
 #measurement .evidence-status[data-status="ERROR"],#measurement .evidence-status[data-status="CONFLICTING"] { color:#ffb9b0 }
 #measurement details { margin-top:16px; border:1px solid var(--line); border-radius:8px; padding:14px 16px; background:var(--panel) }
 #measurement summary { cursor:pointer; font-weight:600 }
 #measurement .measurement-detail { margin-top:14px }
-#measurement .question-result { padding:12px 0; border-bottom:1px solid var(--line) }
-#measurement .question-result:last-child { border:0 }
-#measurement .question-result h3 { font-size:14px; margin:0 0 7px }
-#measurement .question-result p { font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere }
-#measurement .interpretation { margin-top:12px; padding:12px; border-left:2px solid var(--measure-active); background:var(--base); font-size:13px }
+#measurement .measurement-readings,#measurement .measurement-query-details,#measurement .measurement-diagnostics { background:transparent }
+#measurement .controls { align-items:end }
+#measurement .measurement-answer-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:16px }
+#measurement .question-result { display:flex; flex-direction:column; gap:10px; padding:18px; border:1px solid var(--line); border-radius:8px; background:var(--panel); min-width:0 }
+#measurement .question-result[hidden] { display:none }
+#measurement .question-result h3 { font-size:14px; line-height:1.5; margin:0 }
+#measurement .question-result p { white-space:pre-wrap; overflow-wrap:anywhere }
+#measurement .answer-value { font-size:15px; line-height:1.65 }
+#measurement .answer-meta { font-size:12px; color:var(--muted) }
+#measurement .answer-limitations { font-size:12px; color:var(--muted); line-height:1.55 }
+#measurement .answer-limitations:empty { display:none }
+#measurement .question-result[data-status="RESOLVED"] .answer-meta,#measurement .question-result[data-status="INTERPRETED"] .answer-meta { color:var(--measure-done) }
+#measurement .question-result details { margin-top:auto; padding:10px 0 0; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent }
+#measurement .question-result summary,#measurement .interpretation summary { font-size:12px; font-weight:400; color:var(--muted) }
+#measurement .measurement-empty { padding:18px; margin-top:14px; border:1px dashed var(--line); border-radius:8px; color:var(--muted); font-size:14px }
+#measurement .interpretation { margin-top:14px; padding:18px; border:1px solid var(--line); border-left:3px solid var(--measure-active); border-radius:6px; background:var(--panel); font-size:14px }
+#measurement .interpretation p { margin-top:8px; white-space:pre-wrap; overflow-wrap:anywhere }
 #measurement .interpretation pre { max-height:220px }
+#measurement .interpretation details { background:transparent; padding:10px 0 0; border:0; border-top:1px solid var(--line); border-radius:0 }
 #measurement .measurement-table { width:100%; border-collapse:collapse; font-size:12px }
 #measurement .measurement-table th,#measurement .measurement-table td { padding:8px; border-bottom:1px solid var(--line); text-align:left; overflow-wrap:anywhere }
 #measurement .table-scroll { overflow:auto }
@@ -42,5 +59,8 @@
 #measurement .measurement-error { color:#ffb9b0; margin:12px 0; white-space:pre-wrap }
 #measurement .measurement-error:empty { display:none }
 #measurement .measurement-worker { margin-top:14px; color:var(--muted); font-size:13px; white-space:pre-wrap }
-@media(max-width:760px) { #measurement .pipeline { grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px } #measurement .pipeline-node::after { display:none } #measurement .node-label { font-size:12px } }
-@media(prefers-reduced-motion:reduce) { #measurement .pipeline-node.active .node-icon { animation:none; font-size:13px } }
+#measurement .measurement-worker:empty { display:none }
+#measurement .measurement-history { margin-top:28px }
+#measurement .measurement-diagnostics h3 { font-size:14px; margin:20px 0 10px }
+@media(max-width:760px) { #measurement .pipeline { grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px } #measurement .pipeline-node::after { display:none } #measurement .node-label { font-size:12px } #measurement .measurement-answer-grid { grid-template-columns:1fr } #measurement .measurement-section-heading { align-items:flex-start; flex-direction:column } }
+@media(prefers-reduced-motion:reduce) { #measurement .pipeline-node.active .node-icon { animation:none; font-size:13px } #measurement .loading::before { animation:none } }

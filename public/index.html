@@ -17,14 +17,31 @@
     <section><h2>Telemetría recibida</h2><pre id="raw">Esperando MQTT…</pre></section>
   </div>
   <div class="panel" id="measurement" hidden>
-    <div class="measurement-toolbar"><label for="measurement-mode">Modo experimental<select id="measurement-mode"></select></label><button id="measurement-toggle" disabled>Comenzar</button><p id="measurement-run" class="measurement-run">Sin ejecución · parámetros de piloto</p></div>
+    <div class="measurement-intro"><h2>Medición experimental</h2><p class="sub">El sistema observa, evalúa y registra automáticamente durante la ejecución.</p></div>
+    <div class="measurement-toolbar"><label for="measurement-mode">Modo<select id="measurement-mode"></select></label><button id="measurement-toggle" disabled>Comenzar</button><p id="measurement-run" class="measurement-run">Sin ejecución · parámetros de piloto</p></div>
     <p id="measurement-error" class="measurement-error" role="alert"></p>
-    <article class="card pipeline-card" aria-label="Máquina de estados SENSE"><div class="pipeline-heading"><h2>Pipeline SENSE</h2><p id="measurement-state" class="sub" role="status">Esperando conexión…</p></div><ol class="pipeline" id="measurement-pipeline"></ol><p class="pipeline-note">VISION regresa a ASSESS. INTERPRET registra la tarea asíncrona: el monitoreo continúa mientras Gemma trabaja.</p><p id="measurement-degraded" class="degraded-node">DEGRADED · ruta de recuperación ante fallos</p><p id="measurement-worker" class="measurement-worker"></p></article>
-    <div class="measurement-summary" id="measurement-observations" aria-label="Últimas observaciones y vigencia"></div>
-    <details><summary>Respuestas e interpretaciones</summary><div class="measurement-detail"><div class="controls"><label for="measurement-question">Consulta explícita<select id="measurement-question"><option value="Q1">Q1 · Presencia</option><option value="Q2">Q2 · Conteo visible</option><option value="Q3">Q3 · Ambiente</option><option value="Q4">Q4 · Cambios ambientales</option><option value="Q5">Q5 · Suficiencia</option><option value="Q6">Q6 · Relación contextual</option><option value="Q7">Q7 · Información de imagen (E)</option></select></label><button id="measurement-query" disabled>Consultar</button></div><div id="measurement-answers"></div><div id="measurement-interpretations"></div></div></details>
-    <details><summary>Transiciones y decisiones</summary><div class="measurement-detail table-scroll"><table class="measurement-table"><thead><tr><th>Hora</th><th>Transición</th><th>Motivo</th></tr></thead><tbody id="measurement-transitions"></tbody></table></div><pre id="measurement-decisions"></pre></details>
-    <details><summary>Recursos, colas y errores</summary><pre id="measurement-resources"></pre></details>
-    <details id="measurement-history-details"><summary>Historial experimental</summary><p id="measurement-history-note" class="sub measurement-detail">Abre para consultar.</p><div class="table-scroll"><table class="measurement-table"><thead><tr><th>Inicio</th><th>Modo</th><th>Estado</th><th>Registro</th></tr></thead><tbody id="measurement-history"></tbody></table></div></details>
+    <p id="measurement-task-error" class="measurement-error" role="status"></p>
+    <section class="measurement-section" aria-labelledby="measurement-live-title">
+      <div class="measurement-section-heading"><h2 id="measurement-live-title"><span class="section-number">1</span> Ejecución en vivo</h2><p id="measurement-state" class="sub" role="status">Esperando conexión…</p></div>
+      <article class="card pipeline-card" aria-label="Máquina de estados SENSE"><ol class="pipeline" id="measurement-pipeline"></ol><p class="pipeline-note">YOLO vuelve a la evaluación. Gemma puede seguir trabajando mientras el monitoreo continúa.</p><p id="measurement-degraded" class="degraded-node" hidden></p><p id="measurement-trigger" class="measurement-worker" role="status"></p></article>
+      <details class="measurement-readings"><summary>Ver lecturas de radar, YOLO y ambiente</summary><div class="measurement-summary" id="measurement-observations" aria-label="Últimas observaciones y vigencia"></div></details>
+    </section>
+    <section class="measurement-section" aria-labelledby="measurement-answers-title">
+      <div class="measurement-section-heading"><h2 id="measurement-answers-title"><span class="section-number">2</span> Respuestas actuales</h2><p id="measurement-updated" class="measurement-update">Sin evaluación todavía</p></div>
+      <p id="measurement-answer-note" class="sub">Se actualizan solas con la evidencia disponible. No necesitas pulsar ningún botón.</p>
+      <p id="measurement-answers-empty" class="measurement-empty">Comienza una ejecución para ver qué puede responder SENSE.</p>
+      <div id="measurement-answers" class="measurement-answer-grid"></div>
+      <details class="measurement-query-details"><summary>Reevaluar una pregunta manualmente</summary><p class="sub measurement-detail">Solicita otra evaluación con las mismas reglas; no fuerza una captura ni una llamada a Gemma.</p><div class="controls measurement-detail"><label for="measurement-question">Pregunta<select id="measurement-question"><option value="Q1">Q1 · Presencia</option><option value="Q2">Q2 · Conteo visible</option><option value="Q3">Q3 · Ambiente</option><option value="Q4">Q4 · Cambios ambientales</option><option value="Q5">Q5 · Suficiencia</option><option value="Q6">Q6 · Relación contextual</option><option value="Q7">Q7 · Información de imagen (E)</option></select></label><button id="measurement-query" disabled>Reevaluar</button></div></details>
+    </section>
+    <section class="measurement-section" aria-labelledby="measurement-interpretations-title">
+      <div class="measurement-section-heading"><h2 id="measurement-interpretations-title"><span class="section-number">3</span> Interpretaciones de Gemma</h2><p id="measurement-interpretation-count" class="sub"></p></div>
+      <p class="sub">Cada resultado pertenece a la evidencia que lo originó. Su fecha de finalización no lo convierte en una medición actual.</p>
+      <p id="measurement-worker" class="measurement-worker" role="status"></p>
+      <p id="measurement-interpretations-empty" class="measurement-empty">Las interpretaciones adicionales están disponibles en D y E cuando hacen falta.</p>
+      <div id="measurement-interpretations"></div>
+    </section>
+    <details id="measurement-history-details" class="measurement-history"><summary>4 · Historial y registros guardados</summary><p class="sub measurement-detail">Cada ciclo completado guarda sus respuestas. Las transiciones y las salidas de Gemma se registran por separado, incluidas las rechazadas o tardías.</p><p class="measurement-detail"><a id="measurement-current-export" hidden>Descargar registro de esta ejecución</a></p><p id="measurement-history-note" class="sub measurement-detail">Abre para consultar ejecuciones anteriores.</p><div class="table-scroll"><table class="measurement-table"><thead><tr><th>Inicio</th><th>Modo</th><th>Estado</th><th>Registro</th></tr></thead><tbody id="measurement-history"></tbody></table></div></details>
+    <details class="measurement-diagnostics"><summary>Diagnóstico técnico</summary><h3>Identificación de la ejecución</h3><pre id="measurement-run-metadata"></pre><h3>Últimas transiciones</h3><div class="table-scroll"><table class="measurement-table"><thead><tr><th>Hora</th><th>Transición</th><th>Motivo</th></tr></thead><tbody id="measurement-transitions"></tbody></table></div><h3>Decisiones, necesidades y errores</h3><pre id="measurement-decisions"></pre><h3>Recursos y colas</h3><pre id="measurement-resources"></pre></details>
   </div>
 </main>
 <script src="/public/measurement.js"></script>

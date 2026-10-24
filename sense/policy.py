@@ -5,7 +5,7 @@ import json
 from collections import deque
 from dataclasses import dataclass
 
-from .contracts import Snapshot, identifier
+from .contracts import Observation, Snapshot, identifier
 
 QUESTIONS = {
     "Q1": "¿Hay presencia humana en la región monitoreada?",
@@ -97,12 +97,68 @@ class PolicyEngine:
     def __init__(self, config: dict, mode: str, started: float):
         self.config, self.mode = config, mode
         self.next_period = started
-        self.reactive_pending = False
+        self.reactive_pending = None
+        self.reactive_confirmed = None
+        self.reactive_candidate = None
+        self.reactive_evidence = deque(maxlen=config["modes"]["reactive_debounce_samples"])
+        self.reactive_last_timestamp = None
         self.last_visual = float("-inf")
         self.visual_requests = deque()
         self.slm_requests = {"text": deque(), "multimodal": deque()}
         self.last_slm = {"text": float("-inf"), "multimodal": float("-inf")}
         self.needs = {}
+
+    def observe_presence(self, observation: Observation, wall: float) -> list[dict]:
+        if self.mode != "B":
+            return []
+        from .context import timestamp
+
+        captured = timestamp(observation.captured_at)
+        if self.reactive_last_timestamp is not None:
+            if captured <= self.reactive_last_timestamp:
+                return []
+            if captured - self.reactive_last_timestamp >= self.config["sensors"]["presence_ttl_seconds"]:
+                self.reactive_evidence.clear()
+        self.reactive_last_timestamp = captured
+        metadata = dict(observation.metadata)
+        distance = metadata.get("trigger_distance_cm")
+        if observation.status != "VALID" or wall - captured >= self.config["sensors"]["presence_ttl_seconds"] or observation.value and distance is None:
+            self.reactive_candidate = None
+            self.reactive_evidence.clear()
+            return []
+        modes = self.config["modes"]
+        threshold = modes["reactive_exit_at_or_above_cm"] if self.reactive_confirmed else modes["reactive_enter_below_cm"]
+        near = bool(observation.value and distance < threshold)
+        if near != self.reactive_candidate:
+            self.reactive_evidence.clear()
+        self.reactive_candidate = near
+        self.reactive_evidence.append(observation.observation_id)
+        if len(self.reactive_evidence) < modes["reactive_debounce_samples"] or near == self.reactive_confirmed:
+            return []
+        previous = self.reactive_confirmed
+        self.reactive_confirmed = near
+        if previous is None and not near:
+            return []
+        event = {"event_id": identifier(), "event_type": "RADAR_NEAR_CONFIRMED" if previous is None else "RADAR_ZONE_ENTERED" if near else "RADAR_ZONE_EXITED",
+                 "previous": previous, "near": near, "distance_cm": distance, "distance_source": metadata.get("trigger_distance_source"),
+                 "enter_below_cm": modes["reactive_enter_below_cm"], "exit_at_or_above_cm": modes["reactive_exit_at_or_above_cm"],
+                 "confirmation_samples": len(self.reactive_evidence), "region": observation.region,
+                 "evidence_ids": list(self.reactive_evidence), "captured_at": observation.captured_at}
+        self.reactive_pending = event
+        return [event]
+
+    def reactive_view(self, snapshot: dict) -> dict:
+        observation = snapshot["observations"].get("presence", {})
+        metadata = observation.get("metadata", {})
+        known = observation.get("status") in ("VALID", "CONFLICTING") and (observation.get("value") == 0 or metadata.get("trigger_distance_cm") is not None)
+        return {"state": "UNKNOWN" if not known else "CONFIRMING" if len(self.reactive_evidence) < self.config["modes"]["reactive_debounce_samples"] else "NEAR" if self.reactive_confirmed else "FAR",
+                "candidate": "NEAR" if self.reactive_candidate else "FAR" if self.reactive_candidate is not None else None,
+                "distance_cm": metadata.get("trigger_distance_cm"), "distance_source": metadata.get("trigger_distance_source"),
+                "confirmed_samples": len(self.reactive_evidence) if known else 0,
+                "required_samples": self.config["modes"]["reactive_debounce_samples"],
+                "enter_below_cm": self.config["modes"]["reactive_enter_below_cm"],
+                "exit_at_or_above_cm": self.config["modes"]["reactive_exit_at_or_above_cm"],
+                "pending_event": self.reactive_pending}
 
     def information_needs(self, answers: dict, snapshot: dict) -> list[dict]:
         from datetime import datetime, timedelta
@@ -125,17 +181,21 @@ class PolicyEngine:
         return list(self.needs.values())
 
     def vision(self, snapshot: dict, now: float, events: list[dict], available: bool, busy: bool, resource_reason: str | None) -> Decision:
-        if any(event["event_type"] == "PRESENCE_CHANGED" for event in events):
-            self.reactive_pending = True
         count = snapshot["observations"].get("count", {})
         if self.mode == "A":
             if now < self.next_period:
                 return Decision(None, "Q2", "PERIOD_NOT_DUE")
             reason = "PERIODIC_SCHEDULE"
         elif self.mode == "B":
+            trigger = self.reactive_view(snapshot)
+            if trigger["state"] == "UNKNOWN":
+                self.reactive_evidence.clear()
+                return Decision(None, "Q2", "RADAR_DISTANCE_UNKNOWN")
+            if trigger["state"] == "CONFIRMING":
+                return Decision(None, "Q2", "RADAR_ZONE_CONFIRMING")
             if not self.reactive_pending:
                 return Decision(None, "Q2", "NO_REACTIVE_TRIGGER")
-            reason = "PRESENCE_CHANGED"
+            reason = self.reactive_pending["event_type"]
         else:
             if count.get("status") == "VALID":
                 return Decision(None, "Q2", "ALREADY_FRESH")
@@ -162,7 +222,7 @@ class PolicyEngine:
     def accepted_vision(self, now: float) -> None:
         self.last_visual = now
         self.visual_requests.append(now)
-        self.reactive_pending = False
+        self.reactive_pending = None
 
     def interpretation(self, kind: str, answer: dict, now: float, semantic: str, attempted: set,
                        available: bool, resource_reason: str | None) -> Decision:

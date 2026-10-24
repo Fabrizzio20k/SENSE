@@ -32,7 +32,7 @@ def validate_config(config: dict) -> None:
         "interpretation": ("queue_capacity", "relationship_alignment_seconds"),
         "runtime": ("tick_seconds", "evaluation_interval_seconds", "publish_interval_seconds", "cycle_timeout_seconds", "max_cycle_requests", "max_run_seconds", "inbox_capacity", "min_available_mb", "max_rss_mb", "max_cpu_percent", "resource_interval_seconds", "max_database_mb", "min_disk_free_mb"),
         "sensors": ("environment_ttl_seconds", "presence_ttl_seconds", "max_future_skew_seconds"),
-        "modes": ("periodic_interval_seconds", "reactive_debounce_samples", "reactive_min_interval_seconds"),
+        "modes": ("periodic_interval_seconds", "reactive_debounce_samples", "reactive_min_interval_seconds", "reactive_enter_below_cm", "reactive_exit_at_or_above_cm"),
         "regions": ("comparison_max_skew_seconds",),
     }
     for section, names in positive.items():
@@ -40,6 +40,8 @@ def validate_config(config: dict) -> None:
             value = config.get(section, {}).get(name)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
                 raise ValueError(f"Falta un límite positivo: {section}.{name}")
+    if config["modes"]["reactive_exit_at_or_above_cm"] <= config["modes"]["reactive_enter_below_cm"]:
+        raise ValueError("El umbral de salida reactiva debe superar al de entrada.")
     for section, name in (("environment", "confirmation_samples"), ("environment", "history_capacity"),
                           ("vision", "max_requests_per_window"), ("vision", "max_image_bytes"),
                           ("interpretation", "queue_capacity"), ("runtime", "inbox_capacity"),

@@ -65,3 +65,86 @@ test('contenido del modelo es texto y el detalle abierto sobrevive a actualizaci
   assert.equal(detail.open,true);
   assert.equal(card.children[1].textContent,answer.answer);
 });
+
+test('B distingue zona próxima de presencia original y explica conteo vencido',()=>{
+  const {ui,get,calls}=fixture();
+  const data={running:true,run:{mode:'B',run_id:'run',status:'RUNNING'},fsm:'WAIT',
+    reactive_trigger:{state:'FAR',enter_below_cm:30,exit_at_or_above_cm:50,required_samples:3,confirmed_samples:3},
+    context:{observations:{presence:{value:1,status:'VALID',age_seconds:1,region:'radar',metadata:{trigger_distance_cm:309,trigger_distance_source:'static_distance_cm'}},count:{value:2,status:'STALE',age_seconds:80,region:'camera'}}},
+    decisions:[{kind:'VISION',reason:'NO_REACTIVE_TRIGGER'}]};
+  ui.render(data,phases,false);
+  const radar=get('measurement-observations').children[0];
+  assert.equal(radar.children[0].textContent,'Radar · zona B');
+  assert.equal(radar.children[1].textContent,'Fuera de zona');
+  assert.match(radar.children[2].textContent,/309 cm · blanco estático/);
+  assert.match(radar.children[2].textContent,/presencia detectada/);
+  assert.match(get('measurement-trigger').textContent,/entrada < 30 cm/);
+  assert.match(get('measurement-trigger').textContent,/conteo está vencido/);
+  assert.equal(calls.length,0);
+  ui.render({...data,reactive_trigger:{...data.reactive_trigger,state:'UNKNOWN'},decisions:[{kind:'VISION',reason:'RADAR_DISTANCE_UNKNOWN'}]},phases,false);
+  assert.equal(radar.children[1].textContent,'Zona desconocida');
+  assert.match(get('measurement-trigger').textContent,/Sin distancia válida/);
+});
+
+test('respuestas automáticas legibles, unidades y datos desconocidos sin JSON',()=>{
+  const {ui,get,calls}=fixture();
+  ui.render({running:true,run:{mode:'B',run_id:'run',status:'RUNNING'},fsm:'WAIT',answers:{
+    Q3:{question_id:'Q3',question:'Ambiente',status:'PARTIAL',evaluated_at:'2026-10-24T20:00:00Z',answer:{temperature:{value:26.3,unit:'°C',status:'VALID'},eco2:{value:null,unit:'ppm equivalent',status:'UNAVAILABLE'}},limitations:[],pending_information:['eco2']}
+  }},phases,false);
+  const card=get('measurement-answers').children[0];
+  assert.match(card.children[1].textContent,/temperatura: 26.3 °C · Vigente/);
+  assert.match(card.children[1].textContent,/eCO₂ estimado: sin lectura · Sin datos/);
+  assert.match(card.children[2].textContent,/Con limitaciones · Sensores ambientales/);
+  assert.match(card.children[3].textContent,/Falta: eCO₂ estimado/);
+  assert.match(get('measurement-updated').textContent,/Última evaluación:/);
+  assert.match(get('measurement-answer-note').textContent,/Actualización automática/);
+  assert.equal(calls.length,0);
+});
+
+test('nueva evidencia cambia la respuesta sin consultar ni crear peticiones',()=>{
+  const {ui,get,calls}=fixture();
+  const data={running:true,run:{mode:'C',run_id:'run',status:'RUNNING'},fsm:'WAIT',answers:{Q2:{question_id:'Q2',question:'Conteo',status:'RESOLVED',answer:1,evaluated_at:'2026-10-24T20:00:00Z'}}};
+  ui.render(data,phases,false);
+  const card=get('measurement-answers').children[0];
+  assert.equal(card.children[1].textContent,'1 persona visible');
+  ui.render({...data,answers:{Q2:{...data.answers.Q2,answer:3,evaluated_at:'2026-10-24T20:01:00Z'}}},phases,false);
+  assert.equal(card.children[1].textContent,'3 personas visibles');
+  assert.equal(calls.length,0);
+});
+
+test('interpretaciones históricas se conservan al actualizar respuestas y estados son claros',()=>{
+  const {ui,get}=fixture();
+  const result={interpretation_id:'interpretation',question_id:'Q7',snapshot_id:'original',image_id:'image',completed_at:'2026-10-24T20:00:00Z',validation_status:'VALIDATED',inferences:['Personas aparentemente sentadas.'],unknowns:[],recommendations:[]};
+  const data={running:true,run:{mode:'E',run_id:'run',status:'RUNNING'},fsm:'WAIT',interpretations:[result],answers:{}};
+  ui.render(data,phases,false);
+  const card=get('measurement-interpretations').children[0];
+  assert.match(card.children[0].textContent,/Con imagen · Formato validado/);
+  assert.match(card.children[1].textContent,/evidencia histórica/);
+  ui.render({...data,answers:{Q1:{question_id:'Q1',answer:'Presencia nueva',status:'RESOLVED'}}},phases,false);
+  assert.equal(get('measurement-interpretations').children[0],card);
+  assert.equal(get('measurement-interpretations-empty').hidden,true);
+  ui.render({...data,run:{...data.run,mode:'B'},interpretations:[]},phases,false);
+  assert.equal(get('measurement-interpretations').children.length,0);
+  assert.match(get('measurement-interpretations-empty').textContent,/modo B responde mediante reglas/);
+});
+
+test('reevaluar es opcional y conserva la autoridad de los endpoints experimentales',async()=>{
+  const {ui,get,calls}=fixture();
+  ui.render({running:true,run:{mode:'D',run_id:'run',status:'RUNNING'},fsm:'WAIT'},phases,false);
+  get('measurement-question').value='Q6';
+  await get('measurement-query').onclick();
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].url,'/api/experiments/query');
+  assert.equal(JSON.parse(calls[0].options.body).question_id,'Q6');
+});
+
+test('todos los destinos de la interfaz existen una sola vez en el HTML',()=>{
+  const html=fs.readFileSync('public/index.html','utf8'),script=fs.readFileSync('public/measurement.js','utf8');
+  const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
+  assert.equal(new Set(ids).size,ids.length);
+  for(const match of script.matchAll(/byId\('([^']+)'\)/g))assert.ok(ids.includes(match[1]),'Falta '+match[1]);
+  assert.match(html,/id="measurement-answers-title"/);
+  assert.match(html,/id="measurement-interpretations-title"/);
+  assert.match(html,/Cada ciclo completado guarda sus respuestas/);
+  assert.match(html,/measurement\.render\(d\.measurement/);
+});

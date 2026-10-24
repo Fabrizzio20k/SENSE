@@ -41,6 +41,15 @@ class PresenceAgent:
         source = payload.get("presence")
         code = source.get("state_code") if isinstance(source, dict) else None
         valid = type(code) is int and code in (0, 1, 2, 3)
+        metadata = {"state_code": code}
+        for field in ("motion_distance_cm", "static_distance_cm", "total_distance_cm", "motion_energy", "static_energy"):
+            value = source.get(field) if isinstance(source, dict) else None
+            metadata[field] = value if type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 65535 else None
+        fields = ("motion_distance_cm",) if code == 1 else ("static_distance_cm",) if code == 2 else ("motion_distance_cm", "static_distance_cm") if code == 3 else ()
+        usable = fields and all(metadata[field] is not None and metadata[field] > 0 for field in fields)
+        selected = min(fields, key=lambda field: metadata[field]) if usable else None
+        metadata["trigger_distance_cm"] = metadata[selected] if selected else None
+        metadata["trigger_distance_source"] = selected
         return Observation(identifier(), "PresenceAgent", payload["timestamp"], received_at, region,
                            int(code != 0) if valid else None, "presence", "coverage_limited",
-                           "VALID" if valid else ("UNAVAILABLE" if code is None else "ERROR"), (("state_code", code),))
+                           "VALID" if valid else ("UNAVAILABLE" if code is None else "ERROR"), tuple(metadata.items()))
