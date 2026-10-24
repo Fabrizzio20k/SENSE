@@ -39,6 +39,7 @@ state = {
         "vision": {"status": "waiting", "detail": "Pendiente"},
     },
     "tasks": {},
+    "sandbox_busy": False,
 }
 yolo = None
 last_capture: bytes | None = None
@@ -182,6 +183,25 @@ def timed_task(name: str, action) -> None:
         set_task(name, "error", error_detail(error), time.monotonic() - started)
 
 
+def enqueue_sandbox_task(name: str, action) -> str | None:
+    with lock:
+        if not all(phase["status"] == "ready" for phase in state["phases"].values()):
+            return "El sandbox estará disponible cuando terminen las tres preparaciones."
+        if state["sandbox_busy"]:
+            return "Ya hay una operación en proceso."
+        state["sandbox_busy"] = True
+
+    def run() -> None:
+        try:
+            timed_task(name, action)
+        finally:
+            with lock:
+                state["sandbox_busy"] = False
+
+    worker.submit(run)
+    return None
+
+
 def mqtt_message(_client, _userdata, message) -> None:
     try:
         telemetry = json.loads(message.payload)
@@ -208,12 +228,16 @@ def snapshot() -> dict:
         payload = dict(state)
         payload["phases"] = dict(state["phases"])
         payload["tasks"] = dict(state["tasks"])
+        payload["sandbox"] = {
+            "ready": all(phase["status"] == "ready" for phase in state["phases"].values()),
+            "busy": state["sandbox_busy"],
+        }
+        payload["has_capture"] = last_capture is not None
     payload["system"] = {
         "cpu_percent": psutil.cpu_percent(interval=None),
         "memory_percent": psutil.virtual_memory().percent,
         "memory_used_mb": round(psutil.virtual_memory().used / 1024 / 1024),
     }
-    payload["has_capture"] = last_capture is not None
     return payload
 
 
@@ -238,13 +262,17 @@ def camera():
             return send_file(io.BytesIO(current_capture()), mimetype="image/jpeg", max_age=0)
         except RuntimeError:
             return jsonify(error="No hay foto disponible."), 404
-    worker.submit(timed_task, "capture", lambda: (capture(), "Foto lista.")[1])
+    error = enqueue_sandbox_task("capture", lambda: (capture(), "Foto lista.")[1])
+    if error:
+        return jsonify(error=error), 409
     return jsonify(ok=True), 202
 
 
 @app.post("/api/yolo")
 def test_yolo():
-    worker.submit(timed_task, "yolo", lambda: f"{count_people(current_capture())} persona(s) detectada(s).")
+    error = enqueue_sandbox_task("yolo", lambda: f"{count_people(current_capture())} persona(s) detectada(s).")
+    if error:
+        return jsonify(error=error), 409
     return jsonify(ok=True), 202
 
 
@@ -254,7 +282,9 @@ def chat():
     question = str(prompt.get("question", ""))[:1000].strip()
     if not question:
         return jsonify(error="Escribe una pregunta."), 400
-    worker.submit(timed_task, "chat", lambda: completion(question, optional_capture()))
+    error = enqueue_sandbox_task("chat", lambda: completion(question, optional_capture()))
+    if error:
+        return jsonify(error=error), 409
     return jsonify(ok=True), 202
 
 
