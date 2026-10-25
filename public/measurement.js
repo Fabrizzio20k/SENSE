@@ -157,7 +157,7 @@
         card.status.textContent=statusLabels[status]||status;card.status.dataset.status=status;
         if(key==='presence'){
           const metadata=observation?.metadata||{},trigger=current.reactive_trigger;
-          const source={motion_distance_cm:'blanco en movimiento',static_distance_cm:'blanco estático'}[metadata.trigger_distance_source];
+          const source={total_distance_cm:'distancia total',motion_distance_cm:'blanco en movimiento',static_distance_cm:'blanco estático'}[metadata.trigger_distance_source];
           card.title.textContent=run?.mode==='B'?'Radar · zona B':'Radar';
           if(metadata.trigger_distance_cm!=null)card.age.textContent+='\n'+metadata.trigger_distance_cm+' cm · '+(source||'blanco activo');
           if(run?.mode==='B'){

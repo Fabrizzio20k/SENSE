@@ -122,13 +122,13 @@ class PolicyEngine:
         self.reactive_last_timestamp = captured
         metadata = dict(observation.metadata)
         distance = metadata.get("trigger_distance_cm")
-        if observation.status != "VALID" or wall - captured >= self.config["sensors"]["presence_ttl_seconds"] or observation.value and distance is None:
+        if observation.status != "VALID" or wall - captured >= self.config["sensors"]["presence_ttl_seconds"] or distance is None:
             self.reactive_candidate = None
             self.reactive_evidence.clear()
             return []
         modes = self.config["modes"]
         threshold = modes["reactive_exit_at_or_above_cm"] if self.reactive_confirmed else modes["reactive_enter_below_cm"]
-        near = bool(observation.value and distance < threshold)
+        near = distance < threshold
         if near != self.reactive_candidate:
             self.reactive_evidence.clear()
         self.reactive_candidate = near
