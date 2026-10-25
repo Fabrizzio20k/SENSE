@@ -43,13 +43,13 @@ interpretation:
     cooldown_seconds: 30
     max_requests_per_window: 3
     request_window_seconds: 300
-    max_tokens: 512
+    max_tokens: 256
   multimodal:
     timeout_seconds: 180
     cooldown_seconds: 60
     max_requests_per_window: 3
     request_window_seconds: 300
-    max_tokens: 512
+    max_tokens: 256
 runtime:
   tick_seconds: 0.25
   evaluation_interval_seconds: 1

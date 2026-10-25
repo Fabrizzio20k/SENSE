@@ -338,25 +338,48 @@ class InterpretationTests(unittest.TestCase):
                 "inferences": ["Coincidencia temporal, sin causalidad demostrada."], "unknowns": [], "recommendations": [],
                 "evidence_references": [self.evidence["observation_id"]]}
 
+    def text_response(self):
+        return {"inferences": ["Coincidencia contextual, sin causalidad demostrada."], "unknowns": [], "recommendations": []}
+
     def test_validates_facts_and_does_not_send_images_in_d(self):
         calls = []
         def complete(prompt, image, **options):
             calls.append(image)
-            return {"content": json.dumps(self.response()), "usage": {"completion_tokens": 20}}
+            return {"content": json.dumps(self.text_response()), "usage": {"completion_tokens": 20}}
         agent = InterpretationAgent(complete, "gemma")
         command = Command(identifier(), "cycle", "run", "InterpretationAgent", "text", utc_now(), utc_now(), {"question_id": "Q6"}, "TEST")
         result = agent.execute(command, self.snapshot, None, config()["interpretation"]["textual"], agent.prompt("Q6", self.snapshot, None))
         self.assertEqual(calls, [None])
         self.assertEqual(result["validation_status"], "VALIDATED")
         self.assertEqual(result["snapshot_id"], self.snapshot.snapshot_id)
+        self.assertIn(self.evidence["observation_id"], result["evidence_references"])
+        self.assertIn({"evidence_id": self.evidence["observation_id"], "value": self.evidence["value"]}, result["observed_facts"])
+        self.assertNotIn(self.evidence["observation_id"], agent.prompt("Q6", self.snapshot, None))
 
-    def test_rejects_invented_measurement(self):
+    def test_text_uses_snapshot_facts_not_model_measurements(self):
         response = self.response()
         response["observed_facts"][0]["value"] = 99
         agent = InterpretationAgent(lambda *a, **kw: {"content": json.dumps(response)}, "gemma")
         command = Command(identifier(), "c", "r", "InterpretationAgent", "text", utc_now(), utc_now(), {"question_id": "Q6"}, "TEST")
         result = agent.execute(command, self.snapshot, None, config()["interpretation"]["textual"], "prompt")
-        self.assertEqual(result["validation_status"], "REJECTED")
+        self.assertEqual(result["validation_status"], "VALIDATED")
+        self.assertNotIn(99, [fact["value"] for fact in result["observed_facts"]])
+
+    def test_multimodal_uses_authorized_image_without_sending_snapshot_ids(self):
+        calls = []
+        def complete(prompt, image, **options):
+            calls.append((prompt, image))
+            return {"content": json.dumps(self.text_response())}
+        agent = InterpretationAgent(complete, "gemma")
+        image_id = "image-1"
+        command = Command(identifier(), "cycle", "run", "InterpretationAgent", "multimodal", utc_now(), utc_now(),
+                          {"question_id": "Q7", "image_id": image_id}, "TEST")
+        prompt = agent.prompt("Q7", self.snapshot, image_id)
+        result = agent.execute(command, self.snapshot, b"image", config()["interpretation"]["multimodal"], prompt)
+        self.assertEqual(calls, [(prompt, b"image")])
+        self.assertIn(image_id, result["evidence_references"])
+        self.assertNotIn(image_id, prompt)
+        self.assertNotIn(self.evidence["observation_id"], prompt)
 
 
 class OrchestratorTests(unittest.TestCase):

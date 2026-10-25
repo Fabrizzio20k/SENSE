@@ -54,7 +54,7 @@ cat > "$CONFIG_FILE" <<EOF
       "backend": "cpu",
       "vision_backend": "cpu",
       "cpu_thread_count": $THREADS,
-      "max_num_tokens": 4096,
+      "max_num_tokens": 256,
       "thinking": false
     }
   }

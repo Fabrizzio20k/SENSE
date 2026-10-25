@@ -32,19 +32,19 @@ class InterpretationAgent:
 
     def prompt(self, question: str, snapshot: Snapshot, image_id: str | None) -> str:
         document = snapshot.document()
-        # No se envían historiales completos ni imágenes al intérprete textual.
-        evidence = {"snapshot_id": snapshot.snapshot_id, "observations": document["observations"],
-                    "environment_events": document["environment_events"][-4:], "image_id": image_id}
+        evidence = {
+            key: value["value"] if value["status"] == "VALID" else None
+            for key, value in document["observations"].items()
+        }
+        events = [event["event_type"] for event in document["environment_events"][-4:]]
+        question_text = QUESTIONS[question]
+        image_note = " La imagen adjunta es evidencia; describe solo lo visible sin identificar personas." if question == "Q7" else ""
         return (
-            "Eres el intérprete contextual SENSE. Devuelve únicamente JSON, sin Markdown. "
-            "No identifiques personas ni uses reconocimiento facial. No atribuyas causalidad a coincidencias. "
-            "No reemplaces conteos YOLO ni inventes mediciones. Las descripciones de la imagen son inferencias. "
-            "Recomendaciones solo no críticas. Usa este esquema exacto: "
-            '{"observed_facts":[{"evidence_id":"id de observación","value":0}],'
-            '"inferences":["texto"],"unknowns":["texto"],"recommendations":["texto"],'
-            '"evidence_references":["id de observación o image_id"]}. '
-            "Los observed_facts deben copiar exactamente valores de observaciones VALID del snapshot. "
-            "Usa listas vacías si no hay evidencia. Pregunta: " + QUESTIONS[question] + "\n" + json.dumps(evidence)
+            'JSON sin Markdown: {"inferences":["una oración"],"unknowns":["una oración"],'
+            '"recommendations":["una recomendación"]}. Máximo un texto corto por lista. '
+            "Describe solo coincidencia contextual, nunca causalidad ni personas identificables. Q: "
+            + question_text + image_note + " Datos: "
+            + json.dumps({"observations": evidence, "events": events}, separators=(",", ":"))
         )
 
     def execute(self, command: Command, snapshot: Snapshot, image: bytes | None, config: dict, prompt: str) -> dict:
@@ -59,28 +59,22 @@ class InterpretationAgent:
                   "raw_output": response["content"], "tokens": response.get("usage"), "validation_status": "REJECTED"}
         try:
             parsed = json.loads(response["content"])
-            fields = ("observed_facts", "inferences", "unknowns", "recommendations", "evidence_references")
+            fields = ("inferences", "unknowns", "recommendations")
             if not isinstance(parsed, dict) or any(not isinstance(parsed.get(field), list) for field in fields):
                 raise ValueError("Contrato de interpretación incompleto.")
-            observations = {value["observation_id"]: value for value in snapshot.document()["observations"].values()}
-            references = set(observations)
-            if result["image_id"]:
-                references.add(result["image_id"])
-            if not parsed["evidence_references"] or any(not isinstance(ref, str) or ref not in references for ref in parsed["evidence_references"]):
-                raise ValueError("Referencias de evidencia ausentes o desconocidas.")
-            for fact in parsed["observed_facts"]:
-                if not isinstance(fact, dict):
-                    raise ValueError("Hecho observado inválido.")
-                evidence = observations.get(fact.get("evidence_id"))
-                if not evidence or evidence["status"] != "VALID" or type(fact.get("value")) is not type(evidence["value"]) or fact["value"] != evidence["value"]:
-                    raise ValueError("El modelo alteró o inventó una observación.")
-                if fact["evidence_id"] not in parsed["evidence_references"]:
-                    raise ValueError("Hecho sin referencia declarada.")
-            if any(not isinstance(item, str) or len(item) > 2000 for field in ("inferences", "unknowns", "recommendations") for item in parsed[field]):
+            if any(not isinstance(item, str) or len(item) > 2000 for field in fields for item in parsed[field]):
                 raise ValueError("La interpretación contiene texto inválido.")
-            if result["question_id"] == "Q7" and result["image_id"] not in parsed["evidence_references"]:
-                raise ValueError("La descripción multimodal debe referenciar su imagen.")
-            result.update({field: parsed[field] for field in fields}, validation_status="VALIDATED")
+            facts = [{"evidence_id": value["observation_id"], "value": value["value"]}
+                     for value in snapshot.document()["observations"].values() if value["status"] == "VALID"]
+            references = [fact["evidence_id"] for fact in facts]
+            if command.action == "multimodal":
+                if image is None or not result["image_id"]:
+                    raise ValueError("La interpretación multimodal requiere imagen autorizada.")
+                references.append(result["image_id"])
+            if not references:
+                raise ValueError("No hay evidencia válida para atribuir.")
+            result.update(**{field: parsed[field] for field in fields}, observed_facts=facts,
+                          evidence_references=references, validation_status="VALIDATED")
         except (ValueError, TypeError) as error:
             result["validation_error"] = str(error)
         return result
