@@ -13,7 +13,7 @@ def request_completion(url: str, model: str, prompt: str, image: Path | bytes | 
         raw = image.read_bytes() if isinstance(image, Path) else image
         mime = "image/png" if isinstance(image, Path) else "image/jpeg"
         content.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{base64.b64encode(raw).decode()}"}})
-    parameters = {"model": model, "messages": [{"role": "user", "content": content}], "max_tokens": max_tokens}
+    parameters = {"model": model, "messages": [{"role": "user", "content": content}], "max_completion_tokens": max_tokens}
     if temperature is not None:
         parameters["temperature"] = temperature
     response = requests.post(url, json=parameters, timeout=timeout)

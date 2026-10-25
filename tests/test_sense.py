@@ -9,6 +9,7 @@ import unittest
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from sense.agents import InterpretationAgent, VisionAgent
 from sense.acquisition import EnvironmentAgent, PresenceAgent
@@ -18,6 +19,7 @@ from sense.contracts import Command, Observation, identifier, utc_now
 from sense.orchestrator import SenseOrchestrator
 from sense.policy import PolicyEngine, answer_questions, semantic_key
 from sense.runtime import TaskManager
+from sense.inference import request_completion
 from sense.storage import ExperimentLog
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -380,6 +382,15 @@ class InterpretationTests(unittest.TestCase):
         self.assertIn(image_id, result["evidence_references"])
         self.assertNotIn(image_id, prompt)
         self.assertNotIn(self.evidence["observation_id"], prompt)
+
+
+class InferenceTests(unittest.TestCase):
+    @patch("sense.inference.requests.post")
+    def test_uses_completion_token_limit(self, post):
+        post.return_value.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
+        request_completion("http://model", "gemma", "prompt", max_tokens=256)
+        self.assertEqual(post.call_args.kwargs["json"]["max_completion_tokens"], 256)
+        self.assertNotIn("max_tokens", post.call_args.kwargs["json"])
 
 
 class OrchestratorTests(unittest.TestCase):
