@@ -7,6 +7,18 @@ from .contracts import Command, Snapshot, identifier, utc_now
 from .policy import QUESTIONS
 
 
+def parse_json_object(text: str) -> dict:
+    def reject_duplicates(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"Clave JSON duplicada: {key}")
+            result[key] = value
+        return result
+
+    return json.loads(text, object_pairs_hook=reject_duplicates)
+
+
 class VisionAgent:
     def __init__(self, capture, detector):
         self.capture, self.detector = capture, detector
@@ -37,20 +49,30 @@ class InterpretationAgent:
             for key, value in document["observations"].items()
         }
         events = [event["event_type"] for event in document["environment_events"][-4:]]
-        question_text = QUESTIONS[question]
-        image_note = " La imagen adjunta es evidencia; describe solo lo visible sin identificar personas." if question == "Q7" else ""
-        return (
-            'JSON sin Markdown: {"inferences":["una oración"],"unknowns":["una oración"],'
-            '"recommendations":["una recomendación"]}. Máximo un texto corto por lista. '
-            "Describe solo coincidencia contextual, nunca causalidad ni personas identificables. Q: "
-            + question_text + image_note + " Datos: "
-            + json.dumps({"observations": evidence, "events": events}, separators=(",", ":"))
-        )
+        if question == "Q6":
+            event_text = " y ".join(events) if events else "sin eventos ambientales confirmados"
+            return f"Valores: <presence>={evidence.get('presence')}; <count>={evidence.get('count')}; <events>={event_text}."
+        return "Q7. Contexto: " + json.dumps({"observations": evidence, "events": events}, separators=(",", ":"))
+
+    @staticmethod
+    def system_prompt(question: str) -> str | None:
+        if question == "Q7":
+            return ('JSON: {"inferences":[""],"unknowns":[""],"recommendations":[""]}. '
+                    'Una frase breve por lista. La imagen adjunta es evidencia. Describe solo una observación visual '
+                    'no identificatoria; no nombres personas, no infieras cantidad ni reemplaces el conteo YOLO. '
+                    'No afirmes causalidad. Si la imagen no basta, indícalo en unknowns. Recomendación solo no crítica.')
+        return None
+        return ('JSON: {"inferences":[""],"unknowns":[""],"recommendations":[""]}. '
+                'Una frase por lista. Copia esta estructura de inferencia: "Radar presence=<presence>; cámara count=<count>; '
+                'eventos=<events> coinciden temporalmente, sin probar causalidad." No añadas etiquetas ni hechos. '
+                'Unknowns: "Radar y cámara no determinan la ocupación total." Recomendación no crítica: monitorear los eventos listados.')
 
     def execute(self, command: Command, snapshot: Snapshot, image: bytes | None, config: dict, prompt: str) -> dict:
         started_at = utc_now()
         started_monotonic = time.monotonic()
-        response = self.completion(prompt, image, max_tokens=config["max_tokens"], timeout=config["timeout_seconds"])
+        response = self.completion(prompt, image, max_tokens=config["max_tokens"], timeout=config["timeout_seconds"],
+                                   response_format={"type": "json_object"},
+                                   system_prompt=self.system_prompt(command.parameters["question_id"]))
         result = {"interpretation_id": identifier(), "request_id": command.command_id, "snapshot_id": snapshot.snapshot_id,
                   "image_id": command.parameters.get("image_id"), "model_id": self.model,
                   "runtime_model_id": response.get("model", self.model),
@@ -58,7 +80,7 @@ class InterpretationAgent:
                   "inference_seconds": time.monotonic() - started_monotonic,
                   "raw_output": response["content"], "tokens": response.get("usage"), "validation_status": "REJECTED"}
         try:
-            parsed = json.loads(response["content"])
+            parsed = parse_json_object(response["content"])
             fields = ("inferences", "unknowns", "recommendations")
             if not isinstance(parsed, dict) or any(not isinstance(parsed.get(field), list) for field in fields):
                 raise ValueError("Contrato de interpretación incompleto.")

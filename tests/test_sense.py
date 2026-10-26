@@ -346,17 +346,19 @@ class InterpretationTests(unittest.TestCase):
     def test_validates_facts_and_does_not_send_images_in_d(self):
         calls = []
         def complete(prompt, image, **options):
-            calls.append(image)
+            calls.append((image, options["system_prompt"]))
             return {"content": json.dumps(self.text_response()), "usage": {"completion_tokens": 20}}
         agent = InterpretationAgent(complete, "gemma")
         command = Command(identifier(), "cycle", "run", "InterpretationAgent", "text", utc_now(), utc_now(), {"question_id": "Q6"}, "TEST")
         result = agent.execute(command, self.snapshot, None, config()["interpretation"]["textual"], agent.prompt("Q6", self.snapshot, None))
-        self.assertEqual(calls, [None])
+        self.assertEqual(calls, [(None, agent.system_prompt("Q6"))])
         self.assertEqual(result["validation_status"], "VALIDATED")
         self.assertEqual(result["snapshot_id"], self.snapshot.snapshot_id)
         self.assertIn(self.evidence["observation_id"], result["evidence_references"])
         self.assertIn({"evidence_id": self.evidence["observation_id"], "value": self.evidence["value"]}, result["observed_facts"])
-        self.assertNotIn(self.evidence["observation_id"], agent.prompt("Q6", self.snapshot, None))
+        prompt = agent.prompt("Q6", self.snapshot, None)
+        self.assertNotIn(self.evidence["observation_id"], prompt)
+        self.assertIn("<presence>", prompt)
 
     def test_text_uses_snapshot_facts_not_model_measurements(self):
         response = self.response()
@@ -367,10 +369,18 @@ class InterpretationTests(unittest.TestCase):
         self.assertEqual(result["validation_status"], "VALIDATED")
         self.assertNotIn(99, [fact["value"] for fact in result["observed_facts"]])
 
+    def test_rejects_duplicate_json_keys(self):
+        content = '{"inferences":[],"unknowns":[],"recommendations":[],"unknowns":[]}'
+        agent = InterpretationAgent(lambda *a, **kw: {"content": content}, "gemma")
+        command = Command(identifier(), "c", "r", "InterpretationAgent", "text", utc_now(), utc_now(), {"question_id": "Q6"}, "TEST")
+        result = agent.execute(command, self.snapshot, None, config()["interpretation"]["textual"], "prompt")
+        self.assertEqual(result["validation_status"], "REJECTED")
+        self.assertIn("Clave JSON duplicada", result["validation_error"])
+
     def test_multimodal_uses_authorized_image_without_sending_snapshot_ids(self):
         calls = []
         def complete(prompt, image, **options):
-            calls.append((prompt, image))
+            calls.append((prompt, image, options["system_prompt"]))
             return {"content": json.dumps(self.text_response())}
         agent = InterpretationAgent(complete, "gemma")
         image_id = "image-1"
@@ -378,19 +388,22 @@ class InterpretationTests(unittest.TestCase):
                           {"question_id": "Q7", "image_id": image_id}, "TEST")
         prompt = agent.prompt("Q7", self.snapshot, image_id)
         result = agent.execute(command, self.snapshot, b"image", config()["interpretation"]["multimodal"], prompt)
-        self.assertEqual(calls, [(prompt, b"image")])
+        self.assertEqual(calls, [(prompt, b"image", agent.system_prompt("Q7"))])
         self.assertIn(image_id, result["evidence_references"])
         self.assertNotIn(image_id, prompt)
         self.assertNotIn(self.evidence["observation_id"], prompt)
+        self.assertIn("conteo YOLO", agent.system_prompt("Q7"))
 
 
 class InferenceTests(unittest.TestCase):
     @patch("sense.inference.requests.post")
     def test_uses_completion_token_limit(self, post):
         post.return_value.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
-        request_completion("http://model", "gemma", "prompt", max_tokens=256)
+        request_completion("http://model", "gemma", "prompt", max_tokens=256, response_format={"type": "json_object"}, system_prompt="system")
         self.assertEqual(post.call_args.kwargs["json"]["max_completion_tokens"], 256)
         self.assertNotIn("max_tokens", post.call_args.kwargs["json"])
+        self.assertEqual(post.call_args.kwargs["json"]["response_format"], {"type": "json_object"})
+        self.assertEqual(post.call_args.kwargs["json"]["messages"][0], {"role": "system", "content": "system"})
 
 
 class OrchestratorTests(unittest.TestCase):
