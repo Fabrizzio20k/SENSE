@@ -83,5 +83,33 @@
 #measurement .measurement-worker:empty { display:none }
 #measurement .measurement-history { margin-top:28px }
 #measurement .measurement-diagnostics h3 { font-size:14px; margin:20px 0 10px }
-@media(max-width:760px) { #measurement .execution-graph { height:390px } #measurement .measurement-answer-grid { grid-template-columns:1fr } #measurement .measurement-section-heading { align-items:flex-start; flex-direction:column } }
+#experimentation { max-width:820px }
+#experimentation .experimentation-intro { margin-bottom:22px }
+#experimentation .experimentation-intro h2 { font-size:22px; margin-bottom:4px }
+#experimentation label { display:grid; gap:6px; color:var(--muted); font-size:13px }
+#experimentation select { font:inherit; color:var(--ink); background:var(--panel); border:1px solid #606960; border-radius:6px; padding:10px 12px; min-width:240px; max-width:100% }
+#experimentation select:focus-visible { outline:3px solid var(--measure-active); outline-offset:3px }
+#experimentation .experimentation-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin-bottom:22px }
+#experimentation .experiment-start { display:grid; gap:6px; align-items:end }
+#experimentation .experiment-start button { min-height:42px; padding:9px 22px; font-weight:700; letter-spacing:.01em }
+#experimentation .experiment-start p { max-width:185px; color:var(--muted); font-size:12px; line-height:1.25 }
+#experimentation .experiment-guide,#experimentation .experiment-rules,#experimentation .experiment-summary { padding:22px; border:1px solid var(--line); border-radius:10px; background:var(--panel) }
+#experimentation .experiment-kicker { color:var(--measure-done); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase }
+#experimentation .experiment-guide h2 { margin:5px 0 8px; font-size:20px }
+#experimentation .experiment-objective { color:#d8dfd9; font-size:16px }
+#experimentation .experiment-timeline { display:grid; gap:1px; margin:20px 0; border:1px solid #354039; border-radius:7px; overflow:hidden }
+#experimentation .experiment-timeline div { display:grid; grid-template-columns:105px 1fr; gap:12px; padding:11px 13px; background:#141916 }
+#experimentation .experiment-timeline div:nth-child(even) { background:#181e1a }
+#experimentation .experiment-timeline strong { color:#b9ef88; font-variant-numeric:tabular-nums }
+#experimentation .experiment-observe { padding:12px; border-left:3px solid var(--measure-active); background:#151c20; color:#d8e9f2 }
+#experimentation .experiment-caution { margin-top:12px; color:#ffdb9a; font-size:13px }
+#experimentation .experiment-rules,#experimentation .experiment-summary { margin-top:16px }
+#experimentation .experiment-rules h2,#experimentation .experiment-summary h2 { font-size:16px }
+#experimentation .experiment-rules ol { margin:0; padding-left:21px }
+#experimentation .experiment-rules li+li { margin-top:10px }
+#experimentation .experiment-summary>div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px }
+#experimentation .experiment-summary p { display:grid; gap:6px; min-width:0; padding:12px; margin:0; border:1px solid #354039; border-radius:7px; background:#141916 }
+#experimentation .experiment-summary strong { color:var(--measure-done); font-size:13px }
+#experimentation .experiment-summary span { color:var(--muted); font-size:13px }
+@media(max-width:760px) { #measurement .execution-graph { height:390px } #measurement .measurement-answer-grid { grid-template-columns:1fr } #measurement .measurement-section-heading { align-items:flex-start; flex-direction:column } #experimentation .experiment-summary>div { grid-template-columns:1fr } }
 @media(prefers-reduced-motion:reduce) { #measurement .pipeline-node.active .node-icon { animation:none; font-size:13px } #measurement .loading::before { animation:none } }

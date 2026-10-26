@@ -166,3 +166,21 @@ test('todos los destinos de la interfaz existen una sola vez en el HTML',()=>{
   assert.match(html,/Cada ciclo completado guarda sus respuestas/);
   assert.match(html,/measurement\.render\(d\.measurement/);
 });
+
+test('experimentación ofrece los tres guiones y casos sin iniciar una ejecución',()=>{
+  const html=fs.readFileSync('public/index.html','utf8');
+  assert.match(html,/id="experimentation-tab"/);
+  assert.match(html,/id="experiment-scenario"/);
+  assert.match(html,/S1 · Ambiente y ocupación estables/);
+  assert.match(html,/S2 · Cambios de ocupación/);
+  assert.match(html,/S3 · Cambios ambientales/);
+  assert.match(html,/id="experiment-mode"/);
+  assert.match(html,/id="experiment-repetition"/);
+  assert.match(html,/Repetición 1/);
+  assert.match(html,/Repetición 2/);
+  assert.match(html,/Repetición 3/);
+  assert.match(html,/id="experiment-start" type="button" disabled/);
+  assert.match(html,/Esta pestaña todavía no inicia ni registra una ejecución/);
+  assert.match(html,/scenarioSelect\.onchange=.*guide\.hidden=guide\.dataset\.scenario!==scenarioSelect\.value/);
+  assert.match(html,/\$\('experimentation-tab'\)\.disabled=preparationPending/);
+});
