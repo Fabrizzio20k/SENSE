@@ -12,13 +12,12 @@
 #measurement .section-number { display:inline-grid; place-items:center; width:24px; height:24px; border:1px solid var(--line); border-radius:50%; color:var(--muted); font-size:12px }
 #measurement .measurement-update { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums }
 #measurement .pipeline-card { padding:22px 18px; margin-top:16px; overflow:hidden }
-#measurement .pipeline-viewport { overflow-x:auto; padding:8px 2px }
-#measurement .execution-graph { position:relative; min-width:760px; height:390px; border:1px solid #303934; border-radius:10px; background:radial-gradient(circle at 45% 48%,#18231f 0,#111713 45%,#0d100e 100%); overflow:hidden }
-#measurement .execution-edges { position:absolute; inset:0; width:100%; height:100%; overflow:visible }
-#measurement .execution-edges path { fill:none; stroke:#39453e; stroke-width:3; stroke-linecap:round; marker-end:url(#graph-arrow) }
-#measurement .execution-edges marker path { fill:#39453e }
-#measurement .execution-graph[data-edge="WAIT-ACQUIRE"] [data-edge="WAIT-ACQUIRE"],#measurement .execution-graph[data-edge="ACQUIRE-ASSESS"] [data-edge="ACQUIRE-ASSESS"],#measurement .execution-graph[data-edge="ASSESS-VISION"] [data-edge="ASSESS-VISION"],#measurement .execution-graph[data-edge="VISION-ASSESS"] [data-edge="VISION-ASSESS"],#measurement .execution-graph[data-edge="ASSESS-INTERPRET"] [data-edge="ASSESS-INTERPRET"],#measurement .execution-graph[data-edge="INTERPRET-REPORT"] [data-edge="INTERPRET-REPORT"],#measurement .execution-graph[data-edge="ASSESS-REPORT"] [data-edge="ASSESS-REPORT"],#measurement .execution-graph[data-edge="REPORT-WAIT"] [data-edge="REPORT-WAIT"],#measurement .execution-graph[data-edge="ASSESS-DEGRADED"] [data-edge="ASSESS-DEGRADED"],#measurement .execution-graph[data-edge="VISION-DEGRADED"] [data-edge="VISION-DEGRADED"],#measurement .execution-graph[data-edge="INTERPRET-DEGRADED"] [data-edge="INTERPRET-DEGRADED"],#measurement .execution-graph[data-edge="REPORT-DEGRADED"] [data-edge="REPORT-DEGRADED"],#measurement .execution-graph[data-edge="DEGRADED-REPORT"] [data-edge="DEGRADED-REPORT"] { stroke:var(--measure-active); filter:drop-shadow(0 0 5px #76bde280) }
-#measurement .pipeline { position:absolute; inset:0; padding:0; margin:0; list-style:none }
+#measurement .execution-graph { position:relative; height:470px; border:1px solid #303934; border-radius:10px; background:radial-gradient(circle at 45% 48%,#18231f 0,#111713 45%,#0d100e 100%); overflow:hidden }
+#measurement .flow-canvas { position:absolute; inset:0; cursor:grab }
+#measurement .flow-canvas:active { cursor:grabbing }
+#measurement .flow-controls { position:absolute; z-index:2; right:12px; bottom:12px; display:flex; gap:6px; padding:6px; border:1px solid #3b4840; border-radius:7px; background:#101512e8 }
+#measurement .flow-controls button { min-width:31px; padding:5px 7px; font-size:12px }
+#measurement .pipeline { position:absolute; inset:0; padding:0; margin:0; list-style:none; pointer-events:none }
 #measurement .pipeline-node { position:absolute; width:132px; min-height:78px; padding:10px 7px; text-align:center; border:1px solid #4b574f; border-radius:7px; background:#151a17; box-shadow:0 3px 12px #0005 }
 #measurement .pipeline-node[data-state="WAIT"] { left:3%; top:49% }
 #measurement .pipeline-node[data-state="ACQUIRE"] { left:26%; top:49% }
@@ -84,5 +83,5 @@
 #measurement .measurement-worker:empty { display:none }
 #measurement .measurement-history { margin-top:28px }
 #measurement .measurement-diagnostics h3 { font-size:14px; margin:20px 0 10px }
-@media(max-width:760px) { #measurement .execution-graph { min-width:760px } #measurement .measurement-answer-grid { grid-template-columns:1fr } #measurement .measurement-section-heading { align-items:flex-start; flex-direction:column } }
+@media(max-width:760px) { #measurement .execution-graph { height:390px } #measurement .measurement-answer-grid { grid-template-columns:1fr } #measurement .measurement-section-heading { align-items:flex-start; flex-direction:column } }
 @media(prefers-reduced-motion:reduce) { #measurement .pipeline-node.active .node-icon { animation:none; font-size:13px } #measurement .loading::before { animation:none } }

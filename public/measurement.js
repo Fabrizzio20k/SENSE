@@ -10,9 +10,39 @@
   const informationNames = {PRESENCE_REQUIRED:'presencia vigente del radar',VISUAL_COUNT_REQUIRED:'conteo visual vigente',ENVIRONMENT_STATUS_REQUIRED:'lecturas ambientales',CONFLICT_RESOLUTION_REQUIRED:'evidencia para aclarar el conflicto',TEXT_INTERPRETATION_REQUIRED:'interpretación textual adicional',MULTIMODAL_INTERPRETATION_REQUIRED:'interpretación de una imagen pertinente',temperature:'temperatura',humidity:'humedad',aqi:'AQI ENS160',tvoc:'TVOC',eco2:'eCO₂ estimado',presence:'presencia',count:'conteo visual'};
   const eventNames = {TEMP_RISE:'Subida de temperatura',HUMIDITY_RISE:'Subida de humedad',AQI_WORSENED:'Empeoramiento del AQI ENS160',ECO2_THRESHOLD_CROSSED:'Cruce del umbral de eCO₂ estimado'};
   const timeLabel = value => {const date=new Date(value);return value&&!Number.isNaN(date.getTime())?date.toLocaleTimeString():'—';};
-  let current = {}, connected = false, pending = false, ready = false, sandboxBusy = false, historyKey = '', lastDetails = '', lastInterpretations = '';
+  let current = {}, connected = false, pending = false, ready = false, sandboxBusy = false, historyKey = '', lastDetails = '', lastInterpretations = '', flow = null, flowPulse = null;
   const text = (id, value) => {const node=byId(id); const next=String(value ?? '—'); if(node.textContent!==next)node.textContent=next;};
   const make = (tag, value, className) => {const node=document.createElement(tag); if(value!==undefined)node.textContent=String(value); if(className)node.className=className; return node;};
+  const graphEdges=[['WAIT','ACQUIRE'],['ACQUIRE','ASSESS'],['ASSESS','VISION'],['VISION','ASSESS'],['ASSESS','INTERPRET'],['INTERPRET','REPORT'],['ASSESS','REPORT'],['REPORT','WAIT'],['ASSESS','DEGRADED'],['VISION','DEGRADED'],['INTERPRET','DEGRADED'],['REPORT','DEGRADED'],['DEGRADED','REPORT']];
+  const graphPositions={WAIT:{x:90,y:260},ACQUIRE:{x:285,y:260},ASSESS:{x:470,y:260},VISION:{x:470,y:410},INTERPRET:{x:670,y:410},REPORT:{x:860,y:260},DEGRADED:{x:670,y:85}};
+  function initFlow(){
+    if(flow||!window.cytoscape)return;
+    const canvas=byId('measurement-flow-canvas'); if(!canvas)return;
+    flow=window.cytoscape({container:canvas,elements:{nodes:Object.entries(labels).map(([id,label])=>({data:{id,label:id+'\n'+label},position:graphPositions[id]})),edges:graphEdges.map(([source,target])=>({data:{id:source+'-'+target,source,target}}))},style:[
+      {selector:'node',style:{'shape':'round-rectangle','width':142,'height':72,'background-color':'#172019','border-width':2,'border-color':'#536259','label':'data(label)','color':'#dce5df','font-size':12,'font-weight':700,'text-wrap':'wrap','text-max-width':120,'text-valign':'center','text-halign':'center','line-height':1.45}},
+      {selector:'edge',style:{'width':3,'line-color':'#3a4940','target-arrow-color':'#3a4940','target-arrow-shape':'triangle','curve-style':'bezier','arrow-scale':1.2}},
+      {selector:'node.done',style:{'background-color':'#16301d','border-color':'#78c98a','color':'#c9f2d0'}},
+      {selector:'node.waiting',style:{'background-color':'#273026','border-color':'#a5b4a8'}},
+      {selector:'node.active',style:{'background-color':'#17374a','border-color':'#8ad9ff','border-width':5,'underlay-color':'#54c0ff','underlay-opacity':.22,'underlay-padding':11,'color':'#e9f8ff'}},
+      {selector:'node.degraded',style:{'background-color':'#3a2020','border-color':'#ffaaa0','color':'#ffe0dc'}},
+      {selector:'edge.active',style:{'width':6,'line-color':'#8ad9ff','target-arrow-color':'#8ad9ff','line-style':'dashed','line-dash-pattern':[10,7],'line-dash-offset':-30,'overlay-color':'#54c0ff','overlay-opacity':.12,'overlay-padding':8}},
+      {selector:'edge.done',style:{'line-color':'#568d61','target-arrow-color':'#568d61'}}
+    ],layout:{name:'preset',fit:true,padding:55},wheelSensitivity:.18});
+    byId('measurement-pipeline').hidden=true;
+    byId('measurement-flow-controls').hidden=false;
+    flowPulse=window.setInterval(()=>{if(!flow)return;flow.nodes('.active').animate({style:{'underlay-opacity':.4}},{duration:450}).animate({style:{'underlay-opacity':.12}},{duration:450});flow.edges('.active').animate({style:{'line-dash-offset':-90}},{duration:900});},950);
+  }
+  function updateFlow(data,lastTransition,actions){
+    initFlow(); if(!flow)return;
+    flow.elements().removeClass('active done waiting degraded');
+    for(const state of actions)flow.$id(state).addClass('done');
+    const active=data.running?data.fsm:null;
+    if(active)flow.$id(active).removeClass('done').addClass(active==='WAIT'?'waiting':'active');
+    if(active==='DEGRADED')flow.$id('DEGRADED').addClass('degraded');
+    flow.edges().removeClass('active done');
+    for(const transition of data.transitions||[])flow.$id(transition.from+'-'+transition.to).addClass('done');
+    if(lastTransition)flow.$id(lastTransition.from+'-'+lastTransition.to).removeClass('done').addClass('active');
+  }
   function answerText(answer){
     const value=answer.answer;
     if(answer.question_id==='Q2')return typeof value==='number'?value+' '+(value===1?'persona visible':'personas visibles'):'Sin conteo visual vigente.';
@@ -160,8 +190,7 @@
         node.className='pipeline-node'+(waiting?' waiting':active?' active':done?' done':skipped?' skipped':'');
         node.setAttribute('aria-current',active?'step':'false');icon.textContent=waiting?'⌛':active?'↻':done?'✓':skipped?'−':'○';detail.textContent=waiting?label+' · esperando evento':active?label+' · ejecutando':done?label+' · completado':skipped?label+' · sin ejecutar':label+' · pendiente';
       }
-      const graph=byId('measurement-graph');
-      graph.dataset.edge=lastTransition?lastTransition.from+'-'+lastTransition.to:'';
+      updateFlow(current,lastTransition,actions);
       text('measurement-transition-live',lastTransition?'Última transición: '+lastTransition.from+' → '+lastTransition.to+' · '+lastTransition.reason:'Esperando inicio.');
       const background=byId('measurement-background-tasks'), activeTasks=(current.tasks?.active||[]);
       background.hidden=!activeTasks.length;
@@ -216,6 +245,10 @@
       if(current.error)text('measurement-error',current.error);
       renderDetails(current);
       const nextHistory=(run?.run_id||'')+'/'+(run?.status||'');if(nextHistory!==historyKey){historyKey=nextHistory;if(byId('measurement-history-details').open)history();}
-    }
+    },
+    resizeGraph(){if(flow){flow.resize();flow.fit(flow.elements(),55);}}
   };
+  byId('measurement-flow-zoom-in').onclick=()=>{if(flow)flow.zoom({level:flow.zoom()+.2,renderedPosition:{x:byId('measurement-graph').clientWidth/2,y:byId('measurement-graph').clientHeight/2}});};
+  byId('measurement-flow-zoom-out').onclick=()=>{if(flow)flow.zoom({level:Math.max(flow.minZoom(),flow.zoom()-.2),renderedPosition:{x:byId('measurement-graph').clientWidth/2,y:byId('measurement-graph').clientHeight/2}});};
+  byId('measurement-flow-reset').onclick=()=>{if(flow)flow.fit(flow.elements(),55);};
 })();

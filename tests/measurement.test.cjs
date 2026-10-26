@@ -25,6 +25,7 @@ test('selector A–E y pipeline gobernados por el backend',async()=>{
   const {ui,get,calls}=fixture();
   assert.equal(get('measurement-mode').options.length,5);
   assert.equal(get('measurement-pipeline').children.length,7);
+  assert.ok(get('measurement-flow-canvas'));
   ui.render({running:false,enabled_modes:['A','B','C','D','E']},phases,false);
   assert.equal(get('measurement-toggle').disabled,false);
   get('measurement-mode').value='E';
