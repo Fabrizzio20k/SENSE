@@ -9,11 +9,12 @@ import requests
 def request_completion(url: str, model: str, prompt: str, image: Path | bytes | None = None,
                        *, max_tokens: int = 64, timeout: float = 180, temperature: float | None = None,
                        response_format: dict | None = None, system_prompt: str | None = None) -> dict:
-    content = [{"type": "text", "text": prompt}]
+    content = prompt
     if image is not None:
         raw = image.read_bytes() if isinstance(image, Path) else image
         mime = "image/png" if isinstance(image, Path) else "image/jpeg"
-        content.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{base64.b64encode(raw).decode()}"}})
+        content = [{"type": "text", "text": prompt},
+                   {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{base64.b64encode(raw).decode()}"}}]
     messages = [{"role": "user", "content": content}]
     if system_prompt is not None:
         messages.insert(0, {"role": "system", "content": system_prompt})

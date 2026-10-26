@@ -404,6 +404,15 @@ class InferenceTests(unittest.TestCase):
         self.assertNotIn("max_tokens", post.call_args.kwargs["json"])
         self.assertEqual(post.call_args.kwargs["json"]["response_format"], {"type": "json_object"})
         self.assertEqual(post.call_args.kwargs["json"]["messages"][0], {"role": "system", "content": "system"})
+        self.assertEqual(post.call_args.kwargs["json"]["messages"][1]["content"], "prompt")
+
+    @patch("sense.inference.requests.post")
+    def test_keeps_multimodal_content_for_images(self, post):
+        post.return_value.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
+        request_completion("http://model", "gemma", "prompt", image=b"image")
+        content = post.call_args.kwargs["json"]["messages"][0]["content"]
+        self.assertEqual(content[0], {"type": "text", "text": "prompt"})
+        self.assertEqual(content[1]["type"], "image_url")
 
 
 class OrchestratorTests(unittest.TestCase):
