@@ -175,6 +175,8 @@ class ContextTests(unittest.TestCase):
         self.assertFalse(self.store.snapshot(10).document()["conflict"])
 
     def test_coverage_not_comparable_unless_declared(self):
+        self.config["regions"]["radar_camera_comparable"] = False
+        self.store = ContextStore(self.config)
         self.ingest(0, presence=0)
         put_count(self.store, 0, 3, stamp(0))
         self.assertFalse(self.store.snapshot(0).document()["conflict"])
@@ -211,16 +213,12 @@ class PolicyTests(unittest.TestCase):
         self.assertIsNone(self.decision(policy, 1, [{"event_type": "PRESENCE_CHANGED"}]).action)
         self.assertIsNone(self.decision(policy, 40).action)
 
-    def test_cde_exact_visual_equivalence(self):
-        policies = [PolicyEngine(self.config, mode, 0) for mode in "CDE"]
-        for now in (0, 1, 29, 30, 60, 61):
-            decisions = [asdict(self.decision(policy, now)) for policy in policies]
-            self.assertEqual(decisions[0], decisions[1])
-            self.assertEqual(decisions[1], decisions[2])
-            if decisions[0]["action"]:
-                for policy in policies:
-                    policy.accepted_vision(now)
-                put_count(self.store, now)
+    def test_cde_capture_only_for_a_visual_need(self):
+        for mode in "CD":
+            policy = PolicyEngine(self.config, mode, 0)
+            self.assertEqual(self.decision(policy, 0).reason, "NO_VISUAL_NEED")
+            self.assertEqual(self.decision(policy, 1, [{"event_type": "TEMP_RISE"}]).action, "vision")
+        self.assertEqual(self.decision(PolicyEngine(self.config, "E", 0), 0).reason, "MULTIMODAL_REFERENCE_REQUIRED")
 
     def test_environment_event_reuses_fresh_count(self):
         policy = PolicyEngine(self.config, "C", 0)
@@ -228,13 +226,22 @@ class PolicyTests(unittest.TestCase):
         decision = self.decision(policy, 2, [{"event_type": "TEMP_RISE"}])
         self.assertEqual(decision.reason, "ALREADY_FRESH")
         self.assertIsNone(decision.action)
-        self.assertEqual(self.decision(policy, 61).reason, "COUNT_STALE")
+        self.assertEqual(self.decision(policy, 61).reason, "NO_VISUAL_NEED")
+
+    def test_explicit_count_request_uses_stale_or_missing_evidence(self):
+        policy = PolicyEngine(self.config, "C", 0)
+        self.assertEqual(self.decision(policy, 0).reason, "NO_VISUAL_NEED")
+        policy.request_visual_count()
+        decision = self.decision(policy, 1)
+        self.assertEqual(decision.action, "vision")
+        self.assertEqual(decision.reason, "EXPLICIT_VISUAL_COUNT_REQUEST")
 
     def test_budget_and_duplicates_skip(self):
         policy = PolicyEngine(self.config, "C", 0)
         snapshot = self.store.snapshot(0).document()
-        self.assertEqual(policy.vision(snapshot, 0, [], True, False, "INSUFFICIENT_MEMORY").reason, "INSUFFICIENT_MEMORY")
-        self.assertEqual(self.decision(policy, 0, busy=True).reason, "DUPLICATE_REQUEST")
+        events = [{"event_type": "TEMP_RISE"}]
+        self.assertEqual(policy.vision(snapshot, 0, events, True, False, "INSUFFICIENT_MEMORY").reason, "INSUFFICIENT_MEMORY")
+        self.assertEqual(self.decision(policy, 0, events, busy=True).reason, "DUPLICATE_REQUEST")
 
     def test_no_text_slm_for_rule_resolved_question(self):
         policy = PolicyEngine(self.config, "D", 0)
@@ -483,9 +490,8 @@ class OrchestratorTests(unittest.TestCase):
         self.tasks.active["gemma"].future.result(timeout=2)
         self.controller.tick(self.now + 1, resources())
         self.controller.tick(self.now + 61, resources())
-        self.tasks.active["vision"].future.result(timeout=2)
-        self.controller.tick(self.now + 61.1, resources())
-        self.assertEqual(len(self.captures), 2)
+        self.assertIsNone(self.tasks.active["vision"])
+        self.assertEqual(len(self.captures), 1)
         self.assertEqual(len(self.slm_calls), 1)
 
     def test_new_run_resets_context_and_policy(self):
@@ -503,6 +509,7 @@ class OrchestratorTests(unittest.TestCase):
             raise RuntimeError("Cámara desconectada")
         self.controller.vision_agent.detector = fail
         self.start("C")
+        self.controller.events.append({"event_type": "TEMP_RISE"})
         self.controller.tick(self.now, resources())
         with self.assertRaises(RuntimeError):
             self.tasks.active["vision"].future.result(timeout=2)
@@ -518,6 +525,7 @@ class OrchestratorTests(unittest.TestCase):
         for kind in ("TEMP_RISE", "AQI_WORSENED"):
             self.controller.context.environment.events.append({"event_id": identifier(), "event_type": kind,
                 "magnitude": 1, "captured_at": utc_now()})
+            self.controller.events.append({"event_type": kind})
         self.finish_vision()
         task = self.tasks.active["gemma"]
         self.assertIsNotNone(task)
@@ -531,6 +539,7 @@ class OrchestratorTests(unittest.TestCase):
         self.config["regions"]["radar_camera_comparable"] = True
         self.start("C")
         self.controller.ingest(telemetry(presence=0), self.now, time.time())
+        self.controller.events.append({"event_type": "TEMP_RISE"})
         self.finish_vision()
         self.assertEqual(len(self.captures), 1)
         self.assertEqual(self.controller.cycle["requests"], 1)
@@ -558,11 +567,11 @@ class OrchestratorTests(unittest.TestCase):
 
     def test_trace_contains_config_snapshot_reason_and_transitions(self):
         run = self.start("C")
-        self.finish_vision()
+        self.controller.tick(self.now, resources())
         self.controller.stop("USER_STOP", self.now + 1)
         events = list(self.log.export(run["run_id"]))
         serialized = ''.join(events)
-        for required in ("config_hash", "FSM_TRANSITION", "COUNT_UNKNOWN", "snapshot_id", "RESULT_PUBLISHED", "RUN_FINISHED"):
+        for required in ("config_hash", "FSM_TRANSITION", "NO_VISUAL_NEED", "snapshot_id", "RESULT_PUBLISHED", "RUN_FINISHED"):
             self.assertIn(required, serialized)
 
     def test_human_truth_is_separate_and_restart_marks_interrupted(self):

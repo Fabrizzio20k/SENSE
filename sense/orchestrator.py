@@ -122,6 +122,8 @@ class SenseOrchestrator:
         if not self.running or qid not in QUESTIONS or (qid == "Q7" and self.run["mode"] != "E"):
             raise ValueError("Pregunta no disponible en la ejecución actual.")
         self.explicit.add(qid)
+        if qid == "Q2":
+            self.policy.request_visual_count()
         self.record("QUESTION_REQUESTED", {"question_id": qid})
         self.dirty = True
 
@@ -160,6 +162,7 @@ class SenseOrchestrator:
         document = snapshot.document()
         self.latest_snapshot = document
         self.answers = answer_questions(snapshot, self.run["mode"], self.config["interpretation"]["relationship_alignment_seconds"])
+        self.policy.visual_need(document, self.events)
         for qid, saved in self.result_keys.items():
             image_id = self.image["image_id"] if qid == "Q7" and self.image else None
             if saved["result"]["validation_status"] == "VALIDATED" and saved["semantic_key"] == semantic_key(qid, document, self.interpreter.model, image_id):

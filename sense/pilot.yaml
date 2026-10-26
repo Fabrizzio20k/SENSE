@@ -1,12 +1,12 @@
 # Valores iniciales para caracterización, NO parámetros científicamente validados.
-config_version: sense-pilot-2-radar-proximity
+config_version: sense-pilot-3-shared-coverage
 hardware_profile: Raspberry Pi 5 / 8 GB / IMX219 / SHT40 / ENS160 / LD2410C
 enabled_modes: [A, B, C, D, E]
 regions:
-  radar_region: radar_coverage_unverified
-  camera_region: camera_view_unverified
+  radar_region: rasp_shared_view
+  camera_region: rasp_shared_view
   environment_region: sensor_location
-  radar_camera_comparable: false
+  radar_camera_comparable: true
   comparison_max_skew_seconds: 3
 environment:
   window_seconds: 300

@@ -107,6 +107,7 @@ class PolicyEngine:
         self.slm_requests = {"text": deque(), "multimodal": deque()}
         self.last_slm = {"text": float("-inf"), "multimodal": float("-inf")}
         self.needs = {}
+        self.pending_visual_reason = None
 
     def observe_presence(self, observation: Observation, wall: float) -> list[dict]:
         if self.mode != "B":
@@ -168,6 +169,8 @@ class PolicyEngine:
         for qid, kind in types.items():
             answer = answers[qid]
             needed = bool(answer["pending_information"]) and answer["status"] != "NOT_APPLICABLE"
+            if qid == "Q2" and self.mode in ("C", "D", "E"):
+                needed = self.pending_visual_reason is not None
             previous = self.needs.get(qid)
             if needed and (previous is None or previous["status"] == "RESOLVED"):
                 self.needs[qid] = {"need_id": identifier(), "type": kind, "question_id": qid, "question": QUESTIONS[qid],
@@ -179,6 +182,34 @@ class PolicyEngine:
                 self.needs[qid].update(status="PENDING" if needed else "RESOLVED", evidence_ids=answer["evidence_ids"],
                                        missing_information=answer["pending_information"])
         return list(self.needs.values())
+
+    def visual_need(self, snapshot: dict, events: list[dict]) -> str | None:
+        """C/D/E only refresh visual evidence when a question needs it."""
+        if self.mode not in ("C", "D", "E"):
+            return None
+        count = snapshot["observations"].get("count", {})
+        event_types = {event["event_type"] for event in events}
+        if count.get("status") == "VALID" and not snapshot["conflict"]:
+            self.pending_visual_reason = None
+            if self.config["regions"]["radar_camera_comparable"] and "PRESENCE_CHANGED" in event_types:
+                return "COMPARABLE_PRESENCE_CHANGED"
+            if event_types & {"TEMP_RISE", "HUMIDITY_RISE", "AQI_WORSENED", "ECO2_THRESHOLD_CROSSED"}:
+                return "ENVIRONMENT_CONTEXT_REQUIRED"
+            return None
+        if self.pending_visual_reason:
+            return self.pending_visual_reason
+        if snapshot["conflict"]:
+            self.pending_visual_reason = "RESOLVABLE_CONFLICT"
+        elif self.config["regions"]["radar_camera_comparable"] and "PRESENCE_CHANGED" in event_types:
+            self.pending_visual_reason = "COMPARABLE_PRESENCE_CHANGED"
+        elif event_types & {"TEMP_RISE", "HUMIDITY_RISE", "AQI_WORSENED", "ECO2_THRESHOLD_CROSSED"}:
+            self.pending_visual_reason = "ENVIRONMENT_CONTEXT_REQUIRED"
+        elif self.mode == "E" and not count:
+            self.pending_visual_reason = "MULTIMODAL_REFERENCE_REQUIRED"
+        return self.pending_visual_reason
+
+    def request_visual_count(self) -> None:
+        self.pending_visual_reason = "EXPLICIT_VISUAL_COUNT_REQUEST"
 
     def vision(self, snapshot: dict, now: float, events: list[dict], available: bool, busy: bool, resource_reason: str | None) -> Decision:
         count = snapshot["observations"].get("count", {})
@@ -197,9 +228,11 @@ class PolicyEngine:
                 return Decision(None, "Q2", "NO_REACTIVE_TRIGGER")
             reason = self.reactive_pending["event_type"]
         else:
+            reason = self.visual_need(snapshot, events)
+            if reason is None:
+                return Decision(None, "Q2", "NO_VISUAL_NEED")
             if count.get("status") == "VALID":
                 return Decision(None, "Q2", "ALREADY_FRESH")
-            reason = "RESOLVABLE_CONFLICT" if snapshot["conflict"] else "COUNT_UNKNOWN" if not count else "COUNT_STALE"
         if self.mode == "A":
             due = int((now - self.next_period) // self.config["modes"]["periodic_interval_seconds"]) + 1
             self.next_period += due * self.config["modes"]["periodic_interval_seconds"]
@@ -223,6 +256,7 @@ class PolicyEngine:
         self.last_visual = now
         self.visual_requests.append(now)
         self.reactive_pending = None
+        self.pending_visual_reason = None
 
     def interpretation(self, kind: str, answer: dict, now: float, semantic: str, attempted: set,
                        available: bool, resource_reason: str | None) -> Decision:
