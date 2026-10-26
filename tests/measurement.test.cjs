@@ -24,7 +24,7 @@ const phases={yolo:{status:'ready'},text:{status:'ready'},vision:{status:'ready'
 test('selector A–E y pipeline gobernados por el backend',async()=>{
   const {ui,get,calls}=fixture();
   assert.equal(get('measurement-mode').options.length,5);
-  assert.equal(get('measurement-pipeline').children.length,6);
+  assert.equal(get('measurement-pipeline').children.length,7);
   ui.render({running:false,enabled_modes:['A','B','C','D','E']},phases,false);
   assert.equal(get('measurement-toggle').disabled,false);
   get('measurement-mode').value='E';
@@ -53,6 +53,23 @@ test('al perder conexión bloquea comandos; el sandbox activo bloquea comenzar',
   ui.render({running:false},phases,false);
   ui.connection(false);
   assert.equal(get('measurement-toggle').disabled,true);
+});
+
+test('control de radar manual solo aparece en C/D/E y usa endpoint acotado',async()=>{
+  const {ui,get,calls}=fixture();
+  const data={running:true,run:{mode:'C',run_id:'run',status:'RUNNING'},presence_control:{mode:'AUTO',detected:null},context:{observations:{presence:{value:0,status:'VALID',age_seconds:1,region:'radar'}}}};
+  ui.render(data,phases,false);
+  const control=get('measurement-observations').children[0].children[4];
+  assert.equal(control.hidden,false);
+  await control.children[0].onclick();
+  assert.equal(calls[0].url,'/api/experiments/presence');
+  assert.deepEqual(JSON.parse(calls[0].options.body),{mode:'manual',detected:false});
+  ui.render({...data,presence_control:{mode:'MANUAL',detected:false}},phases,false);
+  assert.equal(control.children[1].disabled,false);
+  await control.children[1].onclick();
+  assert.deepEqual(JSON.parse(calls[1].options.body),{mode:'manual',detected:true});
+  ui.render({...data,run:{...data.run,mode:'B'}},phases,false);
+  assert.equal(control.hidden,true);
 });
 
 test('contenido del modelo es texto y el detalle abierto sobrevive a actualizaciones',()=>{

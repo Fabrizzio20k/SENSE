@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 from collections import deque
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 
 from .context import ContextStore, timestamp
@@ -41,6 +41,8 @@ class SenseOrchestrator:
         self.last_decisions = {}
         self.last_multimodal_context = None
         self.explicit = set()
+        self.manual_presence = None
+        self.last_sensor_presence = None
 
     @property
     def running(self):
@@ -74,6 +76,8 @@ class SenseOrchestrator:
         self.events.clear()
         self.explicit.clear()
         self.last_multimodal_context = None
+        self.manual_presence = None
+        self.last_sensor_presence = None
         self.answers = {}
         self.tasks.counters = dict.fromkeys(self.tasks.counters, 0)
         self.log.begin(self.run)
@@ -103,6 +107,9 @@ class SenseOrchestrator:
             received_at = datetime.fromtimestamp(wall, timezone.utc).isoformat()
             environment = EnvironmentAgent.observe(payload, received_at, self.config["regions"]["environment_region"])
             presence = PresenceAgent.observe(payload, received_at, self.config["regions"]["radar_region"])
+            self.last_sensor_presence = presence
+            if self.manual_presence is not None:
+                presence = replace(presence, observation_id=identifier(), value=int(self.manual_presence))
             events = self.context.ingest(environment, presence, now, wall)
             events.extend(self.policy.observe_presence(presence, wall))
         except (ValueError, TypeError, OverflowError, KeyError) as error:
@@ -114,6 +121,31 @@ class SenseOrchestrator:
             self.record(event["event_type"], event)
         self.events.extend(events)
         self.events = self.events[-self.config["runtime"]["inbox_capacity"]:]
+        self.dirty = True
+
+    def set_presence(self, detected: bool | None, now: float):
+        if not self.running or self.run["mode"] not in ("C", "D", "E"):
+            raise ValueError("El control manual de presencia solo está disponible en C, D y E activos.")
+        self.manual_presence = detected
+        if detected is None:
+            self.dirty = True
+            return
+        captured_at = utc_now()
+        template = self.last_sensor_presence
+        presence = (replace(template, observation_id=identifier(), captured_at=captured_at, received_at=captured_at,
+                            value=int(detected), status="VALID") if template else Observation(
+                                identifier(), "PresenceAgent", captured_at, captured_at,
+                                self.config["regions"]["radar_region"], int(detected), "presence",
+                                "sensor_reported", "VALID"))
+        previous = self.context.observations.get("presence")
+        self.context.put("presence", presence, now)
+        if previous is None or previous.value != presence.value:
+            event = {"event_id": identifier(), "event_type": "PRESENCE_CHANGED",
+                     "previous": previous.value if previous else None, "value": presence.value,
+                     "evidence_ids": [presence.observation_id], "captured_at": presence.captured_at}
+            self.record(event["event_type"], event)
+            self.events.append(event)
+            self.events = self.events[-self.config["runtime"]["inbox_capacity"]:]
         self.dirty = True
 
     def query(self, qid: str):
@@ -368,4 +400,6 @@ class SenseOrchestrator:
                 "interpretations": list(self.interpretations), "decisions": list(self.decisions),
                 "errors": list(self.errors), "resources": self.resources, "enabled_modes": self.config["enabled_modes"],
                 "config_version": self.config["config_version"], "questions": {key: value["question"] for key, value in self.answers.items()},
-                "reactive_trigger": self.policy.reactive_view(context) if self.run and self.run["mode"] == "B" else None}
+                "reactive_trigger": self.policy.reactive_view(context) if self.run and self.run["mode"] == "B" else None,
+                "presence_control": {"mode": "MANUAL" if self.manual_presence is not None else "AUTO",
+                                     "detected": self.manual_presence} if self.run and self.run["mode"] in ("C", "D", "E") else None}

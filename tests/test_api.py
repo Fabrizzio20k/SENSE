@@ -46,6 +46,16 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(self.client.post('/api/experiments/start', json=body).status_code, 400)
         self.assertFalse(self.calls)
 
+    def test_presence_control_requires_a_valid_mode(self):
+        manual = self.client.post('/api/experiments/presence', json={"mode": "manual", "detected": True})
+        self.assertEqual(manual.status_code, 202)
+        self.assertEqual(self.calls[-1], ("presence", {"detected": True}))
+        automatic = self.client.post('/api/experiments/presence', json={"mode": "auto"})
+        self.assertEqual(automatic.status_code, 202)
+        self.assertEqual(self.calls[-1], ("presence", {"detected": None}))
+        for body in (None, {"mode": "manual"}, {"mode": "manual", "detected": 1}, {"mode": "other"}):
+            self.assertEqual(self.client.post('/api/experiments/presence', json=body).status_code, 400)
+
     def test_busy_manual_task_blocks_experiment(self):
         main.state["sandbox_busy"] = True
         self.assertEqual(self.client.post('/api/experiments/start', json={"mode": "A"}).status_code, 409)

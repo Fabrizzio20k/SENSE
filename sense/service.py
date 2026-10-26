@@ -172,6 +172,9 @@ class ExperimentService:
                         elif action == "query":
                             self.controller.query(payload.get("question_id"))
                             result = {"ok": True}
+                        elif action == "presence":
+                            self.controller.set_presence(payload.get("detected"), now)
+                            result = {"ok": True}
                         else:
                             raise ValueError("Comando no reconocido.")
                         future.set_result(result)

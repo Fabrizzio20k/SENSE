@@ -504,6 +504,21 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(self.controller.context.observations, {})
         self.assertEqual(self.controller.policy.mode, "C")
 
+    def test_manual_presence_drives_c_and_auto_releases_it(self):
+        self.config["regions"]["radar_camera_comparable"] = True
+        self.start("C")
+        self.controller.set_presence(True, self.now)
+        self.assertEqual(self.controller.view(self.now)["presence_control"], {"mode": "MANUAL", "detected": True})
+        self.controller.tick(self.now, resources())
+        self.assertEqual(self.tasks.active["vision"].command.reason, "COMPARABLE_PRESENCE_CHANGED")
+        self.controller.set_presence(None, self.now + 1)
+        self.assertEqual(self.controller.view(self.now + 1)["presence_control"], {"mode": "AUTO", "detected": None})
+
+    def test_manual_presence_is_unavailable_outside_cde(self):
+        self.start("B")
+        with self.assertRaises(ValueError):
+            self.controller.set_presence(True, self.now)
+
     def test_vision_failure_degrades_without_stopping_sensors(self):
         def fail(_):
             raise RuntimeError("Cámara desconectada")

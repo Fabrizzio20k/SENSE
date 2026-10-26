@@ -311,6 +311,20 @@ def query_experiment():
         return jsonify(error=str(error)), 409
 
 
+@app.post("/api/experiments/presence")
+def set_experiment_presence():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or body.get("mode") not in ("auto", "manual"):
+        return jsonify(error="Usa mode auto o manual."), 400
+    detected = None if body["mode"] == "auto" else body.get("detected")
+    if body["mode"] == "manual" and type(detected) is not bool:
+        return jsonify(error="El modo manual requiere detected booleano."), 400
+    try:
+        return jsonify(get_experiments().call("presence", {"detected": detected})), 202
+    except (ValueError, TimeoutError) as error:
+        return jsonify(error=str(error)), 409
+
+
 @app.get("/api/experiments")
 def experiment_history():
     return jsonify(runs=get_experiments().log.runs())

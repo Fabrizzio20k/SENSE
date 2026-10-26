@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const byId = id => document.getElementById(id);
-  const labels = {WAIT:'Espera', ACQUIRE:'Sensores', ASSESS:'Política', VISION:'YOLO', INTERPRET:'Interpretación', REPORT:'Registro'};
+  const labels = {WAIT:'Espera', ACQUIRE:'Sensores', ASSESS:'Política', VISION:'YOLO', INTERPRET:'Interpretación', REPORT:'Registro', DEGRADED:'Degradado'};
   const statusLabels = {VALID:'Vigente', UNKNOWN:'Desconocido', STALE:'Vencido', CONFLICTING:'Conflicto', UNAVAILABLE:'Sin datos', ERROR:'Error'};
   const modes = {A:'A · Periódico', B:'B · Reactivo', C:'C · Adaptativo', D:'D · Adaptativo + texto', E:'E · Adaptativo + multimodal'};
   const answerStatuses = {RESOLVED:'Resuelta',PARTIAL:'Con limitaciones',ABSTAINED:'Evidencia insuficiente',PENDING:'Pendiente',INTERPRETED:'Interpretación disponible',NOT_APPLICABLE:'No aplica'};
@@ -30,7 +30,7 @@
   const nodes = {};
   for (const [state,label] of Object.entries(labels)) {
     const node=make('li',undefined,'pipeline-node'), icon=make('span','○','node-icon'), title=make('strong',state,'node-title'), detail=make('span',label,'node-label');
-    node.append(icon,title,detail); byId('measurement-pipeline').append(node); nodes[state]={node,icon,detail,label};
+    node.dataset.state=state;node.append(icon,title,detail); byId('measurement-pipeline').append(node); nodes[state]={node,icon,detail,label};
   }
   const observations = {presence:['Radar','presence'], count:['Personas visibles','visible_people'], temperature:['Temperatura','°C'], humidity:['Humedad','%RH'], aqi:['AQI ENS160','ENS160 AQI'], tvoc:['TVOC','ppb'], eco2:['eCO₂ estimado','ppm equivalent']};
   const cards = {};
@@ -38,7 +38,14 @@
   const interpretationNodes = new Map();
   for (const [key,[label]] of Object.entries(observations)) {
     const card=make('article',undefined,'card'), title=make('p',label,'sub'), value=make('p','—','measurement-value'), age=make('p','Sin evidencia','evidence-age'), status=make('span','Desconocido','evidence-status');
-    card.append(title,value,age,status); byId('measurement-observations').append(card); cards[key]={title,value,age,status};
+    const control=key==='presence'?make('div',undefined,'presence-control'):null;
+    if(control){
+      const mode=make('button','Auto'), toggle=make('button','No detectada');
+      mode.onclick=()=>setPresence(current.presence_control?.mode==='MANUAL'?{mode:'auto'}:{mode:'manual',detected:!!current.context?.observations?.presence?.value});
+      toggle.onclick=()=>setPresence({mode:'manual',detected:!current.presence_control?.detected});
+      control.append(mode,toggle);
+    }
+    card.append(title,value,age,status); if(control)card.append(control); byId('measurement-observations').append(card); cards[key]={title,value,age,status,control};
   }
   const modeSelect = byId('measurement-mode');
   for(const [mode,label] of Object.entries(modes)){const option=make('option',label);option.value=mode;modeSelect.append(option);}
@@ -51,6 +58,12 @@
   async function post(url,body){
     const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
     const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo completar la operación.');return data;
+  }
+  async function setPresence(body){
+    if(pending)return;pending=true;controls();text('measurement-error','');
+    try{await post('/api/experiments/presence',body);}
+    catch(error){text('measurement-error',error.message);}
+    finally{pending=false;controls();}
   }
   byId('measurement-toggle').onclick=async()=>{
     if(pending)return;pending=true;controls();text('measurement-error','');
@@ -141,12 +154,18 @@
       text('measurement-updated',evaluated?'Última evaluación: '+timeLabel(evaluated):'Sin evaluación todavía');
       text('measurement-answer-note',current.running?'Actualización automática con la evidencia disponible. Las lecturas pueden estar incompletas o vencidas.':run?'Últimas respuestas de la ejecución finalizada. El registro conserva las anteriores.':'Las respuestas se actualizan automáticamente durante la ejecución.');
       const lastError=current.errors?.at(-1);text('measurement-task-error',lastError?'Último fallo · '+timeLabel(lastError.timestamp)+': '+lastError.detail:'');
-      const actions=current.cycle?.actions||[];
+      const actions=current.cycle?.actions||[], lastTransition=(current.transitions||[]).at(-1);
       for(const [state,{node,icon,detail,label}] of Object.entries(nodes)){
-        const active=current.running&&current.fsm===state,done=actions.includes(state)&&!active,skipped=!active&&!done&&actions.includes('REPORT');
-        node.className='pipeline-node'+(active?' active':done?' done':skipped?' skipped':'');
-        node.setAttribute('aria-current',active?'step':'false');icon.textContent=active?'↻':done?'✓':skipped?'−':'○';detail.textContent=label+(skipped?' · sin ejecutar':'');
+        const active=current.running&&current.fsm===state,waiting=active&&state==='WAIT',done=actions.includes(state)&&!active,skipped=!active&&!done&&actions.includes('REPORT');
+        node.className='pipeline-node'+(waiting?' waiting':active?' active':done?' done':skipped?' skipped':'');
+        node.setAttribute('aria-current',active?'step':'false');icon.textContent=waiting?'⌛':active?'↻':done?'✓':skipped?'−':'○';detail.textContent=waiting?label+' · esperando evento':active?label+' · ejecutando':done?label+' · completado':skipped?label+' · sin ejecutar':label+' · pendiente';
       }
+      const graph=byId('measurement-graph');
+      graph.dataset.edge=lastTransition?lastTransition.from+'-'+lastTransition.to:'';
+      text('measurement-transition-live',lastTransition?'Última transición: '+lastTransition.from+' → '+lastTransition.to+' · '+lastTransition.reason:'Esperando inicio.');
+      const background=byId('measurement-background-tasks'), activeTasks=(current.tasks?.active||[]);
+      background.hidden=!activeTasks.length;
+      background.replaceChildren(...activeTasks.map(task=>make('span',task.question_id+' · '+(task.status==='RUNNING'?'en segundo plano':'esperando finalización')+' · '+task.elapsed_seconds+' s','background-task '+(task.status==='RUNNING'?'running':''))));
       byId('measurement-degraded').classList.toggle('active',current.fsm==='DEGRADED'||actions.includes('DEGRADED'));
       byId('measurement-degraded').hidden=!actions.includes('DEGRADED')&&current.fsm!=='DEGRADED';
       text('measurement-degraded','Este ciclo produjo información parcial o una abstención por falta de evidencia.');
@@ -163,6 +182,13 @@
           if(run?.mode==='B'){
             card.value.textContent={NEAR:'Dentro de zona',FAR:'Fuera de zona',CONFIRMING:'Confirmando…',UNKNOWN:'Zona desconocida'}[trigger?.state]||'Zona desconocida';
             if(observation?.value!=null)card.age.textContent+='\n'+(status==='VALID'?'Radar: ':'Última lectura: ')+(observation.value?'presencia detectada':'sin presencia detectada');
+          }
+          if(card.control){
+            const manual=current.presence_control?.mode==='MANUAL', enabled=!!(current.running&&['C','D','E'].includes(run?.mode)&&!pending);
+            card.control.hidden=!['C','D','E'].includes(run?.mode);
+            const [mode,toggle]=card.control.children;
+            mode.textContent=manual?'Manual':'Auto';mode.className=manual?'manual':'';mode.disabled=!enabled;
+            toggle.textContent=current.presence_control?.detected?'Detectada':'No detectada';toggle.disabled=!enabled||!manual;
           }
         }
       }
