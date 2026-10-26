@@ -352,6 +352,7 @@ class InterpretationTests(unittest.TestCase):
         command = Command(identifier(), "cycle", "run", "InterpretationAgent", "text", utc_now(), utc_now(), {"question_id": "Q6"}, "TEST")
         result = agent.execute(command, self.snapshot, None, config()["interpretation"]["textual"], agent.prompt("Q6", self.snapshot, None))
         self.assertEqual(calls, [(None, agent.system_prompt("Q6"))])
+        self.assertIn("Radar presence=<presence>", agent.system_prompt("Q6"))
         self.assertEqual(result["validation_status"], "VALIDATED")
         self.assertEqual(result["snapshot_id"], self.snapshot.snapshot_id)
         self.assertIn(self.evidence["observation_id"], result["evidence_references"])

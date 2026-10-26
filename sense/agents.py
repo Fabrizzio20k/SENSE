@@ -56,16 +56,17 @@ class InterpretationAgent:
 
     @staticmethod
     def system_prompt(question: str) -> str | None:
+        if question == "Q6":
+            return ('JSON: {"inferences":[""],"unknowns":[""],"recommendations":[""]}. '
+                    'Una frase por lista. Copia esta estructura de inferencia: "Radar presence=<presence>; cámara count=<count>; '
+                    'eventos=<events> coinciden temporalmente, sin probar causalidad." No añadas etiquetas ni hechos. '
+                    'Unknowns: "Radar y cámara no determinan la ocupación total." Recomendación no crítica: monitorear los eventos listados.')
         if question == "Q7":
             return ('JSON: {"inferences":[""],"unknowns":[""],"recommendations":[""]}. '
                     'Una frase breve por lista. La imagen adjunta es evidencia. Describe solo una observación visual '
                     'no identificatoria; no nombres personas, no infieras cantidad ni reemplaces el conteo YOLO. '
                     'No afirmes causalidad. Si la imagen no basta, indícalo en unknowns. Recomendación solo no crítica.')
         return None
-        return ('JSON: {"inferences":[""],"unknowns":[""],"recommendations":[""]}. '
-                'Una frase por lista. Copia esta estructura de inferencia: "Radar presence=<presence>; cámara count=<count>; '
-                'eventos=<events> coinciden temporalmente, sin probar causalidad." No añadas etiquetas ni hechos. '
-                'Unknowns: "Radar y cámara no determinan la ocupación total." Recomendación no crítica: monitorear los eventos listados.')
 
     def execute(self, command: Command, snapshot: Snapshot, image: bytes | None, config: dict, prompt: str) -> dict:
         started_at = utc_now()
