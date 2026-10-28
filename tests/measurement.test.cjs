@@ -21,9 +21,9 @@ function fixture(){
 }
 const phases={yolo:{status:'ready'},text:{status:'ready'},vision:{status:'ready'}};
 
-test('selector A–E y pipeline gobernados por el backend',async()=>{
+test('selector A–F y pipeline gobernados por el backend',async()=>{
   const {ui,get,calls}=fixture();
-  assert.equal(get('measurement-mode').options.length,5);
+  assert.equal(get('measurement-mode').options.length,6);
   assert.equal(get('measurement-pipeline').children.length,7);
   assert.ok(get('measurement-flow-canvas'));
   ui.render({running:false,enabled_modes:['A','B','C','D','E']},phases,false);
@@ -56,7 +56,7 @@ test('al perder conexión bloquea comandos; el sandbox activo bloquea comenzar',
   assert.equal(get('measurement-toggle').disabled,true);
 });
 
-test('control de radar manual solo aparece en C/D/E y usa endpoint acotado',async()=>{
+test('control de radar manual aparece desde B y usa endpoint acotado',async()=>{
   const {ui,get,calls}=fixture();
   const data={running:true,run:{mode:'C',run_id:'run',status:'RUNNING'},presence_control:{mode:'AUTO',detected:null},context:{observations:{presence:{value:0,status:'VALID',age_seconds:1,region:'radar'}}}};
   ui.render(data,phases,false);
@@ -69,7 +69,7 @@ test('control de radar manual solo aparece en C/D/E y usa endpoint acotado',asyn
   assert.equal(control.children[1].disabled,false);
   await control.children[1].onclick();
   assert.deepEqual(JSON.parse(calls[1].options.body),{mode:'manual',detected:true});
-  ui.render({...data,run:{...data.run,mode:'B'}},phases,false);
+  ui.render({...data,run:{...data.run,mode:'A'}},phases,false);
   assert.equal(control.hidden,true);
 });
 
@@ -167,7 +167,7 @@ test('todos los destinos de la interfaz existen una sola vez en el HTML',()=>{
   assert.match(html,/measurement\.render\(d\.measurement/);
 });
 
-test('experimentación ofrece los tres guiones y casos sin iniciar una ejecución',()=>{
+test('experimentación ofrece los tres guiones y prepara la medición guiada',()=>{
   const html=fs.readFileSync('public/index.html','utf8');
   assert.match(html,/id="experimentation-tab"/);
   assert.match(html,/id="experiment-scenario"/);
@@ -180,7 +180,46 @@ test('experimentación ofrece los tres guiones y casos sin iniciar una ejecució
   assert.match(html,/Repetición 2/);
   assert.match(html,/Repetición 3/);
   assert.match(html,/id="experiment-start" type="button" disabled/);
-  assert.match(html,/Esta pestaña todavía no inicia ni registra una ejecución/);
+  assert.match(html,/El guion permanece visible durante la medición/);
+  assert.match(html,/src="\/public\/experiment.js"/);
   assert.match(html,/scenarioSelect\.onchange=.*guide\.hidden=guide\.dataset\.scenario!==scenarioSelect\.value/);
   assert.match(html,/\$\('experimentation-tab'\)\.disabled=preparationPending/);
+});
+
+test('F muestra controles exclusivos y solo solicita fallas al backend',async()=>{
+  const {ui,get,calls}=fixture();
+  const data={running:true,run:{mode:'F',run_id:'run',status:'RUNNING'},fsm:'WAIT',fault_control:{disabled:['sht40'],timeouts:{},faults:[]},component_health:{sht40:{status:'STALE'}}};
+  ui.render(data,phases,false);
+  assert.equal(get('measurement-fault-panel').hidden,false);
+  assert.equal(get('measurement-fault-switches').children.length,4);
+  const button=get('measurement-fault-switches').children[0].children[1];
+  assert.equal(button.textContent,'Restaurar entrada');
+  await button.onclick();
+  assert.equal(calls[0].url,'/api/experiments/faults');
+  assert.deepEqual(JSON.parse(calls[0].options.body),{action:'availability',component:'sht40',enabled:true});
+  await get('measurement-timeout-gemma').onclick();
+  assert.deepEqual(JSON.parse(calls[1].options.body),{action:'timeout',lane:'gemma'});
+  ui.render({...data,fault_control:{...data.fault_control,timeouts:{gemma:'ARMED'}}},phases,false);
+  assert.equal(get('measurement-timeout-gemma').disabled,true);
+  assert.match(get('measurement-timeout-gemma-status').textContent,/esperando una solicitud/);
+  ui.render({...data,run:{...data.run,mode:'E'}},phases,false);
+  assert.equal(get('measurement-fault-panel').hidden,true);
+  assert.equal(button.disabled,true);
+  await button.onclick();assert.equal(calls.length,2);
+});
+
+test('B guiado conserva Auto/Manual sin inventar distancia',async()=>{
+  const {ui,get,calls}=fixture();
+  const data={running:true,run:{mode:'B',guided:true,run_id:'run'},presence_control:{mode:'AUTO'},reactive_trigger:{state:'FAR'},context:{observations:{presence:{value:1,status:'VALID',age_seconds:1,metadata:{trigger_distance_cm:300}}}}};
+  ui.render(data,phases,false);
+  const control=get('measurement-observations').children[0].children[4];
+  assert.equal(control.hidden,false);
+  await control.children[0].onclick();
+  assert.deepEqual(JSON.parse(calls[0].options.body),{mode:'manual',detected:true,near:false});
+  ui.render({...data,presence_control:{mode:'MANUAL',detected:true,near:false}},phases,false);
+  await control.children[1].onclick();
+  assert.deepEqual(JSON.parse(calls[1].options.body),{mode:'manual',detected:true});
+  ui.connection(false);
+  assert.equal(control.children[0].disabled,true);assert.equal(control.children[1].disabled,true);
+  await control.children[1].onclick();assert.equal(calls.length,2);
 });

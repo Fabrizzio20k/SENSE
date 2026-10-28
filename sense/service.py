@@ -5,6 +5,7 @@ import hashlib
 import json
 import platform
 import queue
+import sqlite3
 import threading
 import time
 from concurrent.futures import Future
@@ -163,23 +164,29 @@ class ExperimentService:
                             self.controller.metadata = software_metadata(self.root, self.model)
                             self.controller.resources = self.resources.sample()
                             resources = self.controller.resources
-                            result = self.controller.start(payload["mode"], now, payload.get("session_id", self.session_id), payload.get("scenario_id", "pilot-classroom"))
+                            with self.log.transaction():
+                                result = self.controller.start(payload["mode"], time.monotonic(), payload.get("session_id", self.session_id), payload.get("scenario_id", "pilot-classroom"), payload)
                             self.error = None
                         elif action == "stop":
                             self.drain_observations()
-                            self.controller.stop("USER_STOP", now)
+                            self.controller.stop("USER_STOP", time.monotonic())
                             result = {"ok": True}
                         elif action == "query":
-                            self.controller.query(payload.get("question_id"))
+                            self.controller.query(payload.get("question_id"), time.monotonic())
                             result = {"ok": True}
                         elif action == "presence":
-                            self.controller.set_presence(payload.get("detected"), now)
+                            self.controller.set_presence(payload.get("detected"), time.monotonic(), payload.get("near"))
+                            result = {"ok": True}
+                        elif action == "fault":
+                            self.controller.set_fault(payload, time.monotonic())
                             result = {"ok": True}
                         else:
                             raise ValueError("Comando no reconocido.")
                         future.set_result(result)
                     except Exception as failure:
                         future.set_exception(failure)
+                        if isinstance(failure, (sqlite3.Error, OSError)):
+                            raise
                     finally:
                         if action == "start":
                             with self.lease_lock:
@@ -189,13 +196,15 @@ class ExperimentService:
                     self.controller.record("DISPATCHER_DROPPED", {"total": self.dropped, "policy": "REJECT_NEWEST"})
                     reported_drops = self.dropped
                 with self.log.transaction():
-                    self.controller.tick(now, resources)
+                    self.controller.tick(time.monotonic(), resources)
                 with self.lease_lock:
                     if not self.starting and not self.controller.running and not self.tasks.busy and self.controls.empty():
                         self.reserved.clear()
             except Exception as failure:
                 self.error = str(failure)
                 try:
+                    if self.controller.running:
+                        self.controller.record("SERVICE_ERROR", {"error": str(failure)})
                     self.controller.stop("INTERNAL_OR_STORAGE_ERROR", now)
                 except Exception:
                     # Si la persistencia falla, no se continúan experimentos sin trazabilidad.
@@ -203,7 +212,7 @@ class ExperimentService:
                         self.controller.run["status"] = "FAILED"
                     self.tasks.cancel(self.controller.run["run_id"] if self.controller.run else "")
             if now - published_at >= self.config["runtime"]["publish_interval_seconds"]:
-                view = self.controller.view(now)
+                view = self.controller.view(time.monotonic())
                 view.update(error=self.error, dispatcher={"queued": self.inbox.qsize(), "capacity": self.inbox.maxsize,
                                                           "dropped": self.dropped}, reserved=self.reserved.is_set())
                 with self.view_lock:

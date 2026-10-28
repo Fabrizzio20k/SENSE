@@ -4,7 +4,7 @@
   const byId = id => document.getElementById(id);
   const labels = {WAIT:'Espera', ACQUIRE:'Sensores', ASSESS:'Política', VISION:'YOLO', INTERPRET:'Interpretación', REPORT:'Registro', DEGRADED:'Degradado'};
   const statusLabels = {VALID:'Vigente', UNKNOWN:'Desconocido', STALE:'Vencido', CONFLICTING:'Conflicto', UNAVAILABLE:'Sin datos', ERROR:'Error'};
-  const modes = {A:'A · Periódico', B:'B · Reactivo', C:'C · Adaptativo', D:'D · Adaptativo + texto', E:'E · Adaptativo + multimodal'};
+  const modes = {A:'A · Periódico', B:'B · Reactivo', C:'C · Adaptativo', D:'D · Adaptativo + texto', E:'E · Adaptativo + multimodal', F:'F · Multimodal + fallas por software'};
   const answerStatuses = {RESOLVED:'Resuelta',PARTIAL:'Con limitaciones',ABSTAINED:'Evidencia insuficiente',PENDING:'Pendiente',INTERPRETED:'Interpretación disponible',NOT_APPLICABLE:'No aplica'};
   const runStatuses = {RUNNING:'En ejecución',COMPLETED:'Finalizada',FAILED:'Finalizada con error',INTERRUPTED:'Interrumpida'};
   const informationNames = {PRESENCE_REQUIRED:'presencia vigente del radar',VISUAL_COUNT_REQUIRED:'conteo visual vigente',ENVIRONMENT_STATUS_REQUIRED:'lecturas ambientales',CONFLICT_RESOLUTION_REQUIRED:'evidencia para aclarar el conflicto',TEXT_INTERPRETATION_REQUIRED:'interpretación textual adicional',MULTIMODAL_INTERPRETATION_REQUIRED:'interpretación de una imagen pertinente',temperature:'temperatura',humidity:'humedad',aqi:'AQI ENS160',tvoc:'TVOC',eco2:'eCO₂ estimado',presence:'presencia',count:'conteo visual'};
@@ -71,26 +71,51 @@
     const control=key==='presence'?make('div',undefined,'presence-control'):null;
     if(control){
       const mode=make('button','Auto'), toggle=make('button','No detectada');
-      mode.onclick=()=>setPresence(current.presence_control?.mode==='MANUAL'?{mode:'auto'}:{mode:'manual',detected:!!current.context?.observations?.presence?.value});
-      toggle.onclick=()=>setPresence({mode:'manual',detected:!current.presence_control?.detected});
+      mode.onclick=()=>setPresence(current.presence_control?.mode==='MANUAL'?{mode:'auto'}:current.run?.mode==='B'?{mode:'manual',detected:!!current.context?.observations?.presence?.value,near:current.reactive_trigger?.state==='NEAR'}:{mode:'manual',detected:!!current.context?.observations?.presence?.value});
+      toggle.onclick=()=>setPresence({mode:'manual',detected:!(current.run?.mode==='B'?current.presence_control?.near:current.presence_control?.detected)});
       control.append(mode,toggle);
     }
     card.append(title,value,age,status); if(control)card.append(control); byId('measurement-observations').append(card); cards[key]={title,value,age,status,control};
   }
   const modeSelect = byId('measurement-mode');
   for(const [mode,label] of Object.entries(modes)){const option=make('option',label);option.value=mode;modeSelect.append(option);}
+  const componentNames={sht40:'SHT40 · temperatura y humedad',ens160:'ENS160 · AQI, TVOC y eCO₂',radar:'Radar LD2410C',camera:'Cámara / YOLO',gemma:'Gemma'};
+  const healthLabels={UNKNOWN:'Sin comprobar',HEALTHY:'Operativo',STALE:'Evidencia vencida',UNAVAILABLE:'Sin datos',FAILED:'Fallo detectado',RECOVERING:'Comprobando recuperación'};
+  const healthNodes={},faultButtons={};
+  for(const [component,label] of Object.entries(componentNames)){
+    const card=make('article'),name=make('span',label),state=make('strong','Sin comprobar');card.append(name,state);byId('measurement-health').append(card);healthNodes[component]=state;
+    if(component==='gemma')continue;
+    const row=make('div',undefined,'fault-row'),button=make('button','Deshabilitar por software');button.type='button';
+    button.onclick=()=>setFault({action:'availability',component,enabled:!!current.fault_control?.disabled.includes(component)});
+    row.append(make('span',label),button);byId('measurement-fault-switches').append(row);faultButtons[component]=button;
+  }
+  for(const [id,lane] of [['measurement-timeout-vision','vision'],['measurement-timeout-gemma','gemma']])byId(id).onclick=()=>setFault({action:'timeout',lane});
+  async function setFault(body){
+    if(pending||!connected||current.run?.mode!=='F'||!current.running)return;
+    pending=true;controls();text('measurement-error','');
+    try{await post('/api/experiments/faults',body);}
+    catch(error){text('measurement-error',error.message);}
+    finally{pending=false;controls();}
+  }
   function controls(){
     byId('measurement-toggle').disabled=!!(pending||!connected||(!current.running&&(!ready||sandboxBusy||current.reserved)));
     modeSelect.disabled=!!(pending||current.running||current.reserved);
     byId('measurement-toggle').textContent=pending?'Procesando…':current.running?'Finalizar':'Comenzar';
     byId('measurement-query').disabled=pending||!connected||!current.running;
+    const presenceEnabled=connected&&current.running&&['B','C','D','E','F'].includes(current.run?.mode)&&!pending;
+    const [presenceMode,presenceToggle]=cards.presence.control.children;
+    presenceMode.disabled=!presenceEnabled;presenceToggle.disabled=!presenceEnabled||current.presence_control?.mode!=='MANUAL';
+    const faultEnabled=connected&&current.running&&current.run?.mode==='F'&&!pending;
+    for(const button of Object.values(faultButtons))button.disabled=!faultEnabled;
+    byId('measurement-timeout-vision').disabled=!faultEnabled||!!current.fault_control?.timeouts?.vision;
+    byId('measurement-timeout-gemma').disabled=!faultEnabled||!!current.fault_control?.timeouts?.gemma;
   }
   async function post(url,body){
     const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
     const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo completar la operación.');return data;
   }
   async function setPresence(body){
-    if(pending)return;pending=true;controls();text('measurement-error','');
+    if(pending||!connected||!current.running)return;pending=true;controls();text('measurement-error','');
     try{await post('/api/experiments/presence',body);}
     catch(error){text('measurement-error',error.message);}
     finally{pending=false;controls();}
@@ -123,7 +148,7 @@
       }
       nodes.heading.textContent=answer.question_id+' · '+answer.question;
       nodes.value.textContent=answerText(answer);
-      const source=answer.interpretation_id?'Gemma':{Q1:'Radar',Q2:'YOLO',Q3:'Sensores ambientales',Q4:'Reglas ambientales',Q5:'Reglas de contexto',Q6:'Reglas de contexto',Q7:'Análisis de imagen'}[answer.question_id]||'SENSE';
+      const source=answer.interpretation_id?'Gemma':{Q1:data.context?.observations?.presence?.metadata?.source_kind==='MANUAL_CONTROL'?'Control manual':'Radar',Q2:'YOLO',Q3:'Sensores ambientales',Q4:'Reglas ambientales',Q5:'Reglas de contexto',Q6:'Reglas de contexto',Q7:'Análisis de imagen'}[answer.question_id]||'SENSE';
       nodes.status.textContent=(answerStatuses[answer.status]||answer.status||'Sin evaluar')+' · '+source+' · '+timeLabel(answer.evaluated_at);
       nodes.article.dataset.status=answer.status;
       const missing=(answer.pending_information||[]).map(item=>informationNames[item]||item);
@@ -158,23 +183,27 @@
       const {runs}=await response.json();
       byId('measurement-history').replaceChildren(...runs.map(run=>{
         const row=make('tr');for(const value of [new Date(run.start_time).toLocaleString(),run.mode,runStatuses[run.status]||run.status])row.append(make('td',value));
-        const cell=make('td'),link=make('a','Descargar registro');link.href='/api/experiments/'+encodeURIComponent(run.run_id)+'/export';cell.append(link);row.append(cell);return row;
+        const cell=make('td'),link=make('a','CSV · ZIP'),raw=make('a','NDJSON'),observe=make('button','Completar observaciones');
+        link.href='/api/experiments/'+encodeURIComponent(run.run_id)+'/export?format=csv';raw.href='/api/experiments/'+encodeURIComponent(run.run_id)+'/export';
+        observe.hidden=!run.quality?.pending_observations;observe.onclick=()=>window.experimentation?.review(run.run_id);
+        cell.append(link,make('span',' · '),raw,observe);row.append(cell);return row;
       }));
       text('measurement-history-note',runs.length?'Últimas '+runs.length+' ejecuciones.':'Todavía no hay ejecuciones.');
     }catch(error){text('measurement-history-note',error.message);}
   }
   byId('measurement-history-details').addEventListener('toggle',()=>{if(byId('measurement-history-details').open)history();});
   window.measurement = {
-    connection(value){connected=value;controls();if(!value){text('measurement-state','Conexión interrumpida; estado sin actualizar.');text('measurement-answer-note','Conexión interrumpida. Se muestran las últimas respuestas recibidas.');}},
+    connection(value){connected=value;controls();window.experimentation?.connection(value);if(!value){text('measurement-state','Conexión interrumpida; estado sin actualizar.');text('measurement-answer-note','Conexión interrumpida. Se muestran las últimas respuestas recibidas.');}},
     render(data,phases,busy){
       current=data||{};connected=true;sandboxBusy=!!busy;ready=Object.values(phases||{}).length===3&&Object.values(phases).every(p=>!['waiting','loading'].includes(p.status));
       controls();
       for(const option of modeSelect.options)option.disabled=current.enabled_modes&&!current.enabled_modes.includes(option.value);
       if(current.run&&current.running)modeSelect.value=current.run.mode;
       const visualQuestion=Array.from(byId('measurement-question').options).find(option=>option.value==='Q7');
-      if(visualQuestion)visualQuestion.disabled=current.run?.mode!=='E';
+      if(visualQuestion)visualQuestion.disabled=!['E','F'].includes(current.run?.mode);
       if(visualQuestion?.disabled&&byId('measurement-question').value==='Q7')byId('measurement-question').value='Q1';
       const run=current.run;
+      text('measurement-heading',run?.guided?'Medición experimental':'Medición y pruebas');
       text('measurement-run',run?(modes[run.mode]||run.mode)+' · '+(runStatuses[run.status]||run.status):'Sin ejecución · parámetros de piloto');
       const stateLabel={WAIT:'Esperando datos o un disparador',ACQUIRE:'Recopilando observaciones',ASSESS:'Evaluando la evidencia',VISION:'Capturando imagen y ejecutando YOLO',INTERPRET:'Solicitando interpretación',REPORT:'Guardando respuestas',DEGRADED:'Continuando con información parcial'}[current.fsm]||current.fsm;
       text('measurement-state',current.running?stateLabel:current.reserved?'Esperando a que terminen las tareas activas':run?'Ejecución finalizada':'Listo para comenzar');
@@ -194,7 +223,7 @@
       text('measurement-transition-live',lastTransition?'Última transición: '+lastTransition.from+' → '+lastTransition.to+' · '+lastTransition.reason:'Esperando inicio.');
       const background=byId('measurement-background-tasks'), activeTasks=(current.tasks?.active||[]);
       background.hidden=!activeTasks.length;
-      background.replaceChildren(...activeTasks.map(task=>make('span',task.question_id+' · '+(task.status==='RUNNING'?'en segundo plano':'esperando finalización')+' · '+task.elapsed_seconds+' s','background-task '+(task.status==='RUNNING'?'running':''))));
+      background.replaceChildren(...activeTasks.map(task=>make('span',task.question_id+' · '+(task.simulated?'simulación, modelo sin ejecutar':task.status==='RUNNING'?'en segundo plano':'esperando finalización')+' · '+task.elapsed_seconds+' s','background-task '+(task.status==='RUNNING'?'running':''))));
       byId('measurement-degraded').classList.toggle('active',current.fsm==='DEGRADED'||actions.includes('DEGRADED'));
       byId('measurement-degraded').hidden=!actions.includes('DEGRADED')&&current.fsm!=='DEGRADED';
       text('measurement-degraded','Este ciclo produjo información parcial o una abstención por falta de evidencia.');
@@ -213,22 +242,26 @@
             if(observation?.value!=null)card.age.textContent+='\n'+(status==='VALID'?'Radar: ':'Última lectura: ')+(observation.value?'presencia detectada':'sin presencia detectada');
           }
           if(card.control){
-            const manual=current.presence_control?.mode==='MANUAL', enabled=!!(current.running&&['C','D','E'].includes(run?.mode)&&!pending);
-            card.control.hidden=!['C','D','E'].includes(run?.mode);
+            const manual=current.presence_control?.mode==='MANUAL';
+            card.control.hidden=!['B','C','D','E','F'].includes(run?.mode);
             const [mode,toggle]=card.control.children;
-            mode.textContent=manual?'Manual':'Auto';mode.className=manual?'manual':'';mode.disabled=!enabled;
-            toggle.textContent=current.presence_control?.detected?'Detectada':'No detectada';toggle.disabled=!enabled||!manual;
+            mode.textContent=manual?'Manual':'Auto';mode.className=manual?'manual':'';
+            toggle.textContent=run?.mode==='B'?(current.presence_control?.near?'Dentro de zona':'Fuera de zona'):(current.presence_control?.detected?'Detectada':'No detectada');
+            if(manual){
+              card.age.textContent+='\nControl manual fijado; no es lectura del radar.';
+              if(current.raw_presence)card.age.textContent+='\nÚltimo radar real: '+(current.raw_presence.value==null?'desconocido':current.raw_presence.value?'presencia':'sin presencia')+' · '+timeLabel(current.raw_presence.captured_at);
+            }
           }
         }
       }
       const trigger=current.reactive_trigger,visionDecision=(current.decisions||[]).filter(item=>item.kind==='VISION').at(-1);
       let triggerText='';
       if(current.running&&run?.mode==='B'&&trigger){
-        const rule='B: entrada < '+trigger.enter_below_cm+' cm · salida ≥ '+trigger.exit_at_or_above_cm+' cm · '+trigger.required_samples+' lecturas.';
+        const rule=trigger.manual?'B manual: señal explícita de presencia/zona; sin distancia simulada.':'B: entrada < '+trigger.enter_below_cm+' cm · salida ≥ '+trigger.exit_at_or_above_cm+' cm · '+trigger.required_samples+' lecturas.';
         const reason={RADAR_DISTANCE_UNKNOWN:'Sin distancia válida y vigente; esperando al radar.',RADAR_ZONE_CONFIRMING:'Confirmando zona: '+trigger.confirmed_samples+'/'+trigger.required_samples+'.',
           COOLDOWN_ACTIVE:'Esperando el intervalo mínimo entre capturas.',CAMERA_UNAVAILABLE:'YOLO no está disponible.',DUPLICATE_REQUEST:'Captura visual en curso.',
           INSUFFICIENT_MEMORY:'Captura pospuesta por memoria disponible.',CPU_BUDGET:'Captura pospuesta por carga de CPU.',RATE_LIMIT:'Esperando el presupuesto de activaciones.',
-          RADAR_NEAR_CONFIRMED:'Zona próxima inicial confirmada: captura autorizada.',RADAR_ZONE_ENTERED:'Entrada confirmada: captura autorizada.',RADAR_ZONE_EXITED:'Salida confirmada: captura autorizada.'}[visionDecision?.reason];
+          RADAR_NEAR_CONFIRMED:'Zona próxima inicial confirmada: captura autorizada.',RADAR_ZONE_ENTERED:'Entrada confirmada: captura autorizada.',RADAR_ZONE_EXITED:'Salida confirmada: captura autorizada.',MANUAL_ZONE_ENTERED:'Entrada manual: captura autorizada si hay recursos.',MANUAL_ZONE_EXITED:'Salida manual: captura autorizada si hay recursos.'}[visionDecision?.reason];
         triggerText=rule+' '+(reason||(trigger.state==='UNKNOWN'?'Sin distancia válida y vigente.':trigger.state==='CONFIRMING'?'Confirmando zona: '+trigger.confirmed_samples+'/'+trigger.required_samples+'.':'Esperando otro cambio confirmado de zona.'));
         if(current.context?.observations?.count?.status==='STALE')triggerText+=' El conteo está vencido; B no lo renueva únicamente por antigüedad.';
       }
@@ -236,14 +269,29 @@
       const tasks=current.tasks||{},active=tasks.active||[];
       const gemmaTasks=active.filter(task=>task.agent==='InterpretationAgent');
       byId('measurement-worker').classList.toggle('loading',gemmaTasks.length>0);
-      text('measurement-worker',gemmaTasks.length?gemmaTasks.map(task=>task.question_id+' · '+(task.status==='RUNNING'?'Interpretando':task.status==='DRAINING'?'Esperando finalización física':'Estado del runtime sin confirmar')+' · '+task.elapsed_seconds+' s').join('\n')+'\nEn cola: '+(tasks.queued||0):tasks.queued?'Interpretaciones en espera: '+tasks.queued:'');
+      text('measurement-worker',gemmaTasks.length?gemmaTasks.map(task=>task.question_id+' · '+(task.simulated?'Simulando timeout; modelo sin ejecutar':task.status==='RUNNING'?'Interpretando':task.status==='DRAINING'?'Esperando finalización física':'Estado del runtime sin confirmar')+' · '+task.elapsed_seconds+' s').join('\n')+'\nEn cola: '+(tasks.queued||0):tasks.queued?'Interpretaciones en espera: '+tasks.queued:'');
       const interpretationCount=(current.interpretations||[]).length;
       byId('measurement-interpretations-empty').hidden=interpretationCount>0;
       text('measurement-interpretation-count',interpretationCount?Math.min(10,interpretationCount)+' resultados recientes':'');
-      text('measurement-interpretations-empty',!run?'Gemma se utiliza en D y E cuando la política identifica una necesidad adicional.':!['D','E'].includes(run.mode)?'El modo '+run.mode+' responde mediante reglas; no utiliza Gemma.':gemmaTasks.length||tasks.queued?'Todavía no hay resultados: una interpretación está pendiente.':'Todavía no hay interpretaciones. Gemma solo se invoca cuando puede aportar información adicional.');
+      text('measurement-interpretations-empty',!run?'Gemma se utiliza en D, E y F cuando la política identifica una necesidad adicional.':!['D','E','F'].includes(run.mode)?'El modo '+run.mode+' responde mediante reglas; no utiliza Gemma.':gemmaTasks.length||tasks.queued?'Todavía no hay resultados: una interpretación está pendiente.':'Todavía no hay interpretaciones. Gemma solo se invoca cuando puede aportar información adicional.');
+      for(const [component,node] of Object.entries(healthNodes)){
+        const status=current.component_health?.[component]?.status||'UNKNOWN';node.textContent=healthLabels[status]||status;node.dataset.status=status;
+      }
+      byId('measurement-fault-panel').hidden=run?.mode!=='F';
+      for(const [component,button] of Object.entries(faultButtons)){
+        const disabled=current.fault_control?.disabled.includes(component);button.textContent=disabled?'Restaurar entrada':'Deshabilitar por software';button.setAttribute('aria-pressed',String(!!disabled));
+      }
+      const timeoutLabel=lane=>({ARMED:'Armado: esperando una solicitud de la política',QUEUED:'Asignado a una tarea en cola',RUNNING:'Timeout simulado en curso'}[current.fault_control?.timeouts[lane]]||'Sin timeout armado');
+      text('measurement-timeout-vision-status',timeoutLabel('vision'));text('measurement-timeout-gemma-status',timeoutLabel('gemma'));
+      const faults=current.fault_control?.faults||[];
+      text('measurement-fault-summary',faults.length?faults.length+' fallas registradas · '+faults.filter(f=>f.detected_at).length+' detectadas · '+faults.filter(f=>f.recovered_at).length+' recuperadas · '+faults.filter(f=>f.not_executed_reason).length+' sin ejecutar.':'Sin fallas inyectadas. F utiliza la misma política de E.');
       text('measurement-resources',JSON.stringify({resources:current.resources,workers:tasks,dispatcher:current.dispatcher},null,2));
       if(current.error)text('measurement-error',current.error);
       renderDetails(current);
+      const blind=!!current.run?.guided&&(current.observer_requests||[]).some(r=>r.fields.includes('visible_people'));
+      cards.count.value.textContent=blind?'Observación pendiente':cards.count.value.textContent;
+      if(answerNodes.Q2)answerNodes.Q2.article.hidden=blind||!current.answers?.Q2;
+      window.experimentation?.render(current,ready,sandboxBusy);
       const nextHistory=(run?.run_id||'')+'/'+(run?.status||'');if(nextHistory!==historyKey){historyKey=nextHistory;if(byId('measurement-history-details').open)history();}
     },
     resizeGraph(){if(flow){flow.resize();flow.fit(flow.elements(),55);}}

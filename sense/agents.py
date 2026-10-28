@@ -49,18 +49,21 @@ class InterpretationAgent:
             for key, value in document["observations"].items()
         }
         events = [event["event_type"] for event in document["environment_events"][-4:]]
+        presence_source = "control manual" if document["observations"].get("presence", {}).get("metadata", {}).get("source_kind") == "MANUAL_CONTROL" else "radar"
+        status = {key: value["status"] for key, value in document["observations"].items()}
+        health = {key: value["status"] for key, value in document.get("component_health", {}).items()}
         if question == "Q6":
             event_text = " y ".join(events) if events else "sin eventos ambientales confirmados"
-            return f"Valores: <presence>={evidence.get('presence')}; <count>={evidence.get('count')}; <events>={event_text}."
-        return "Q7. Contexto: " + json.dumps({"observations": evidence, "events": events}, separators=(",", ":"))
+            return f"Valores: <presence>={evidence.get('presence')}; <presence_source>={presence_source}; <count>={evidence.get('count')}; <events>={event_text}. Estados: {json.dumps(status)}; salud observada: {json.dumps(health)}."
+        return "Q7. Contexto: " + json.dumps({"observations": evidence, "events": events, "presence_source": presence_source, "data_status": status, "component_health": health}, separators=(",", ":"))
 
     @staticmethod
     def system_prompt(question: str) -> str | None:
         if question == "Q6":
             return ('JSON: {"inferences":[""],"unknowns":[""],"recommendations":[""]}. '
-                    'Una frase por lista. Copia esta estructura de inferencia: "Radar presence=<presence>; cámara count=<count>; '
+                    'Una frase por lista. Copia esta estructura de inferencia: "Presence=<presence> (fuente=<presence_source>); cámara count=<count>; '
                     'eventos=<events> coinciden temporalmente, sin probar causalidad." No añadas etiquetas ni hechos. '
-                    'Unknowns: "Radar y cámara no determinan la ocupación total." Recomendación no crítica: monitorear los eventos listados.')
+                    'Unknowns: "Estas fuentes no determinan la ocupación total ni la causa física de los fallos." Recomendación no crítica: monitorear los eventos listados.')
         if question == "Q7":
             return ('JSON: {"inferences":[""],"unknowns":[""],"recommendations":[""]}. '
                     'Una frase breve por lista. La imagen adjunta es evidencia. Describe solo una observación visual '

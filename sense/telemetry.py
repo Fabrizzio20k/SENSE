@@ -4,9 +4,11 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import psutil
+from .contracts import utc_now
 
 
 class ResourceMonitor:
@@ -56,7 +58,9 @@ class ResourceMonitor:
             except (OSError, subprocess.TimeoutExpired):
                 pass
         size = sum(path.stat().st_size for path in self.database.parent.glob(self.database.name + "*") if path.is_file())
-        return {"cpu_total_percent": psutil.cpu_percent(), "available_mb": round(psutil.virtual_memory().available / 1048576),
+        system_memory = psutil.virtual_memory()
+        return {"sampled_at": utc_now(), "sampled_monotonic": time.monotonic(), "cpu_total_percent": psutil.cpu_percent(), "available_mb": round(system_memory.available / 1048576),
+                "ram_used_mb": round(system_memory.used / 1048576, 1), "ram_total_mb": round(system_memory.total / 1048576, 1),
                 "main": {"pid": os.getpid(), "cpu_percent": self.process.cpu_percent(), "rss_mb": round(memory.rss / 1048576, 1),
                          "peak_rss_mb": peak_os or round(self.peak_rss / 1048576, 1), "swap_mb": swap_process},
                 "gemma_processes": workers, "swap_used_mb": round(psutil.swap_memory().used / 1048576, 1),

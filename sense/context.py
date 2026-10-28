@@ -39,6 +39,14 @@ class EnvironmentEvaluator:
                 elif condition["state"] == "RECOVERING":
                     condition["state"] = "ACTIVE"
         self.last_update = captured
+        for key, condition in self.conditions.items():
+            if key not in observations:
+                condition["evaluable"] = False
+                condition["count"] = condition["recovery"] = 0
+                if condition["state"] == "CANDIDATE":
+                    condition.update(state="NORMAL", reference=None)
+                elif condition["state"] == "RECOVERING":
+                    condition["state"] = "ACTIVE"
         codes = {"temperature": "TEMP_RISE", "humidity": "HUMIDITY_RISE", "aqi": "AQI_WORSENED", "eco2": "ECO2_THRESHOLD_CROSSED"}
         thresholds = {"temperature": "temperature_rise_c", "humidity": "humidity_rise_pp", "aqi": "aqi_increase_levels"}
         rearms = {"temperature": "temperature_rearm_c", "humidity": "humidity_rearm_pp", "aqi": "aqi_rearm_levels"}
@@ -120,9 +128,10 @@ class ContextStore:
         self.presence_samples = 0
         self.confirmed_presence = None
         self.conflict = False
+        self.component_health = {}
 
-    def ingest(self, updated: dict[str, Observation], radar: Observation, now: float, wall: float) -> list[dict]:
-        captured = timestamp(radar.captured_at)
+    def ingest(self, updated: dict[str, Observation], radar: Observation | None, now: float, wall: float, captured_at: str | None = None) -> list[dict]:
+        captured = timestamp(captured_at if captured_at is not None else radar.captured_at if radar is not None else None)
         if captured > wall + self.config["sensors"]["max_future_skew_seconds"]:
             raise ValueError("Timestamp MQTT en el futuro; compruebe sincronización de relojes.")
         if self.last_sensor_timestamp is not None and captured <= self.last_sensor_timestamp:
@@ -132,12 +141,13 @@ class ContextStore:
         self.last_sensor_timestamp = captured
         for key, observation in updated.items():
             self.put(key, observation, now, max(0, wall - captured))
-        self.put("presence", radar, now, max(0, wall - captured))
+        if radar is not None:
+            self.put("presence", radar, now, max(0, wall - captured))
         events = self.environment.update(updated, captured) if wall - captured <= self.config["sensors"]["environment_ttl_seconds"] else []
         if not events and wall - captured > self.config["sensors"]["environment_ttl_seconds"]:
             for condition in self.environment.conditions.values():
                 condition["count"] = condition["recovery"] = 0
-        if radar.status == "VALID" and wall - captured <= self.config["sensors"]["presence_ttl_seconds"]:
+        if radar is not None and radar.status == "VALID" and wall - captured <= self.config["sensors"]["presence_ttl_seconds"]:
             if radar.value == self.presence_candidate:
                 self.presence_samples += 1
             else:
@@ -165,7 +175,7 @@ class ContextStore:
                    if key == "presence" else self.config["sensors"]["environment_ttl_seconds"])
             age = max(0, now - self.received_monotonic[key] + self.age_on_receipt[key])
             document["age_seconds"] = round(age, 2)
-            if document["status"] == "VALID" and age >= ttl:
+            if document["status"] == "VALID" and age >= ttl and document["metadata"].get("source_kind") != "MANUAL_CONTROL":
                 document["status"] = "STALE"
             observations[key] = document
         radar, count = observations.get("presence", {}), observations.get("count", {})
@@ -180,4 +190,5 @@ class ContextStore:
                     "observations": observations, "environment_events": list(self.environment.events),
                     "environment_conditions": self.environment.conditions, "session_baseline": self.environment.baseline,
                     "conflict": self.conflict, "physical_state": "NOT_DIRECTLY_OBSERVABLE"}
+        document["component_health"] = self.component_health
         return Snapshot(snapshot_id, created, json.dumps(document, allow_nan=False))

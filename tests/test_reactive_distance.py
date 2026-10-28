@@ -127,6 +127,13 @@ class ReactiveDistanceTests(unittest.TestCase):
         self.assertEqual(self.events[-1]["event_type"], "RADAR_ZONE_EXITED")
         self.assertIsNone(self.events[-1]["distance_cm"])
 
+    def test_zero_total_distance_does_not_turn_absence_into_presence(self):
+        packet = telemetry(stamp(0), presence=0)
+        packet['presence']['total_distance_cm'] = 0
+        observation = PresenceAgent.observe(packet, stamp(0), 'radar')
+        self.assertEqual(observation.value, 0)
+        self.assertIsNone(dict(observation.metadata)['trigger_distance_cm'])
+
 
 if __name__ == "__main__":
     unittest.main()

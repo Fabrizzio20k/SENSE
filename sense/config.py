@@ -68,8 +68,8 @@ def validate_config(config: dict) -> None:
                 raise ValueError(f"Se requiere un entero: interpretation.{kind}.{name}")
     if not config.get("config_version") or not config.get("hardware_profile"):
         raise ValueError("Faltan config_version o hardware_profile.")
-    if not isinstance(config.get("enabled_modes"), list) or not config["enabled_modes"] or any(not isinstance(m, str) or m not in list("ABCDE") for m in config["enabled_modes"]):
-        raise ValueError("enabled_modes debe contener modos A–E.")
+    if not isinstance(config.get("enabled_modes"), list) or not config["enabled_modes"] or any(not isinstance(m, str) or m not in list("ABCDEF") for m in config["enabled_modes"]):
+        raise ValueError("enabled_modes debe contener modos A–F.")
     for name in ("radar_region", "camera_region", "environment_region"):
         if not isinstance(config.get("regions", {}).get(name), str) or not config["regions"][name]:
             raise ValueError(f"Falta regions.{name}.")

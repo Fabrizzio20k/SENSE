@@ -19,7 +19,8 @@ QUESTIONS = {
 
 
 def semantic_key(question: str, snapshot: dict, model: str, image_id: str | None = None) -> str:
-    relevant = {key: {"value": value["value"], "status": value["status"], "region": value["region"]}
+    relevant = {key: {"value": value["value"], "status": value["status"], "region": value["region"],
+                     "source_agent": value.get("source_agent"), "source_kind": value.get("metadata", {}).get("source_kind")}
                 for key, value in snapshot["observations"].items()}
     content = {"question": question, "evidence": relevant, "model": model, "image_id": image_id,
                "episodes": [event["event_id"] for event in snapshot["environment_events"]]}
@@ -27,6 +28,7 @@ def semantic_key(question: str, snapshot: dict, model: str, image_id: str | None
 
 
 def answer_questions(snapshot: Snapshot, mode: str, alignment_seconds: float = 60) -> dict:
+    mode = "E" if mode == "F" else mode
     document = snapshot.document()
     observations = document["observations"]
     answers = {}
@@ -39,10 +41,13 @@ def answer_questions(snapshot: Snapshot, mode: str, alignment_seconds: float = 6
 
     presence = observations.get("presence", {})
     valid_presence = presence.get("status") == "VALID"
+    manual = presence.get("metadata", {}).get("source_kind") == "MANUAL_CONTROL"
     result("Q1", "RESOLVED" if valid_presence else "ABSTAINED",
            ("Presencia detectada" if presence["value"] else "Sin presencia detectada") if valid_presence else "Radar sin evidencia vigente.",
            ("presence",), ("Solo cobertura del radar; no representa toda el aula ni proporciona conteo.",),
            () if valid_presence else ("PRESENCE_REQUIRED",))
+    if manual:
+        answers["Q1"]["limitations"] = ["Señal manual del operador; no es medición del radar ni ground truth."]
     count = observations.get("count", {})
     valid_count = count.get("status") == "VALID"
     result("Q2", "RESOLVED" if valid_count else "PENDING", count["value"] if valid_count else None,
@@ -65,6 +70,8 @@ def answer_questions(snapshot: Snapshot, mode: str, alignment_seconds: float = 6
     result("Q5", "RESOLVED" if not missing else "ABSTAINED",
            "Evidencia vigente dentro de sus regiones." if not missing else "Información incompleta, vencida o no comparable.",
            tuple(observations), ("Radar y cámara solo se comparan si su cobertura fue declarada comparable.",), missing)
+    if manual:
+        answers["Q5"]["limitations"].append("La presencia utilizada es una intervención manual, separada del ground truth.")
     related = bool(events and valid_count and valid_presence)
     latest_episode = events[-1] if events else None
     # La relación requiere evidencia próxima al episodio; la simultaneidad no prueba causalidad.
@@ -79,8 +86,10 @@ def answer_questions(snapshot: Snapshot, mode: str, alignment_seconds: float = 6
            else "No hay un episodio ambiental y evidencia de ocupación temporalmente comparables.",
            (*env_keys, "presence", "count"), ("No se puede atribuir el cambio ambiental a las personas.",),
            ("TEXT_INTERPRETATION_REQUIRED",) if complex_episode and mode in ("D", "E") else ())
+    if manual:
+        answers["Q6"]["limitations"].append("La señal manual de presencia no confirma ocupación real.")
     result("Q7", "PENDING" if mode == "E" else "NOT_APPLICABLE",
-           "Pendiente de imagen pertinente y necesidad visual adicional." if mode == "E" else "Capacidad exclusiva del modo E.",
+           "Pendiente de imagen pertinente y necesidad visual adicional." if mode == "E" else "Capacidad disponible en E y F.",
            ("count",), ("Descripción inferida; sin identificación ni reconocimiento facial.",),
            ("MULTIMODAL_INTERPRETATION_REQUIRED",) if mode == "E" else ())
     return answers
@@ -95,7 +104,7 @@ class Decision:
 
 class PolicyEngine:
     def __init__(self, config: dict, mode: str, started: float):
-        self.config, self.mode = config, mode
+        self.config, self.mode = config, "E" if mode == "F" else mode
         self.next_period = started
         self.reactive_pending = None
         self.reactive_confirmed = None
@@ -114,27 +123,31 @@ class PolicyEngine:
             return []
         from .context import timestamp
 
+        metadata = dict(observation.metadata)
+        manual = metadata.get("source_kind") == "MANUAL_CONTROL"
         captured = timestamp(observation.captured_at)
-        if self.reactive_last_timestamp is not None:
+        if not manual and self.reactive_last_timestamp is not None:
             if captured <= self.reactive_last_timestamp:
                 return []
             if captured - self.reactive_last_timestamp >= self.config["sensors"]["presence_ttl_seconds"]:
                 self.reactive_evidence.clear()
-        self.reactive_last_timestamp = captured
-        metadata = dict(observation.metadata)
+        if not manual:
+            self.reactive_last_timestamp = captured
         distance = metadata.get("trigger_distance_cm")
-        if observation.status != "VALID" or wall - captured >= self.config["sensors"]["presence_ttl_seconds"] or distance is None:
+        if observation.status != "VALID" or (not manual and wall - captured >= self.config["sensors"]["presence_ttl_seconds"]) or (not manual and observation.value != 0 and distance is None):
             self.reactive_candidate = None
             self.reactive_evidence.clear()
             return []
         modes = self.config["modes"]
         threshold = modes["reactive_exit_at_or_above_cm"] if self.reactive_confirmed else modes["reactive_enter_below_cm"]
-        near = distance < threshold
+        near = metadata["manual_near"] if manual else observation.value != 0 and distance < threshold
+        if manual:
+            self.reactive_evidence.clear()
         if near != self.reactive_candidate:
             self.reactive_evidence.clear()
         self.reactive_candidate = near
         self.reactive_evidence.append(observation.observation_id)
-        if len(self.reactive_evidence) < modes["reactive_debounce_samples"] or near == self.reactive_confirmed:
+        if (not manual and len(self.reactive_evidence) < modes["reactive_debounce_samples"]) or near == self.reactive_confirmed:
             return []
         previous = self.reactive_confirmed
         self.reactive_confirmed = near
@@ -145,12 +158,23 @@ class PolicyEngine:
                  "enter_below_cm": modes["reactive_enter_below_cm"], "exit_at_or_above_cm": modes["reactive_exit_at_or_above_cm"],
                  "confirmation_samples": len(self.reactive_evidence), "region": observation.region,
                  "evidence_ids": list(self.reactive_evidence), "captured_at": observation.captured_at}
+        if manual:
+            event.update(event_type="MANUAL_ZONE_ENTERED" if near else "MANUAL_ZONE_EXITED", source="MANUAL_CONTROL")
         self.reactive_pending = event
         return [event]
+
+    def reset_reactive(self):
+        self.reactive_confirmed = self.reactive_candidate = self.reactive_pending = self.reactive_last_timestamp = None
+        self.reactive_evidence.clear()
 
     def reactive_view(self, snapshot: dict) -> dict:
         observation = snapshot["observations"].get("presence", {})
         metadata = observation.get("metadata", {})
+        if metadata.get("source_kind") == "MANUAL_CONTROL":
+            return dict(state="NEAR" if metadata["manual_near"] else "FAR", manual=True,
+                        candidate="NEAR" if metadata["manual_near"] else "FAR", distance_cm=None, distance_source=None,
+                        confirmed_samples=1, required_samples=1, pending_event=self.reactive_pending,
+                        enter_below_cm=self.config["modes"]["reactive_enter_below_cm"], exit_at_or_above_cm=self.config["modes"]["reactive_exit_at_or_above_cm"])
         known = observation.get("status") in ("VALID", "CONFLICTING") and (observation.get("value") == 0 or metadata.get("trigger_distance_cm") is not None)
         return {"state": "UNKNOWN" if not known else "CONFIRMING" if len(self.reactive_evidence) < self.config["modes"]["reactive_debounce_samples"] else "NEAR" if self.reactive_confirmed else "FAR",
                 "candidate": "NEAR" if self.reactive_candidate else "FAR" if self.reactive_candidate is not None else None,

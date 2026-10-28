@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import sqlite3
 import os
 import tempfile
 import threading
@@ -268,18 +269,23 @@ def snapshot() -> dict:
         "memory_percent": psutil.virtual_memory().percent,
         "memory_used_mb": round(psutil.virtual_memory().used / 1024 / 1024),
     }
-    payload["measurement"] = experiments.snapshot() if experiments is not None else {"running": False, "enabled_modes": list("ABCDE")}
+    payload["measurement"] = experiments.snapshot() if experiments is not None else {"running": False, "enabled_modes": list("ABCDEF")}
     return payload
 
 
 @app.post("/api/experiments/start")
 def start_experiment():
     body = request.get_json(silent=True)
-    if not isinstance(body, dict) or body.get("mode") not in list("ABCDE"):
-        return jsonify(error="Selecciona un modo A–E."), 400
+    if not isinstance(body, dict) or body.get("mode") not in list("ABCDEF"):
+        return jsonify(error="Selecciona un modo A–F."), 400
     for name in ("session_id", "scenario_id"):
         if name in body and (not isinstance(body[name], str) or not 1 <= len(body[name]) <= 100):
             return jsonify(error=f"{name} debe contener entre 1 y 100 caracteres."), 400
+    try:
+        from sense.protocol import validate_guided_start
+        validate_guided_start(body)
+    except (ValueError, TypeError, OverflowError) as error:
+        return jsonify(error=str(error)), 400
     try:
         service = get_experiments()
         with lock:
@@ -288,7 +294,7 @@ def start_experiment():
             service.reserve()
         run = service.call("start", body)
         return jsonify(run_id=run["run_id"]), 202
-    except (ValueError, OSError, TimeoutError) as error:
+    except (ValueError, OSError, sqlite3.Error, TimeoutError) as error:
         return jsonify(error=str(error)), 409
 
 
@@ -296,7 +302,7 @@ def start_experiment():
 def stop_experiment():
     try:
         return jsonify(get_experiments().call("stop")), 202
-    except (ValueError, TimeoutError) as error:
+    except (ValueError, OSError, sqlite3.Error, TimeoutError) as error:
         return jsonify(error=str(error)), 409
 
 
@@ -307,7 +313,7 @@ def query_experiment():
         return jsonify(error="Se requiere question_id."), 400
     try:
         return jsonify(get_experiments().call("query", body)), 202
-    except (ValueError, TimeoutError) as error:
+    except (ValueError, OSError, sqlite3.Error, TimeoutError) as error:
         return jsonify(error=str(error)), 409
 
 
@@ -319,9 +325,29 @@ def set_experiment_presence():
     detected = None if body["mode"] == "auto" else body.get("detected")
     if body["mode"] == "manual" and type(detected) is not bool:
         return jsonify(error="El modo manual requiere detected booleano."), 400
+    if "near" in body and (body["mode"] != "manual" or type(body["near"]) is not bool):
+        return jsonify(error="near debe ser booleano en modo manual."), 400
     try:
-        return jsonify(get_experiments().call("presence", {"detected": detected})), 202
-    except (ValueError, TimeoutError) as error:
+        control = {"detected": detected}
+        if "near" in body:
+            control["near"] = body["near"]
+        return jsonify(get_experiments().call("presence", control)), 202
+    except (ValueError, OSError, sqlite3.Error, TimeoutError) as error:
+        return jsonify(error=str(error)), 409
+
+
+@app.post("/api/experiments/faults")
+def set_experiment_fault():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or body.get("action") not in ("availability", "timeout"):
+        return jsonify(error="Selecciona una falla de disponibilidad o timeout."), 400
+    if body["action"] == "availability" and (body.get("component") not in ("sht40", "ens160", "radar", "camera") or type(body.get("enabled")) is not bool):
+        return jsonify(error="Selecciona componente y enabled booleano."), 400
+    if body["action"] == "timeout" and body.get("lane") not in ("vision", "gemma"):
+        return jsonify(error="Selecciona el worker vision o gemma."), 400
+    try:
+        return jsonify(get_experiments().call("fault", body)), 202
+    except (ValueError, OSError, sqlite3.Error, TimeoutError) as error:
         return jsonify(error=str(error)), 409
 
 
@@ -340,7 +366,7 @@ def experiment_details(run_id):
         after = max(0, int(request.args.get("after", 0)))
     except ValueError:
         return jsonify(error="Cursor inválido."), 400
-    return jsonify(run=run, events=log.events(run_id, after))
+    return jsonify(run=run, events=log.events(run_id, after), observer_requests=log.observer_requests(run_id, True), quality=log.quality(run_id))
 
 
 @app.get("/api/experiments/<run_id>/export")
@@ -348,15 +374,45 @@ def export_experiment(run_id):
     log = get_experiments().log
     if log.run(run_id) is None:
         return jsonify(error="Ejecución no encontrada."), 404
+    if request.args.get("format") == "csv":
+        from sense.trace import export_csv_zip
+        archive = export_csv_zip(log.path, run_id)
+        response = send_file(archive, mimetype="application/zip", as_attachment=True, download_name=f"sense-{run_id}.zip")
+        response.call_on_close(archive.close)
+        return response
     return Response(log.export(run_id), mimetype="application/x-ndjson",
                     headers={"Content-Disposition": f'attachment; filename="sense-{run_id}.ndjson"'})
+
+
+@app.post("/api/experiments/<run_id>/observer-requests/<request_id>")
+def record_observer_response(run_id, request_id):
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or len(json.dumps(payload)) > 10000:
+        return jsonify(error="Se requiere una observación de hasta 10 kB."), 400
+    log = get_experiments().log
+    if log.run(run_id) is None:
+        return jsonify(error="Ejecución no encontrada."), 404
+    try:
+        record_id = log.resolve_observer(run_id, request_id, payload)
+    except (ValueError, TypeError, OverflowError) as error:
+        return jsonify(error=str(error)), 400
+    return jsonify(record_id=record_id, observer_requests=log.observer_requests(run_id, True), quality=log.quality(run_id)), 201
+
+
+@app.post("/api/experiments/<run_id>/observer-requests")
+def request_observer_record(run_id):
+    log = get_experiments().log
+    if log.run(run_id) is None:
+        return jsonify(error="Ejecución no encontrada."), 404
+    log.request_observer(run_id, "OBSERVER_EVENT", ["power_w", "visible_people", "action"])
+    return jsonify(observer_requests=log.observer_requests(run_id, True)), 201
 
 
 @app.post("/api/experiments/<run_id>/human-records")
 def record_ground_truth(run_id):
     body = request.get_json(silent=True)
-    if not isinstance(body, dict) or body.get("kind") not in ("GROUND_TRUTH", "EXTERNAL_ENERGY"):
-        return jsonify(error="Usa kind GROUND_TRUTH o EXTERNAL_ENERGY y un payload separado."), 400
+    if not isinstance(body, dict) or body.get("kind") not in ("GROUND_TRUTH", "EXTERNAL_ENERGY", "EXTERNAL_POWER"):
+        return jsonify(error="Usa kind GROUND_TRUTH, EXTERNAL_POWER o EXTERNAL_ENERGY y un payload separado."), 400
     payload = body.get("payload")
     if not isinstance(payload, dict) or len(json.dumps(payload)) > 10000:
         return jsonify(error="payload debe ser un objeto de hasta 10 kB."), 400
@@ -367,10 +423,11 @@ def record_ground_truth(run_id):
         from sense.context import timestamp
 
         timestamp(payload.get("observed_at"))
-        if body["kind"] == "EXTERNAL_ENERGY":
+        if body["kind"] in ("EXTERNAL_ENERGY", "EXTERNAL_POWER"):
             value = payload.get("value")
-            if type(value) not in (int, float) or not 0 <= value < float("inf") or payload.get("unit") not in ("Wh", "J") or payload.get("scope") != "whole_run":
-                raise ValueError("Energía externa: valor finito no negativo, unidad Wh o J y scope whole_run.")
+            units = ("W",) if body["kind"] == "EXTERNAL_POWER" else ("Wh", "J")
+            if type(value) not in (int, float) or not 0 <= value < float("inf") or payload.get("unit") not in units or payload.get("scope") != "whole_run":
+                raise ValueError("Lectura externa: valor finito no negativo, unidad W (potencia) o Wh/J (energía) y scope whole_run.")
         elif not isinstance(payload.get("region"), str) or not payload["region"]:
             raise ValueError("El ground truth debe indicar su región.")
         elif "visible_people" in payload and (type(payload["visible_people"]) is not int or payload["visible_people"] < 0):

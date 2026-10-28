@@ -280,7 +280,7 @@ class RuntimeTests(unittest.TestCase):
         self.tasks.submit("gemma", self.command(), lambda: self.gate.wait(2), "one", 0, 1)
         self.tasks.submit("gemma", self.command(), lambda: "two", "two", 0, 5)
         self.assertEqual(self.tasks.submit("gemma", self.command(), lambda: 3, "three", 0, 5), "QUEUE_SATURATED")
-        events = self.tasks.poll(2)
+        events = [e for e in self.tasks.poll(2) if e.event_type != 'TASK_STARTED']
         self.assertEqual(events[0].event_type, "TASK_TIMEOUT")
         self.assertIsNotNone(self.tasks.active["gemma"])
         self.assertEqual(len(self.tasks.pending), 1)
@@ -311,7 +311,7 @@ class RuntimeTests(unittest.TestCase):
         self.tasks.submit("gemma", self.command(), fail, "one", 0, 10)
         with self.assertRaises(ReadTimeout):
             self.tasks.active["gemma"].future.result(timeout=2)
-        events = self.tasks.poll(1)
+        events = [e for e in self.tasks.poll(1) if e.event_type != 'TASK_STARTED']
         self.assertTrue(events[0].payload["remote_execution_uncertain"])
         self.assertTrue(self.tasks.busy)
         self.assertEqual(self.tasks.submit("gemma", self.command(), lambda: 1, "two", 2, 10), "REMOTE_EXECUTION_UNCERTAIN")
@@ -322,7 +322,7 @@ class RuntimeTests(unittest.TestCase):
         self.tasks.submit("gemma", self.command(), lambda: self.gate.wait(2), "one", 0, 10)
         command = replace(self.command(), parameters={"question_id": "Q7", "image_expires_monotonic": 1})
         self.tasks.submit("gemma", command, lambda: self.fail("Imagen expirada ejecutada"), "two", 0, 10)
-        events = self.tasks.poll(2)
+        events = [e for e in self.tasks.poll(2) if e.event_type != 'TASK_STARTED']
         self.assertEqual(events[0].payload["reason"], "IMAGE_EXPIRED_IN_QUEUE")
         self.assertEqual(len(self.tasks.pending), 0)
 
@@ -330,9 +330,12 @@ class RuntimeTests(unittest.TestCase):
         self.tasks.submit("vision", self.command("vision"), lambda: {"count": 2}, "one", 0, 1)
         self.tasks.active["vision"].future.result(timeout=2)
         events = self.tasks.poll(2)
-        self.assertEqual(events[0].event_type, "TASK_TIMEOUT")
+        self.assertEqual(events[0].event_type, "TASK_STARTED")
         self.assertNotIn("result", events[0].payload)
         self.assertEqual(events[1].payload["result"], {"count": 2})
+        self.assertEqual(events[1].event_type, "TASK_COMPLETED")
+        self.assertIsNotNone(events[1].payload['completed_at'])
+        self.assertLess(events[1].payload['duration_seconds'], 1)
 
 
 class InterpretationTests(unittest.TestCase):
@@ -359,7 +362,7 @@ class InterpretationTests(unittest.TestCase):
         command = Command(identifier(), "cycle", "run", "InterpretationAgent", "text", utc_now(), utc_now(), {"question_id": "Q6"}, "TEST")
         result = agent.execute(command, self.snapshot, None, config()["interpretation"]["textual"], agent.prompt("Q6", self.snapshot, None))
         self.assertEqual(calls, [(None, agent.system_prompt("Q6"))])
-        self.assertIn("Radar presence=<presence>", agent.system_prompt("Q6"))
+        self.assertIn("fuente=<presence_source>", agent.system_prompt("Q6"))
         self.assertEqual(result["validation_status"], "VALIDATED")
         self.assertEqual(result["snapshot_id"], self.snapshot.snapshot_id)
         self.assertIn(self.evidence["observation_id"], result["evidence_references"])
@@ -508,14 +511,14 @@ class OrchestratorTests(unittest.TestCase):
         self.config["regions"]["radar_camera_comparable"] = True
         self.start("C")
         self.controller.set_presence(True, self.now)
-        self.assertEqual(self.controller.view(self.now)["presence_control"], {"mode": "MANUAL", "detected": True})
+        self.assertEqual(self.controller.view(self.now)["presence_control"], {"mode": "MANUAL", "detected": True, "near": None})
         self.controller.tick(self.now, resources())
         self.assertEqual(self.tasks.active["vision"].command.reason, "COMPARABLE_PRESENCE_CHANGED")
         self.controller.set_presence(None, self.now + 1)
-        self.assertEqual(self.controller.view(self.now + 1)["presence_control"], {"mode": "AUTO", "detected": None})
+        self.assertEqual(self.controller.view(self.now + 1)["presence_control"], {"mode": "AUTO", "detected": None, "near": None})
 
-    def test_manual_presence_is_unavailable_outside_cde(self):
-        self.start("B")
+    def test_manual_presence_is_unavailable_in_a(self):
+        self.start("A")
         with self.assertRaises(ValueError):
             self.controller.set_presence(True, self.now)
 

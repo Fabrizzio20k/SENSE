@@ -1,7 +1,7 @@
 # Valores iniciales para caracterización, NO parámetros científicamente validados.
-config_version: sense-pilot-3-shared-coverage
+config_version: sense-pilot-5-software-faults
 hardware_profile: Raspberry Pi 5 / 8 GB / IMX219 / SHT40 / ENS160 / LD2410C
-enabled_modes: [A, B, C, D, E]
+enabled_modes: [A, B, C, D, E, F]
 regions:
   radar_region: rasp_shared_view
   camera_region: rasp_shared_view
@@ -61,7 +61,7 @@ runtime:
   min_available_mb: 1024
   max_rss_mb: 2048
   max_cpu_percent: 95
-  resource_interval_seconds: 5
+  resource_interval_seconds: 1
   max_database_mb: 512
   min_disk_free_mb: 256
 modes:

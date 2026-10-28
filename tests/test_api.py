@@ -42,7 +42,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/experiments/start', json={"mode": "C"}).status_code, 409)
 
     def test_invalid_inputs_do_not_start(self):
-        for body in (None, [], {"mode": "F"}, {"mode": "C", "scenario_id": []}):
+        for body in (None, [], {"mode": "G"}, {"mode": "C", "scenario_id": []}):
             self.assertEqual(self.client.post('/api/experiments/start', json=body).status_code, 400)
         self.assertFalse(self.calls)
 
