@@ -469,7 +469,8 @@ class SenseOrchestrator:
         if self.run and self.run["run_id"] == run_id and self.run.get("guided") and event.event_type in ("TASK_STARTED", "TASK_COMPLETED", "TASK_FAILED", "TASK_TIMEOUT"):
             fields = ["power_w", "visible_people"] if command["action"] == "vision" and event.event_type == "TASK_STARTED" else ["power_w"]
             self.log.request_observer(run_id, command["action"].upper() + "_" + event.event_type,
-                                      fields, task_id=command["command_id"], event_id=event.event_id)
+                                      fields, task_id=command["command_id"], event_id=event.event_id,
+                                      requested_at=(payload.get("started_at") if event.event_type == "TASK_STARTED" else payload.get("completed_at")) or event.timestamp)
         same_run = self.running and self.run["run_id"] == run_id
         if same_run:
             self.health.task_event(event, now)
@@ -563,6 +564,7 @@ class SenseOrchestrator:
                 "raw_presence": raw_presence,
                 "elapsed_s": min(now - self.started, self.run["duration_seconds"]) if self.running else self.run.get("elapsed_s", 0) if self.run else 0,
                 "observer_requests": self.log.observer_requests(self.run["run_id"], True) if self.run else [],
+                "observer_previous": self.log.observer_previous(self.run["run_id"]) if self.run else {},
                 "quality": self.log.quality(self.run["run_id"]) if self.run else None,
                 "transitions": list(self.transitions), "context": context, "answers": self.answers,
                 "needs": list(self.policy.needs.values()) if self.run else [], "tasks": self.tasks.view(now),

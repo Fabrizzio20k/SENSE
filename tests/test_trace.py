@@ -64,6 +64,10 @@ class TraceTests(unittest.TestCase):
             self.assertEqual(len(list(csv.DictReader(io.StringIO(archive.read('samples_1s.csv').decode('utf-8-sig'))))), 1800)
             self.assertIn('inference_tasks.csv', archive.namelist())
             self.assertIn('question_results.csv', archive.namelist())
+            manifest = json.loads(archive.read('replay-manifest.json'))
+            self.assertEqual(manifest['schema'], 'sense-replay.v1')
+            self.assertEqual(manifest['run_id'], run['run_id'])
+            self.assertTrue(set(manifest['files']).issubset(archive.namelist()))
             self.assertEqual(json.loads(archive.read('metadata.json'))['repetition'], 1)
 
     def test_gaps_remain_missing_and_retained_readings_age(self):
@@ -131,8 +135,44 @@ class TraceTests(unittest.TestCase):
         self.assertGreaterEqual(failed['duration_seconds'], 0)
         requests = self.log.observer_requests(run['run_id'])
         self.assertEqual([r['task_id'] for r in requests if r['reason'].startswith('VISION_TASK_')], [task.command.command_id] * 2)
+        self.assertEqual(next(r['requested_at'] for r in requests if r['reason'] == 'VISION_TASK_STARTED'), started['started_at'])
+        self.assertEqual(next(r['requested_at'] for r in requests if r['reason'] == 'VISION_TASK_FAILED'), failed['completed_at'])
         with self.assertRaises(ValueError):
             self.controller.set_presence(True, 0.5)
+
+    def test_previous_readings_survive_reload_and_ignore_missing_and_other_runs(self):
+        run = self.start()
+        self.assertEqual(self.log.observer_previous(run['run_id']), dict(power_w=0, visible_people=0))
+        request_id = self.log.request_observer(run['run_id'], 'TEST', ['power_w', 'visible_people'])
+        self.log.resolve_observer(run['run_id'], request_id, dict(self.initial, power_w=12, visible_people=2))
+        missing = self.log.request_observer(run['run_id'], 'TEST', ['power_w'])
+        self.log.resolve_observer(run['run_id'], missing, dict(self.initial, power_w=None,
+                                  unavailable_fields=['power_w'], missing_reason='No pude leer'))
+        other = ExperimentLog(self.log.path)
+        self.addCleanup(other.db.close)
+        self.assertEqual(other.observer_previous(run['run_id']), dict(power_w=12, visible_people=2))
+        self.assertEqual(other.observer_previous('other-run'), {})
+        client = main.app.test_client()
+        with patch.object(main, 'get_experiments', return_value=SimpleNamespace(log=other)):
+            self.assertEqual(client.get(f"/api/experiments/{run['run_id']}").json['observer_previous'],
+                             dict(power_w=12, visible_people=2))
+
+    def test_event_time_is_fixed_and_repeated_readings_are_exported(self):
+        run = self.start()
+        event_time = '2026-10-27T12:00:00+00:00'
+        request_id = self.log.request_observer(run['run_id'], 'TEST', ['power_w'], requested_at=event_time)
+        record_id = self.log.resolve_observer(run['run_id'], request_id,
+            dict(self.initial, power_w=0, repeated_fields=['power_w'], event_at='incorrect'))
+        record = next(r for r in self.events(run['run_id']) if r.get('record_id') == record_id)
+        self.assertEqual(record['payload']['event_at'], event_time)
+        self.assertNotEqual(record['payload']['observed_at'], event_time)
+        with export_csv_zip(self.log.path, run['run_id']) as exported, zipfile.ZipFile(exported) as archive:
+            rows = list(csv.DictReader(io.StringIO(archive.read('power_readings.csv').decode('utf-8-sig'))))
+            self.assertEqual(rows[-1]['event_at'], event_time)
+            self.assertEqual(json.loads(rows[-1]['repeated_fields']), ['power_w'])
+        for repeated in (['action'], ['power_w', 'power_w'], 'power_w', [True], ['visible_people']):
+            with self.subTest(repeated=repeated), self.assertRaises(ValueError):
+                validate_observation(dict(self.initial, repeated_fields=repeated), ['power_w'])
 
     def test_new_api_exports_live_and_resolves_after_stop(self):
         run = self.start()

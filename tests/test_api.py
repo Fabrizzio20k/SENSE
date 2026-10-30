@@ -75,6 +75,17 @@ class ApiTests(unittest.TestCase):
             with self.client.get('/public/' + asset) as response:
                 self.assertEqual(response.status_code, 200)
 
+    def test_offline_is_the_same_ui_and_does_not_start_services(self):
+        with patch.object(main, 'get_experiments', side_effect=AssertionError('offline must not start services')):
+            with self.client.get('/') as live, self.client.get('/offline') as offline:
+                self.assertEqual(offline.status_code, 200)
+                self.assertEqual(offline.data, live.data)
+                self.assertIn(b'id="replay-tab"', offline.data)
+                self.assertIn(b'/public/offline.js', offline.data)
+            for asset in ('api.js', 'offline.js', 'app.js', 'replay.js', 'replay-data.js', 'replay.css'):
+                with self.client.get('/public/' + asset) as response:
+                    self.assertEqual(response.status_code, 200)
+
     def test_human_records_are_validated_and_separate(self):
         from unittest.mock import Mock
         from sense.contracts import utc_now

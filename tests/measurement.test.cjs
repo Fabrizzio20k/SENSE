@@ -11,15 +11,27 @@ class Element {
   addEventListener(){}
   get options(){return this.children;}
 }
-function fixture(){
+function fixture(browser={}){
   const elements=new Map();
   const document={getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id);},createElement:tag=>new Element(tag)};
   const calls=[];
-  const context={document,window:{},fetch:async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>({run_id:'run',runs:[]})};},console};
+  const context={document,window:browser,fetch:async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>({run_id:'run',runs:[]})};},console};
+  browser.location={pathname:'/'};
+  vm.runInNewContext(fs.readFileSync('public/api.js','utf8'),context);
   vm.runInNewContext(fs.readFileSync('public/measurement.js','utf8'),context);
   return {ui:context.window.measurement,get:id=>document.getElementById(id),calls};
 }
 const phases={yolo:{status:'ready'},text:{status:'ready'},vision:{status:'ready'}};
+
+test('en móvil muestra pasos legibles y conserva el estado real sin inicializar el canvas',()=>{
+  const {ui,get}=fixture({matchMedia:()=>({matches:true,addEventListener(){}}),cytoscape(){throw Error('No debe iniciar en móvil');}});
+  ui.render({running:true,fsm:'VISION',run:{run_id:'run',mode:'C'},cycle:{actions:['ACQUIRE','ASSESS','VISION']}},phases,false);
+  assert.equal(get('measurement-pipeline').hidden,false);
+  assert.equal(get('measurement-flow-canvas').hidden,true);
+  assert.equal(get('measurement-flow-controls').hidden,true);
+  assert.equal(get('measurement-pipeline').children[3].className,'pipeline-node active');
+  assert.doesNotThrow(()=>ui.resizeGraph());
+});
 
 test('selector A–F y pipeline gobernados por el backend',async()=>{
   const {ui,get,calls}=fixture();
@@ -158,17 +170,19 @@ test('reevaluar es opcional y conserva la autoridad de los endpoints experimenta
 
 test('todos los destinos de la interfaz existen una sola vez en el HTML',()=>{
   const html=fs.readFileSync('public/index.html','utf8'),script=fs.readFileSync('public/measurement.js','utf8');
+  const app=fs.readFileSync('public/app.js','utf8');
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
   assert.equal(new Set(ids).size,ids.length);
   for(const match of script.matchAll(/byId\('([^']+)'\)/g))assert.ok(ids.includes(match[1]),'Falta '+match[1]);
   assert.match(html,/id="measurement-answers-title"/);
   assert.match(html,/id="measurement-interpretations-title"/);
   assert.match(html,/Cada ciclo completado guarda sus respuestas/);
-  assert.match(html,/measurement\.render\(d\.measurement/);
+  assert.match(app,/measurement\.render\(d\.measurement/);
 });
 
 test('experimentación ofrece los tres guiones y prepara la medición guiada',()=>{
   const html=fs.readFileSync('public/index.html','utf8');
+  const app=fs.readFileSync('public/app.js','utf8');
   assert.match(html,/id="experimentation-tab"/);
   assert.match(html,/id="experiment-scenario"/);
   assert.match(html,/S1 · Ambiente y ocupación estables/);
@@ -180,10 +194,10 @@ test('experimentación ofrece los tres guiones y prepara la medición guiada',()
   assert.match(html,/Repetición 2/);
   assert.match(html,/Repetición 3/);
   assert.match(html,/id="experiment-start" type="button" disabled/);
-  assert.match(html,/El guion permanece visible durante la medición/);
+  assert.match(html,/El guion permanece disponible durante la medición/);
   assert.match(html,/src="\/public\/experiment.js"/);
-  assert.match(html,/scenarioSelect\.onchange=.*guide\.hidden=guide\.dataset\.scenario!==scenarioSelect\.value/);
-  assert.match(html,/\$\('experimentation-tab'\)\.disabled=preparationPending/);
+  assert.match(app,/scenarioSelect\.onchange=.*guide\.hidden=guide\.dataset\.scenario!==scenarioSelect\.value/);
+  assert.match(app,/\$\('experimentation-tab'\)\.disabled=preparationPending/);
 });
 
 test('F muestra controles exclusivos y solo solicita fallas al backend',async()=>{

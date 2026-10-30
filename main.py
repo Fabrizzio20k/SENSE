@@ -366,7 +366,7 @@ def experiment_details(run_id):
         after = max(0, int(request.args.get("after", 0)))
     except ValueError:
         return jsonify(error="Cursor inválido."), 400
-    return jsonify(run=run, events=log.events(run_id, after), observer_requests=log.observer_requests(run_id, True), quality=log.quality(run_id))
+    return jsonify(run=run, events=log.events(run_id, after), observer_requests=log.observer_requests(run_id, True), observer_previous=log.observer_previous(run_id), quality=log.quality(run_id))
 
 
 @app.get("/api/experiments/<run_id>/export")
@@ -396,7 +396,7 @@ def record_observer_response(run_id, request_id):
         record_id = log.resolve_observer(run_id, request_id, payload)
     except (ValueError, TypeError, OverflowError) as error:
         return jsonify(error=str(error)), 400
-    return jsonify(record_id=record_id, observer_requests=log.observer_requests(run_id, True), quality=log.quality(run_id)), 201
+    return jsonify(record_id=record_id, observer_requests=log.observer_requests(run_id, True), observer_previous=log.observer_previous(run_id), quality=log.quality(run_id)), 201
 
 
 @app.post("/api/experiments/<run_id>/observer-requests")
@@ -439,6 +439,8 @@ def record_ground_truth(run_id):
 
 
 @app.get("/")
+@app.get("/offline")
+@app.get("/offline/")
 def index():
     return send_from_directory(PUBLIC, "index.html")
 

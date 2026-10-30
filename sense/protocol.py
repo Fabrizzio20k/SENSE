@@ -23,6 +23,10 @@ def validate_observation(payload: dict, fields: list[str]) -> None:
         raise ValueError("Campos no observados inválidos.")
     if unavailable and (not isinstance(payload.get("missing_reason"), str) or not payload["missing_reason"].strip()):
         raise ValueError("Explica por qué no pudiste observar los campos pendientes.")
+    repeated = payload.get("repeated_fields", [])
+    if (not isinstance(repeated, list) or any(f not in fields or f not in ("power_w", "visible_people") or f in unavailable for f in repeated)
+            or len(set(repeated)) != len(repeated)):
+        raise ValueError("Campos repetidos inválidos.")
     for field in fields:
         value = payload.get(field)
         if field in unavailable:

@@ -113,8 +113,8 @@ class ExperimentLog:
             self.db.execute("INSERT INTO samples_1s VALUES (?, ?, ?, ?)",
                             (run_id, second, payload["timestamp_utc"], json.dumps(payload, allow_nan=False)))
 
-    def request_observer(self, run_id: str, reason: str, fields: list[str], task_id=None, event_id=None) -> str:
-        request_id, requested_at = identifier(), utc_now()
+    def request_observer(self, run_id: str, reason: str, fields: list[str], task_id=None, event_id=None, requested_at=None) -> str:
+        request_id, requested_at = identifier(), requested_at or utc_now()
         with self.transaction():
             self.db.execute("INSERT INTO observer_requests VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', NULL)",
                             (request_id, run_id, requested_at, reason, task_id, event_id, json.dumps(fields)))
@@ -140,13 +140,27 @@ class ExperimentLog:
             validate_observation(payload, request["fields"])
             run = self.run(run_id)
             record = dict(payload, request_id=request_id, task_id=request["task_id"], event_id=request["event_id"],
-                          requested_at=request["requested_at"], reason=request["reason"], scope="connected_equipment",
+                          requested_at=request["requested_at"], event_at=request["requested_at"], reason=request["reason"], scope="connected_equipment",
                           **{k: payload.get(k, run.get(k)) for k in ("observer", "instrument", "equipment")})
             record_id = self.human_record(run_id, "OBSERVER_RECORD", record)
             self.db.execute("UPDATE observer_requests SET status='RESOLVED', record_id=? WHERE request_id=?",
                             (record_id, request_id))
             self.event(run_id, "OBSERVER_RECORDED", {"request_id": request_id, "record_id": record_id})
             return record_id
+
+    def observer_previous(self, run_id: str) -> dict:
+        previous = {}
+        with self.lock:
+            for field in ("power_w", "visible_people"):
+                row = self.db.execute(
+                    "SELECT h.payload FROM human_records h WHERE h.run_id=? AND h.kind='OBSERVER_RECORD' "
+                    f"AND json_type(h.payload, '$.{field}') IN ('integer', 'real') "
+                    "AND EXISTS (SELECT 1 FROM observer_requests r, json_each(r.fields) f "
+                    "WHERE r.record_id=h.record_id AND r.run_id=h.run_id AND f.value=?) ORDER BY h.rowid DESC LIMIT 1",
+                    (run_id, field)).fetchone()
+                if row:
+                    previous[field] = json.loads(row[0])[field]
+        return previous
 
     def quality(self, run_id: str) -> dict:
         with self.lock:

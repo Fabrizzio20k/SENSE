@@ -91,11 +91,17 @@ def export_csv_zip(path, run_id: str):
             with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
                 sample_count = db.execute("SELECT count(*) FROM samples_1s WHERE run_id=?", (run_id,)).fetchone()[0]
                 archive.writestr("metadata.json", json.dumps(dict(run, export_event_sequence=cutoff, exported_samples=sample_count), ensure_ascii=False, indent=2))
+                archive.writestr("replay-manifest.json", json.dumps({
+                    "schema": "sense-replay.v1", "run_id": run_id, "event_sequence": cutoff,
+                    "files": ["metadata.json", "samples_1s.csv", "events.csv", "ground_truth.csv", "power_readings.csv", "observer_requests.csv"],
+                    "images_stored": False,
+                }))
                 archive.writestr("LEEME.txt", "Snapshot de la ejecución al descargar. CSV UTF-8; celdas vacías = dato desconocido.\n"
                                  "Potencia W manual: hora observada distinta de hora registrada; no es energía ni consumo exclusivo de IA.\n"
                                  "samples_1s conserva datos retenidos con edad y referencia original. Segundos ausentes: SAMPLE_GAP en events.\n"
                                  "Personas: región observada, no necesariamente ocupación del aula. Fotografías no almacenadas.\n"
-                                 "JSON anidado se conserva en columnas *_json. Tareas tardías pueden llegar después de esta descarga.\n")
+                                 "JSON anidado se conserva en columnas *_json. Tareas tardías pueden llegar después de esta descarga.\n"
+                                 "Replay: importa este ZIP en la pestaña Replay; el manifiesto versiona las mismas fuentes CSV, sin duplicarlas.\n")
                 samples = db.execute("SELECT payload FROM samples_1s WHERE run_id=? ORDER BY second", (run_id,))
                 first = samples.fetchone()
                 if first:
@@ -170,7 +176,7 @@ def export_csv_zip(path, run_id: str):
                 for record in records:
                     if record["kind"] == "EXTERNAL_POWER":
                         record["power_w"] = record.get("value")
-                fields = ["run_id", "record_id", "request_id", "task_id", "event_id", "kind", "reason", "requested_at", "observed_at", "power_observed_at", "people_observed_at", "recorded_at", "region", "observer", "notes", "unavailable_fields", "missing_reason"]
+                fields = ["run_id", "record_id", "request_id", "task_id", "event_id", "kind", "reason", "requested_at", "event_at", "observed_at", "power_observed_at", "people_observed_at", "recorded_at", "region", "observer", "notes", "unavailable_fields", "missing_reason", "repeated_fields"]
                 _write_csv(archive, "ground_truth", (r for r in records if "visible_people" in r or "action" in r or r["kind"] == "GROUND_TRUTH"), fields + ["visible_people", "action"])
                 _write_csv(archive, "power_readings", (r for r in records if "power_w" in r or "power_w" in r.get("unavailable_fields", []) or r["kind"] in ("EXTERNAL_POWER", "EXTERNAL_ENERGY")), fields + ["power_w", "instrument", "equipment", "scope", "value", "unit"])
                 requests = [dict(run_id=run_id, request_id=r[0], requested_at=r[1], reason=r[2], task_id=r[3], event_id=r[4], fields=json.loads(r[5]), status=r[6], record_id=r[7]) for r in db.execute("SELECT request_id,requested_at,reason,task_id,event_id,fields,status,record_id FROM observer_requests WHERE run_id=? ORDER BY rowid", (run_id,))]

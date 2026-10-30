@@ -15,22 +15,33 @@
   const make = (tag, value, className) => {const node=document.createElement(tag); if(value!==undefined)node.textContent=String(value); if(className)node.className=className; return node;};
   const graphEdges=[['WAIT','ACQUIRE'],['ACQUIRE','ASSESS'],['ASSESS','VISION'],['VISION','ASSESS'],['ASSESS','INTERPRET'],['INTERPRET','REPORT'],['ASSESS','REPORT'],['REPORT','WAIT'],['ASSESS','DEGRADED'],['VISION','DEGRADED'],['INTERPRET','DEGRADED'],['REPORT','DEGRADED'],['DEGRADED','REPORT']];
   const graphPositions={WAIT:{x:90,y:260},ACQUIRE:{x:285,y:260},ASSESS:{x:470,y:260},VISION:{x:470,y:410},INTERPRET:{x:670,y:410},REPORT:{x:860,y:260},DEGRADED:{x:670,y:85}};
+  const compactFlow=window.matchMedia?.('(max-width:640px)');
+  function graphStyle(){
+    const palette=getComputedStyle(document.documentElement), color=name=>palette.getPropertyValue('--'+name).trim();
+    return [
+      {selector:'node',style:{'shape':'round-rectangle','width':142,'height':72,'background-color':color('panel'),'border-width':2,'border-color':color('strong-line'),'label':'data(label)','color':color('ink'),'font-size':12,'font-weight':700,'text-wrap':'wrap','text-max-width':120,'text-valign':'center','text-halign':'center','line-height':1.45}},
+      {selector:'edge',style:{'width':3,'line-color':color('strong-line'),'target-arrow-color':color('strong-line'),'target-arrow-shape':'triangle','curve-style':'bezier','arrow-scale':1.2}},
+      {selector:'node.done',style:{'background-color':color('success-bg'),'border-color':color('success'),'color':color('success')}},
+      {selector:'node.waiting',style:{'background-color':color('soft'),'border-color':color('strong-line')}},
+      {selector:'node.active',style:{'background-color':color('info-bg'),'border-color':color('info'),'border-width':5,'underlay-color':color('info'),'underlay-opacity':.22,'underlay-padding':11,'color':color('info')}},
+      {selector:'node.degraded',style:{'background-color':color('danger-bg'),'border-color':color('danger'),'color':color('danger')}},
+      {selector:'edge.active',style:{'width':6,'line-color':color('info'),'target-arrow-color':color('info'),'line-style':'dashed','line-dash-pattern':[10,7],'line-dash-offset':-30,'overlay-color':color('info'),'overlay-opacity':.12,'overlay-padding':8}},
+      {selector:'edge.done',style:{'line-color':color('success'),'target-arrow-color':color('success')}}
+    ];
+  }
+  function graphVisibility(){
+    const graphical=!!flow&&!compactFlow?.matches;
+    byId('measurement-pipeline').hidden=graphical;
+    byId('measurement-flow-canvas').hidden=!graphical;
+    byId('measurement-flow-controls').hidden=!graphical;
+  }
   function initFlow(){
-    if(flow||!window.cytoscape)return;
+    if(flow||!window.cytoscape||compactFlow?.matches){graphVisibility();return;}
     const canvas=byId('measurement-flow-canvas'); if(!canvas)return;
-    flow=window.cytoscape({container:canvas,elements:{nodes:Object.entries(labels).map(([id,label])=>({data:{id,label:id+'\n'+label},position:graphPositions[id]})),edges:graphEdges.map(([source,target])=>({data:{id:source+'-'+target,source,target}}))},style:[
-      {selector:'node',style:{'shape':'round-rectangle','width':142,'height':72,'background-color':'#172019','border-width':2,'border-color':'#536259','label':'data(label)','color':'#dce5df','font-size':12,'font-weight':700,'text-wrap':'wrap','text-max-width':120,'text-valign':'center','text-halign':'center','line-height':1.45}},
-      {selector:'edge',style:{'width':3,'line-color':'#3a4940','target-arrow-color':'#3a4940','target-arrow-shape':'triangle','curve-style':'bezier','arrow-scale':1.2}},
-      {selector:'node.done',style:{'background-color':'#16301d','border-color':'#78c98a','color':'#c9f2d0'}},
-      {selector:'node.waiting',style:{'background-color':'#273026','border-color':'#a5b4a8'}},
-      {selector:'node.active',style:{'background-color':'#17374a','border-color':'#8ad9ff','border-width':5,'underlay-color':'#54c0ff','underlay-opacity':.22,'underlay-padding':11,'color':'#e9f8ff'}},
-      {selector:'node.degraded',style:{'background-color':'#3a2020','border-color':'#ffaaa0','color':'#ffe0dc'}},
-      {selector:'edge.active',style:{'width':6,'line-color':'#8ad9ff','target-arrow-color':'#8ad9ff','line-style':'dashed','line-dash-pattern':[10,7],'line-dash-offset':-30,'overlay-color':'#54c0ff','overlay-opacity':.12,'overlay-padding':8}},
-      {selector:'edge.done',style:{'line-color':'#568d61','target-arrow-color':'#568d61'}}
-    ],layout:{name:'preset',fit:true,padding:55},wheelSensitivity:.18});
-    byId('measurement-pipeline').hidden=true;
-    byId('measurement-flow-controls').hidden=false;
-    flowPulse=window.setInterval(()=>{if(!flow)return;flow.nodes('.active').animate({style:{'underlay-opacity':.4}},{duration:450}).animate({style:{'underlay-opacity':.12}},{duration:450});flow.edges('.active').animate({style:{'line-dash-offset':-90}},{duration:900});},950);
+    canvas.hidden=false;
+    flow=window.cytoscape({container:canvas,elements:{nodes:Object.entries(labels).map(([id,label])=>({data:{id,label:id+'\n'+label},position:graphPositions[id]})),edges:graphEdges.map(([source,target])=>({data:{id:source+'-'+target,source,target}}))},style:graphStyle(),layout:{name:'preset',fit:true,padding:55},wheelSensitivity:.18});
+    graphVisibility();
+    if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)flowPulse=window.setInterval(()=>{if(!flow||compactFlow?.matches)return;flow.nodes('.active').animate({style:{'underlay-opacity':.4}},{duration:450}).animate({style:{'underlay-opacity':.12}},{duration:450});flow.edges('.active').animate({style:{'line-dash-offset':-90}},{duration:900});},950);
   }
   function updateFlow(data,lastTransition,actions){
     initFlow(); if(!flow)return;
@@ -111,7 +122,7 @@
     byId('measurement-timeout-gemma').disabled=!faultEnabled||!!current.fault_control?.timeouts?.gemma;
   }
   async function post(url,body){
-    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+    const response=await window.senseAPI.fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
     const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo completar la operación.');return data;
   }
   async function setPresence(body){
@@ -179,12 +190,12 @@
   }
   async function history(){
     try{
-      const response=await fetch('/api/experiments');if(!response.ok)throw new Error('No se pudo cargar el historial.');
+      const response=await window.senseAPI.fetch('/api/experiments');if(!response.ok)throw new Error('No se pudo cargar el historial.');
       const {runs}=await response.json();
       byId('measurement-history').replaceChildren(...runs.map(run=>{
         const row=make('tr');for(const value of [new Date(run.start_time).toLocaleString(),run.mode,runStatuses[run.status]||run.status])row.append(make('td',value));
         const cell=make('td'),link=make('a','CSV · ZIP'),raw=make('a','NDJSON'),observe=make('button','Completar observaciones');
-        link.href='/api/experiments/'+encodeURIComponent(run.run_id)+'/export?format=csv';raw.href='/api/experiments/'+encodeURIComponent(run.run_id)+'/export';
+        window.senseAPI.setExportLink(link,run.run_id);window.senseAPI.setExportLink(raw,run.run_id,'ndjson');
         observe.hidden=!run.quality?.pending_observations;observe.onclick=()=>window.experimentation?.review(run.run_id);
         cell.append(link,make('span',' · '),raw,observe);row.append(cell);return row;
       }));
@@ -193,6 +204,7 @@
   }
   byId('measurement-history-details').addEventListener('toggle',()=>{if(byId('measurement-history-details').open)history();});
   window.measurement = {
+    formatAnswer:answerText,
     connection(value){connected=value;controls();window.experimentation?.connection(value);if(!value){text('measurement-state','Conexión interrumpida; estado sin actualizar.');text('measurement-answer-note','Conexión interrumpida. Se muestran las últimas respuestas recibidas.');}},
     render(data,phases,busy){
       current=data||{};connected=true;sandboxBusy=!!busy;ready=Object.values(phases||{}).length===3&&Object.values(phases).every(p=>!['waiting','loading'].includes(p.status));
@@ -208,7 +220,7 @@
       const stateLabel={WAIT:'Esperando datos o un disparador',ACQUIRE:'Recopilando observaciones',ASSESS:'Evaluando la evidencia',VISION:'Capturando imagen y ejecutando YOLO',INTERPRET:'Solicitando interpretación',REPORT:'Guardando respuestas',DEGRADED:'Continuando con información parcial'}[current.fsm]||current.fsm;
       text('measurement-state',current.running?stateLabel:current.reserved?'Esperando a que terminen las tareas activas':run?'Ejecución finalizada':'Listo para comenzar');
       text('measurement-run-metadata',JSON.stringify({run,cycle:current.cycle,config_version:current.config_version},null,2));
-      const download=byId('measurement-current-export');download.hidden=!run;if(run)download.href='/api/experiments/'+encodeURIComponent(run.run_id)+'/export';
+      const download=byId('measurement-current-export');download.hidden=!run;if(run)window.senseAPI.setExportLink(download,run.run_id,'ndjson');
       const evaluated=Object.values(current.answers||{}).map(answer=>answer.evaluated_at).filter(Boolean).sort().at(-1);
       text('measurement-updated',evaluated?'Última evaluación: '+timeLabel(evaluated):'Sin evaluación todavía');
       text('measurement-answer-note',current.running?'Actualización automática con la evidencia disponible. Las lecturas pueden estar incompletas o vencidas.':run?'Últimas respuestas de la ejecución finalizada. El registro conserva las anteriores.':'Las respuestas se actualizan automáticamente durante la ejecución.');
@@ -294,8 +306,10 @@
       window.experimentation?.render(current,ready,sandboxBusy);
       const nextHistory=(run?.run_id||'')+'/'+(run?.status||'');if(nextHistory!==historyKey){historyKey=nextHistory;if(byId('measurement-history-details').open)history();}
     },
-    resizeGraph(){if(flow){flow.resize();flow.fit(flow.elements(),55);}}
+    resizeGraph(){initFlow();graphVisibility();if(flow&&!compactFlow?.matches){flow.resize();flow.fit(flow.elements(),55);}}
   };
+  document.addEventListener?.('themechange',()=>{if(flow)flow.style(graphStyle()).update();});
+  compactFlow?.addEventListener('change',()=>window.measurement.resizeGraph());
   byId('measurement-flow-zoom-in').onclick=()=>{if(flow)flow.zoom({level:flow.zoom()+.2,renderedPosition:{x:byId('measurement-graph').clientWidth/2,y:byId('measurement-graph').clientHeight/2}});};
   byId('measurement-flow-zoom-out').onclick=()=>{if(flow)flow.zoom({level:Math.max(flow.minZoom(),flow.zoom()-.2),renderedPosition:{x:byId('measurement-graph').clientWidth/2,y:byId('measurement-graph').clientHeight/2}});};
   byId('measurement-flow-reset').onclick=()=>{if(flow)flow.fit(flow.elements(),55);};
