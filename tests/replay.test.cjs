@@ -85,7 +85,7 @@ test('rechaza ZIP dañados, versiones desconocidas, tamaños abusivos y CSV con 
 
 test('la UI Replay recorre el ejemplo y mantiene el archivo anterior si falla otra importación',async()=>{
   const ui=frontend();ui.tabs.find(t=>t.dataset.panel==='replay').click();
-  ui.get('replay-demo').click();assert.equal(ui.get('replay-view').hidden,false);assert.match(ui.get('replay-title').textContent,/DEMO/);
+  ui.get('replay-demo').click();assert.equal(ui.get('replay-view').hidden,false);assert.match(ui.get('replay-title').textContent,/Simulación/);
   ui.window.replay.seek(601);assert.match(ui.get('replay-gap').textContent,/Sin muestra/);
   ui.window.replay.seek(1026);assert.ok(ui.get('replay-models').children.length>0);
   ui.window.replay.seek(0);assert.equal(ui.get('replay-models').children.length,0);
@@ -97,11 +97,28 @@ test('la UI Replay recorre el ejemplo y mantiene el archivo anterior si falla ot
 test('play/pausa, velocidad y saltos funcionan y los detalles abiertos no se reinician en cada cuadro',()=>{
   const ui=frontend();ui.tabs.find(t=>t.dataset.panel==='replay').click();ui.get('replay-demo').click();
   ui.get('replay-play').click();ui.tick(1000);assert.match(ui.get('replay-position').textContent,/^00:01/);
+  assert.equal(ui.get('replay-play').dataset.sprite,'pause');
   ui.get('replay-play').click();assert.equal(ui.get('replay-play').textContent,'Reproducir');
+  assert.equal(ui.get('replay-play').dataset.sprite,'play');
   const stopped=ui.get('replay-position').textContent;ui.tick(1000);assert.equal(ui.get('replay-position').textContent,stopped);
   ui.get('replay-speed').value='5';ui.get('replay-play').click();ui.tick(1000);assert.match(ui.get('replay-position').textContent,/^00:06/);ui.window.replay.pause();
   ui.get('replay-next').click();assert.match(ui.get('replay-position').textContent,/^01:00/);
   ui.get('replay-prev').click();assert.match(ui.get('replay-position').textContent,/^00:05/);
   const card=ui.get('replay-answers').children[0],detail=card.children.at(-1);detail.open=true;
   ui.window.replay.seek(10);assert.equal(ui.get('replay-answers').children[0],card);assert.equal(detail.open,true);
+});
+
+test('Replay agrupa las 14 métricas y la leyenda coincide con los marcadores',()=>{
+  const ui=frontend();ui.tabs.find(t=>t.dataset.panel==='replay').click();ui.get('replay-demo').click();
+  assert.equal(ui.get('replay-scale').children.length,3);
+  ui.window.replay.seek(902);
+  assert.match(ui.get('replay-seek').style['--replay-progress'],/^49\./);
+  assert.equal(ui.get('replay-event-list').children.filter(item=>item.attributes['aria-current']==='true').length,1);
+  const groups=ui.get('replay-readings').children;
+  assert.deepEqual(groups.map(group=>group.children[0].textContent),['Ambiente','Presencia y visión','Recursos','Tareas']);
+  assert.equal(groups.reduce((sum,group)=>sum+group.children[1].children.length,0),14);
+  assert.deepEqual(groups.flatMap(group=>group.children[1].children.map(card=>card.dataset.sprite)),['temperature','humidity','aqi','eco2','tvoc','radar','yolo','distance','cpu','memory','memory','pi','yolo','gemma-text']);
+  const markers=new Set(ui.get('replay-markers').children.map(marker=>marker.dataset.category));
+  const legend=new Set(ui.get('replay-legend').children.map(item=>item.dataset.category));
+  assert.deepEqual(legend,markers);
 });

@@ -1,0 +1,84 @@
+.sense-sprite{--sense-size:24px;display:inline-block;width:var(--sense-size);height:var(--sense-size);background-image:url('../sprites/static-light.png');background-size:calc(var(--sense-size)*8) calc(var(--sense-size)*8);image-rendering:pixelated;vertical-align:middle}.sense-sprite[data-theme="dark"]{background-image:url('../sprites/static-dark.png')}
+.sense-sprite[data-icon="sht40"]{background-position:calc(var(--sense-size)*-0) calc(var(--sense-size)*-0)}
+.sense-sprite[data-icon="ens160"]{background-position:calc(var(--sense-size)*-1) calc(var(--sense-size)*-0)}
+.sense-sprite[data-icon="radar"]{background-position:calc(var(--sense-size)*-2) calc(var(--sense-size)*-0)}
+.sense-sprite[data-icon="camera"]{background-position:calc(var(--sense-size)*-3) calc(var(--sense-size)*-0)}
+.sense-sprite[data-icon="yolo"]{background-position:calc(var(--sense-size)*-4) calc(var(--sense-size)*-0)}
+.sense-sprite[data-icon="gemma"]{background-position:calc(var(--sense-size)*-5) calc(var(--sense-size)*-0)}
+.sense-sprite[data-icon="power"]{background-position:calc(var(--sense-size)*-6) calc(var(--sense-size)*-0)}
+.sense-sprite[data-icon="wait"]{background-position:calc(var(--sense-size)*-7) calc(var(--sense-size)*-0)}
+.sense-sprite[data-icon="acquire"]{background-position:calc(var(--sense-size)*-0) calc(var(--sense-size)*-1)}
+.sense-sprite[data-icon="assess"]{background-position:calc(var(--sense-size)*-1) calc(var(--sense-size)*-1)}
+.sense-sprite[data-icon="vision"]{background-position:calc(var(--sense-size)*-2) calc(var(--sense-size)*-1)}
+.sense-sprite[data-icon="interpret"]{background-position:calc(var(--sense-size)*-3) calc(var(--sense-size)*-1)}
+.sense-sprite[data-icon="report"]{background-position:calc(var(--sense-size)*-4) calc(var(--sense-size)*-1)}
+.sense-sprite[data-icon="degraded"]{background-position:calc(var(--sense-size)*-5) calc(var(--sense-size)*-1)}
+.sense-sprite[data-icon="preparation"]{background-position:calc(var(--sense-size)*-6) calc(var(--sense-size)*-1)}
+.sense-sprite[data-icon="measurement"]{background-position:calc(var(--sense-size)*-7) calc(var(--sense-size)*-1)}
+.sense-sprite[data-icon="experiment"]{background-position:calc(var(--sense-size)*-0) calc(var(--sense-size)*-2)}
+.sense-sprite[data-icon="replay"]{background-position:calc(var(--sense-size)*-1) calc(var(--sense-size)*-2)}
+.sense-sprite[data-icon="observe"]{background-position:calc(var(--sense-size)*-2) calc(var(--sense-size)*-2)}
+.sense-sprite[data-icon="save"]{background-position:calc(var(--sense-size)*-3) calc(var(--sense-size)*-2)}
+.sense-sprite[data-icon="export"]{background-position:calc(var(--sense-size)*-4) calc(var(--sense-size)*-2)}
+.sense-sprite[data-icon="lock"]{background-position:calc(var(--sense-size)*-5) calc(var(--sense-size)*-2)}
+.sense-sprite[data-icon="connection"]{background-position:calc(var(--sense-size)*-6) calc(var(--sense-size)*-2)}
+.sense-sprite[data-icon="pi"]{background-position:calc(var(--sense-size)*-7) calc(var(--sense-size)*-2)}
+.sense-sprite[data-icon="cpu"]{background-position:calc(var(--sense-size)*-0) calc(var(--sense-size)*-3)}
+.sense-sprite[data-icon="memory"]{background-position:calc(var(--sense-size)*-1) calc(var(--sense-size)*-3)}
+.sense-sprite[data-icon="temperature"]{background-position:calc(var(--sense-size)*-2) calc(var(--sense-size)*-3)}
+.sense-sprite[data-icon="humidity"]{background-position:calc(var(--sense-size)*-3) calc(var(--sense-size)*-3)}
+.sense-sprite[data-icon="timer"]{background-position:calc(var(--sense-size)*-4) calc(var(--sense-size)*-3)}
+.sense-sprite[data-icon="presence"]{background-position:calc(var(--sense-size)*-5) calc(var(--sense-size)*-3)}
+.sense-sprite[data-icon="distance"]{background-position:calc(var(--sense-size)*-6) calc(var(--sense-size)*-3)}
+.sense-sprite[data-icon="aqi"]{background-position:calc(var(--sense-size)*-7) calc(var(--sense-size)*-3)}
+.sense-sprite[data-icon="tvoc"]{background-position:calc(var(--sense-size)*-0) calc(var(--sense-size)*-4)}
+.sense-sprite[data-icon="eco2"]{background-position:calc(var(--sense-size)*-1) calc(var(--sense-size)*-4)}
+.sense-sprite[data-icon="gemma-text"]{background-position:calc(var(--sense-size)*-2) calc(var(--sense-size)*-4)}
+.sense-sprite[data-icon="gemma-image"]{background-position:calc(var(--sense-size)*-3) calc(var(--sense-size)*-4)}
+.sense-sprite[data-icon="changes"]{background-position:calc(var(--sense-size)*-4) calc(var(--sense-size)*-4)}
+.sense-sprite[data-icon="evidence"]{background-position:calc(var(--sense-size)*-5) calc(var(--sense-size)*-4)}
+.sense-sprite[data-icon="context"]{background-position:calc(var(--sense-size)*-6) calc(var(--sense-size)*-4)}
+.sense-sprite[data-icon="image"]{background-position:calc(var(--sense-size)*-7) calc(var(--sense-size)*-4)}
+.sense-sprite[data-icon="tasks"]{background-position:calc(var(--sense-size)*-0) calc(var(--sense-size)*-5)}
+.sense-sprite[data-icon="pending"]{background-position:calc(var(--sense-size)*-1) calc(var(--sense-size)*-5)}
+.sense-sprite[data-icon="history"]{background-position:calc(var(--sense-size)*-2) calc(var(--sense-size)*-5)}
+.sense-sprite[data-icon="health"]{background-position:calc(var(--sense-size)*-3) calc(var(--sense-size)*-5)}
+.sense-sprite[data-icon="diagnostic"]{background-position:calc(var(--sense-size)*-4) calc(var(--sense-size)*-5)}
+.sense-sprite[data-icon="telemetry"]{background-position:calc(var(--sense-size)*-5) calc(var(--sense-size)*-5)}
+.sense-sprite[data-icon="play"]{background-position:calc(var(--sense-size)*-6) calc(var(--sense-size)*-5)}
+.sense-sprite[data-icon="pause"]{background-position:calc(var(--sense-size)*-7) calc(var(--sense-size)*-5)}
+.sense-sprite[data-icon="stop"]{background-position:calc(var(--sense-size)*-0) calc(var(--sense-size)*-6)}
+.sense-sprite[data-icon="previous"]{background-position:calc(var(--sense-size)*-1) calc(var(--sense-size)*-6)}
+.sense-sprite[data-icon="next"]{background-position:calc(var(--sense-size)*-2) calc(var(--sense-size)*-6)}
+.sense-sprite[data-icon="refresh"]{background-position:calc(var(--sense-size)*-3) calc(var(--sense-size)*-6)}
+.sense-sprite[data-icon="upload"]{background-position:calc(var(--sense-size)*-4) calc(var(--sense-size)*-6)}
+.sense-sprite[data-icon="filter"]{background-position:calc(var(--sense-size)*-5) calc(var(--sense-size)*-6)}
+.sense-sprite[data-icon="event"]{background-position:calc(var(--sense-size)*-6) calc(var(--sense-size)*-6)}
+.sense-sprite[data-icon="observer"]{background-position:calc(var(--sense-size)*-7) calc(var(--sense-size)*-6)}
+.sense-sprite[data-icon="quality"]{background-position:calc(var(--sense-size)*-0) calc(var(--sense-size)*-7)}
+.sense-sprite[data-icon="stale"]{background-position:calc(var(--sense-size)*-1) calc(var(--sense-size)*-7)}
+.sense-sprite[data-icon="unknown"]{background-position:calc(var(--sense-size)*-2) calc(var(--sense-size)*-7)}
+.sense-sprite[data-icon="conflict"]{background-position:calc(var(--sense-size)*-3) calc(var(--sense-size)*-7)}
+.sense-sprite[data-icon="error"]{background-position:calc(var(--sense-size)*-4) calc(var(--sense-size)*-7)}
+.sense-sprite[data-icon="check"]{background-position:calc(var(--sense-size)*-5) calc(var(--sense-size)*-7)}
+.sense-sprite[data-icon="theme-light"]{background-position:calc(var(--sense-size)*-6) calc(var(--sense-size)*-7)}
+.sense-sprite[data-icon="theme-dark"]{background-position:calc(var(--sense-size)*-7) calc(var(--sense-size)*-7)}
+.sense-sprite[data-icon="radar"].is-animated{background-image:url('../sprites/animated/radar-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="radar"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/radar-dark.png')}
+.sense-sprite[data-icon="camera"].is-animated{background-image:url('../sprites/animated/camera-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="camera"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/camera-dark.png')}
+.sense-sprite[data-icon="yolo"].is-animated{background-image:url('../sprites/animated/yolo-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="yolo"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/yolo-dark.png')}
+.sense-sprite[data-icon="gemma"].is-animated{background-image:url('../sprites/animated/gemma-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="gemma"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/gemma-dark.png')}
+.sense-sprite[data-icon="wait"].is-animated{background-image:url('../sprites/animated/wait-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="wait"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/wait-dark.png')}
+.sense-sprite[data-icon="acquire"].is-animated{background-image:url('../sprites/animated/acquire-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="acquire"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/acquire-dark.png')}
+.sense-sprite[data-icon="assess"].is-animated{background-image:url('../sprites/animated/assess-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="assess"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/assess-dark.png')}
+.sense-sprite[data-icon="vision"].is-animated{background-image:url('../sprites/animated/vision-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="vision"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/vision-dark.png')}
+.sense-sprite[data-icon="interpret"].is-animated{background-image:url('../sprites/animated/interpret-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="interpret"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/interpret-dark.png')}
+.sense-sprite[data-icon="report"].is-animated{background-image:url('../sprites/animated/report-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="report"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/report-dark.png')}
+.sense-sprite[data-icon="degraded"].is-animated{background-image:url('../sprites/animated/degraded-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:2400ms}.sense-sprite[data-icon="degraded"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/degraded-dark.png')}
+.sense-sprite[data-icon="connection"].is-animated{background-image:url('../sprites/animated/connection-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="connection"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/connection-dark.png')}
+.sense-sprite[data-icon="gemma-text"].is-animated{background-image:url('../sprites/animated/gemma-text-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="gemma-text"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/gemma-text-dark.png')}
+.sense-sprite[data-icon="gemma-image"].is-animated{background-image:url('../sprites/animated/gemma-image-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="gemma-image"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/gemma-image-dark.png')}
+.sense-sprite[data-icon="tasks"].is-animated{background-image:url('../sprites/animated/tasks-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="tasks"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/tasks-dark.png')}
+.sense-sprite[data-icon="telemetry"].is-animated{background-image:url('../sprites/animated/telemetry-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="telemetry"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/telemetry-dark.png')}
+.sense-sprite[data-icon="refresh"].is-animated{background-image:url('../sprites/animated/refresh-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="refresh"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/refresh-dark.png')}
+.sense-sprite[data-icon="upload"].is-animated{background-image:url('../sprites/animated/upload-light.png');background-size:calc(var(--sense-size)*8) var(--sense-size);background-position:0 0;--sense-duration:1600ms}.sense-sprite[data-icon="upload"][data-theme="dark"].is-animated{background-image:url('../sprites/animated/upload-dark.png')}
+.sense-sprite.is-animated.is-active{animation:sense-sprite-play var(--sense-duration,1600ms) steps(8,end) infinite}@keyframes sense-sprite-play{to{background-position:calc(var(--sense-size)*-8) 0}}@media(prefers-reduced-motion:reduce){.sense-sprite.is-animated.is-active{animation:none;background-position:0 0}}

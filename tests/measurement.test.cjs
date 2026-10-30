@@ -4,11 +4,13 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 class Element {
-  constructor(tag='div'){this.tagName=tag;this.children=[];this.textContent='';this.value='';this.disabled=false;this.dataset={};this.attributes={};this.className='';this.classList={toggle:()=>{}};}
+  constructor(tag='div'){this.tagName=tag;this.children=[];this.textContent='';this.value='';this.disabled=false;this.open=false;this.dataset={};this.attributes={};this.className='';this.classList={toggle:()=>{}};}
   append(...nodes){this.children.push(...nodes);}
   replaceChildren(...nodes){this.children=nodes;}
   setAttribute(key,value){this.attributes[key]=value;}
   addEventListener(){}
+  showModal(){this.open=true;}
+  close(){this.open=false;}
   get options(){return this.children;}
 }
 function fixture(browser={}){
@@ -44,19 +46,31 @@ test('selector A–F y pipeline gobernados por el backend',async()=>{
   await get('measurement-toggle').onclick();
   assert.equal(calls[0].url,'/api/experiments/start');
   assert.equal(JSON.parse(calls[0].options.body).mode,'E');
-  ui.render({running:true,reserved:true,fsm:'VISION',run:{run_id:'run',mode:'E',status:'RUNNING'},cycle:{actions:['ACQUIRE','ASSESS','VISION']}},phases,false);
+  assert.equal(get('measurement-toggle').disabled,true);
+  assert.equal(get('measurement-toggle').textContent,'Comenzar');
+  assert.match(get('measurement-state').textContent,/esperando confirmación/);
+  ui.render({running:true,reserved:false,fsm:'VISION',run:{run_id:'run',mode:'E',status:'RUNNING'},cycle:{actions:['ACQUIRE','ASSESS','VISION']}},phases,false);
   assert.equal(get('measurement-pipeline').children[3].className,'pipeline-node active');
   assert.equal(get('measurement-toggle').textContent,'Finalizar');
-  await get('measurement-toggle').onclick();
+  get('measurement-toggle').onclick();
+  assert.equal(get('finish-dialog').open,true);
+  await get('finish-accept').onclick();
   assert.equal(calls[1].url,'/api/experiments/stop');
+  assert.equal(get('measurement-toggle').disabled,true);
+  assert.equal(get('measurement-toggle').textContent,'Finalizar');
 });
 
 test('desconocido conserva ausencia de valor, y cero es un conteo válido',()=>{
   const {ui,get}=fixture();
   ui.render({context:{observations:{count:{value:0,status:'VALID',age_seconds:1,region:'camera_view'},presence:{value:null,status:'UNAVAILABLE',age_seconds:1,region:'radar'}}}},phases,false);
-  const cards=get('measurement-observations').children;
+  const cards=[...get('measurement-presence-readings').children,...get('measurement-environment-readings').children];
   assert.equal(cards[0].children[1].textContent,'—');
   assert.equal(cards[1].children[1].textContent,'0');
+  assert.deepEqual(cards.map(card=>card.dataset.sprite),['radar','yolo','temperature','humidity','aqi','tvoc','eco2']);
+  assert.equal(cards[0].children.at(-1).tagName,'details');
+  assert.match(cards[0].children.at(-1).children[1].textContent,/Región · radar/);
+  assert.match(cards[0].children.at(-1).children[2].textContent,/Fuente · radar/);
+  assert.equal(get('measurement-flow-controls').hidden,false);
 });
 
 test('al perder conexión bloquea comandos; el sandbox activo bloquea comenzar',()=>{
@@ -72,7 +86,7 @@ test('control de radar manual aparece desde B y usa endpoint acotado',async()=>{
   const {ui,get,calls}=fixture();
   const data={running:true,run:{mode:'C',run_id:'run',status:'RUNNING'},presence_control:{mode:'AUTO',detected:null},context:{observations:{presence:{value:0,status:'VALID',age_seconds:1,region:'radar'}}}};
   ui.render(data,phases,false);
-  const control=get('measurement-observations').children[0].children[4];
+  const control=get('measurement-presence-readings').children[0].children[4];
   assert.equal(control.hidden,false);
   await control.children[0].onclick();
   assert.equal(calls[0].url,'/api/experiments/presence');
@@ -103,11 +117,11 @@ test('B distingue zona próxima de presencia original y explica conteo vencido',
     context:{observations:{presence:{value:1,status:'VALID',age_seconds:1,region:'radar',metadata:{trigger_distance_cm:309,trigger_distance_source:'static_distance_cm'}},count:{value:2,status:'STALE',age_seconds:80,region:'camera'}}},
     decisions:[{kind:'VISION',reason:'NO_REACTIVE_TRIGGER'}]};
   ui.render(data,phases,false);
-  const radar=get('measurement-observations').children[0];
+  const radar=get('measurement-presence-readings').children[0];
   assert.equal(radar.children[0].textContent,'Radar · zona B');
   assert.equal(radar.children[1].textContent,'Fuera de zona');
-  assert.match(radar.children[2].textContent,/309 cm · blanco estático/);
-  assert.match(radar.children[2].textContent,/presencia detectada/);
+  assert.match(radar.children[5].textContent,/309 cm · blanco estático/);
+  assert.match(radar.children[5].textContent,/presencia detectada/);
   assert.match(get('measurement-trigger').textContent,/entrada < 30 cm/);
   assert.match(get('measurement-trigger').textContent,/conteo está vencido/);
   assert.equal(calls.length,0);
@@ -194,7 +208,7 @@ test('experimentación ofrece los tres guiones y prepara la medición guiada',()
   assert.match(html,/Repetición 2/);
   assert.match(html,/Repetición 3/);
   assert.match(html,/id="experiment-start" type="button" disabled/);
-  assert.match(html,/El guion permanece disponible durante la medición/);
+  assert.match(html,/id="measurement-guidance"/);
   assert.match(html,/src="\/public\/experiment.js"/);
   assert.match(app,/scenarioSelect\.onchange=.*guide\.hidden=guide\.dataset\.scenario!==scenarioSelect\.value/);
   assert.match(app,/\$\('experimentation-tab'\)\.disabled=preparationPending/);
@@ -226,7 +240,7 @@ test('B guiado conserva Auto/Manual sin inventar distancia',async()=>{
   const {ui,get,calls}=fixture();
   const data={running:true,run:{mode:'B',guided:true,run_id:'run'},presence_control:{mode:'AUTO'},reactive_trigger:{state:'FAR'},context:{observations:{presence:{value:1,status:'VALID',age_seconds:1,metadata:{trigger_distance_cm:300}}}}};
   ui.render(data,phases,false);
-  const control=get('measurement-observations').children[0].children[4];
+  const control=get('measurement-presence-readings').children[0].children[4];
   assert.equal(control.hidden,false);
   await control.children[0].onclick();
   assert.deepEqual(JSON.parse(calls[0].options.body),{mode:'manual',detected:true,near:false});
