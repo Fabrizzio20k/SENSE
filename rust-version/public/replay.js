@@ -41,7 +41,7 @@
       const section=make('section',null,'replay-reading-group'),items=make('div',null,'replay-reading-items');
       section.append(make('h3',title));
       items.append(...readings.map(([key,label,unit])=>{
-        const card=make('article',null,'card'),value=sample?.[key];card.dataset.sprite=readingIcons[key];card.append(make('span',label,'sub'),make('strong',value==null?'—':String(value)+(unit?' '+unit:'')));
+        const card=make('article',null,'card'),value=sample?.[key];card.dataset.sprite=readingIcons[key];card.append(make('span',label,'sub'),make('strong',['cpu_percent','ram_used_mb','process_rss_mb'].includes(key)?window.measurement.formatResource(value,unit):value==null?'—':String(value)+(unit?' '+unit:'')));
         const source=observationKeys[key];if(source&&sample){const age=sample[source+'_age_s'],status=sample[source+'_status']||'UNKNOWN',meta=make('span',(evidenceLabels[status]||status)+(age==null?'':' · '+(age+frame.sampleAge).toFixed(1)+' s'),'sub replay-reading-meta');meta.dataset.status=status;card.append(meta);}
         return card;
       }));section.append(items);return section;

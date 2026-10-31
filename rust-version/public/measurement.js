@@ -16,7 +16,7 @@
     S3:[['0–10 min','Condición inicial','Dos personas presentes; observa el ambiente inicial.'],['10–20 min','Cambio de ventilación','Modifica la ventilación de forma segura y registra la acción.'],['20–30 min','Restaurar condición','Restablece la condición inicial y observa la evolución.']]
   };
   const timeLabel = value => {const date=new Date(value);return value&&!Number.isNaN(date.getTime())?date.toLocaleTimeString():'—';};
-  let current = {}, connected = false, pending = false, ready = false, sandboxBusy = false, historyKey = '', lastDetails = '', lastInterpretations = '', lastGuidance = '', flow = null, flowPulse = null, fallbackStage = null, selectedState = null, seenTransitionKey;
+  let current = {}, connected = false, pending = false, stopRequested = false, ready = false, sandboxBusy = false, historyKey = '', lastDetails = '', lastInterpretations = '', lastGuidance = '', flow = null, flowPulse = null, fallbackStage = null, selectedState = null, seenTransitionKey;
   const fallbackView={x:0,y:0,scale:1};
   const text = (id, value) => {const node=byId(id); const next=String(value ?? '—'); if(node.textContent!==next)node.textContent=next;};
   const make = (tag, value, className) => {const node=document.createElement(tag); if(value!==undefined)node.textContent=String(value); if(className)node.className=className; return node;};
@@ -183,7 +183,7 @@
     finally{pending=false;controls();}
   }
   function controls(){
-    byId('measurement-toggle').disabled=!!(pending||!connected||current.reserved||(!current.running&&(!ready||sandboxBusy)));
+    byId('measurement-toggle').disabled=!!(pending||stopRequested||!connected||(!current.running&&(current.reserved||!ready||sandboxBusy)));
     byId('measurement-toggle').dataset.running=String(!!current.running);
     modeSelect.disabled=!!(pending||current.running||current.reserved);
     byId('measurement-toggle').textContent=pending?'Procesando…':current.running?'Finalizar':'Comenzar';
@@ -206,11 +206,11 @@
     catch(error){text('measurement-error',error.message);}
     finally{pending=false;controls();}
   }
-  async function toggleRun(){
+  async function toggleRun(stopping=false){
     if(pending)return;pending=true;controls();text('measurement-error','');
     try{
-      const stopping=current.running;
       await post('/api/experiments/'+(stopping?'stop':'start'),{mode:modeSelect.value});
+      stopRequested=stopping;
       current={...current,reserved:true};
       text('measurement-state','Solicitud aceptada; esperando confirmación de SENSE.');
     }catch(error){text('measurement-error',error.message);}
@@ -221,7 +221,7 @@
     return toggleRun();
   };
   byId('finish-cancel').onclick=()=>byId('finish-dialog').close();
-  byId('finish-accept').onclick=async()=>{byId('finish-dialog').close();await toggleRun();};
+  byId('finish-accept').onclick=async()=>{byId('finish-dialog').close();await toggleRun(true);};
   byId('measurement-query').onclick=async()=>{
     pending=true;controls();
     try{await post('/api/experiments/query',{question_id:byId('measurement-question').value});}
@@ -300,9 +300,11 @@
   }
   window.measurement = {
     formatAnswer:answerText,
+    formatResource:(value,unit)=>typeof value==='number'&&Number.isFinite(value)?value.toFixed(2)+(unit?' '+unit:''):'—',
     connection(value){connected=value;controls();window.experimentation?.connection(value);if(!value){text('measurement-state','Conexión interrumpida; estado sin actualizar.');text('measurement-answer-note','Conexión interrumpida. Se muestran las últimas respuestas recibidas.');}},
     render(data,phases,busy){
       current=data||{};connected=true;sandboxBusy=!!busy;ready=Object.values(phases||{}).length===3&&Object.values(phases).every(p=>!['waiting','loading'].includes(p.status));
+      if(!current.running)stopRequested=false;
       controls();
       for(const option of modeSelect.options)option.disabled=current.enabled_modes&&!current.enabled_modes.includes(option.value);
       if(current.run&&current.running)modeSelect.value=current.run.mode;
@@ -315,7 +317,7 @@
       text('measurement-heading',run?.guided?'Medición experimental':'Medición y pruebas');
       text('measurement-run',current.running?'En ejecución':run?(modes[run.mode]||run.mode)+' · '+(runStatuses[run.status]||run.status):'Sin ejecución');
       const stateLabel=stateDescriptions[current.fsm]||current.fsm;
-      text('measurement-state',current.running?stateLabel:current.reserved?'Esperando a que terminen las tareas activas':run?'Ejecución finalizada':'Listo para comenzar');
+      text('measurement-state',current.running?stateLabel:current.reserved?(run?'Medición finalizada; esperando a que terminen las tareas activas':'Esperando a que terminen las tareas activas'):run?'Ejecución finalizada':'Listo para comenzar');
       text('measurement-run-metadata',JSON.stringify({run,cycle:current.cycle,config_version:current.config_version},null,2));
       const download=byId('measurement-current-export');download.hidden=!run;if(run)window.senseAPI.setExportLink(download,run.run_id,'ndjson');
       const evaluated=Object.values(current.answers||{}).map(answer=>answer.evaluated_at).filter(Boolean).sort().at(-1);

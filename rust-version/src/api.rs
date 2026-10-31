@@ -112,7 +112,7 @@ impl AppState {
             sys.refresh_memory();
             let total = sys.total_memory();
             let used = sys.used_memory();
-            payload["system"] = json!({"cpu_percent":sys.global_cpu_usage(),"memory_percent":if total>0{used as f64*100./total as f64}else{0.},"memory_used_mb":(used as f64/1048576.).round_ties_even()});
+            payload["system"] = json!({"cpu_percent":rounded(f64::from(sys.global_cpu_usage()),2),"memory_percent":if total>0{rounded(used as f64*100./total as f64,2)}else{0.},"memory_used_mb":rounded(used as f64/1048576.,2)});
         }
         payload["measurement"] = self
             .service

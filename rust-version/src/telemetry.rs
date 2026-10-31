@@ -37,8 +37,8 @@ impl ResourceMonitor {
         let rss = p.map(|p| p.memory()).unwrap_or(0);
         let cpu = p.map(|p| p.cpu_usage()).unwrap_or(0.);
         self.peak_rss = self.peak_rss.max(rss);
-        let mb = |bytes: u64| rounded(bytes as f64 / 1048576., 1);
-        let workers:Vec<_>=self.system.processes().iter().filter(|(id,p)|**id!=pid&&(p.name().to_string_lossy().to_lowercase().contains("litert")||p.cmd().iter().any(|s|s.to_string_lossy().contains("litert-lm")))).map(|(id,p)|json!({"pid":id.as_u32(),"name":p.name().to_string_lossy(),"cpu_percent":p.cpu_usage(),"rss_mb":mb(p.memory())})).collect();
+        let mb = |bytes: u64| rounded(bytes as f64 / 1048576., 2);
+        let workers:Vec<_>=self.system.processes().iter().filter(|(id,p)|**id!=pid&&(p.name().to_string_lossy().to_lowercase().contains("litert")||p.cmd().iter().any(|s|s.to_string_lossy().contains("litert-lm")))).map(|(id,p)|json!({"pid":id.as_u32(),"name":p.name().to_string_lossy(),"cpu_percent":rounded(f64::from(p.cpu_usage()),2),"rss_mb":mb(p.memory())})).collect();
         let mut swap = None;
         let mut peak = None;
         if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
@@ -106,6 +106,6 @@ impl ResourceMonitor {
             .iter()
             .filter(|d| canonical.starts_with(d.mount_point()))
             .max_by_key(|d| d.mount_point().as_os_str().len());
-        json!({"sampled_at":utc_now(),"sampled_monotonic":monotonic(),"cpu_total_percent":self.system.global_cpu_usage(),"available_mb":(self.system.available_memory() as f64/1048576.).round_ties_even(),"ram_used_mb":mb(self.system.used_memory()),"ram_total_mb":mb(self.system.total_memory()),"main":{"pid":std::process::id(),"cpu_percent":cpu,"rss_mb":mb(rss),"peak_rss_mb":peak.unwrap_or(mb(self.peak_rss)),"swap_mb":swap},"gemma_processes":workers,"swap_used_mb":mb(self.system.used_swap()),"temperature_c":temp,"throttled":throttled,"database_mb":rounded(size as f64/1048576.,2),"disk_free_mb":disk.map(|d|(d.available_space() as f64/1048576.).round_ties_even())})
+        json!({"sampled_at":utc_now(),"sampled_monotonic":monotonic(),"cpu_total_percent":rounded(f64::from(self.system.global_cpu_usage()),2),"available_mb":rounded(self.system.available_memory() as f64/1048576.,2),"ram_used_mb":mb(self.system.used_memory()),"ram_total_mb":mb(self.system.total_memory()),"main":{"pid":std::process::id(),"cpu_percent":rounded(f64::from(cpu),2),"rss_mb":mb(rss),"peak_rss_mb":peak.map(|v|rounded(v,2)).unwrap_or(mb(self.peak_rss)),"swap_mb":swap.map(|v|rounded(v,2))},"gemma_processes":workers,"swap_used_mb":mb(self.system.used_swap()),"temperature_c":temp,"throttled":throttled,"database_mb":rounded(size as f64/1048576.,2),"disk_free_mb":disk.map(|d|(d.available_space() as f64/1048576.).round_ties_even())})
     }
 }

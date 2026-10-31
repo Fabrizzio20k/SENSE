@@ -5,7 +5,10 @@ Sirve la misma UI en el puerto **5000** en Linux y **5001** en macOS, y conserva
 MQTT, modos A–F, políticas, controles manuales, fallas simuladas, coordinación,
 observaciones externas, SQLite y exportaciones NDJSON/CSV/ZIP para Replay.
 
-`public/` y `run.sh` se conservan tal como fueron copiados. El backend no ejecuta
+`public/` conserva la UI compartida, con cierre confirmado de la medición incluso
+si hay fallos o workers pendientes, y CPU/RAM con dos decimales. Cerrar detiene
+el registro; los workers pendientes siguen protegidos hasta terminar o confirmar
+su estado. `run.sh` se conserva tal como fue copiado. El backend no ejecuta
 Python. LiteRT-LM y el broker son servicios externos existentes; `run.sh` continúa
 siendo exclusivamente el lanzador de LiteRT-LM.
 
