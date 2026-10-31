@@ -7,6 +7,13 @@ pub struct ExperimentLog {
     pub db: Connection,
 }
 impl ExperimentLog {
+    pub fn save_image(&self, run: &str, image: &str, bytes: &[u8]) -> Result<()> {
+        self.db.execute(
+            "INSERT INTO images(run_id,image_id,jpeg) VALUES (?,?,?)",
+            params![run, image, bytes],
+        )?;
+        Ok(())
+    }
     pub fn reader(path: &Path) -> Result<Self> {
         let db = Connection::open(path)?;
         db.busy_timeout(std::time::Duration::from_secs(5))?;

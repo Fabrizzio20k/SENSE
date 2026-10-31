@@ -28,6 +28,15 @@
   <section id="offline-banner" class="offline-banner" hidden aria-label="Simulador para desarrollo frontend"><div><strong>OFFLINE · Datos simulados</strong><p>Vista de prueba sin hardware.</p></div><div class="controls"><label>Escena<select id="offline-scene"><option value="ready">Preparación lista</option><option value="loading">Preparando modelos</option><option value="running">Ejecución en curso</option><option value="pending">Observaciones pendientes</option><option value="finished">Ejecución terminada</option><option value="failure">F · Falla de un componente</option><option value="missing">Datos incompletos</option></select></label><button id="offline-advance" type="button">Avanzar 1 min</button><button id="offline-reset" type="button">Reiniciar demo</button></div></section>
   <div class="panel" id="preparation">
     <div class="page-intro"><span class="page-number">01</span><span class="page-intro-icon" data-sprite="preparation" aria-hidden="true"></span><div><p class="eyebrow">Comprobación del sistema</p><h2>Preparación</h2><p class="sub">Revisa sensores y modelos antes de medir.</p></div></div>
+    <div id="preparation-camera">
+  <details class="camera-setup" id="camera-setup">
+    <summary>Orientación de cámara · <span id="camera-current">0°</span></summary>
+    <p class="sub">Toma una foto actual, elige el giro horario y aplica antes de comenzar. YOLO, Gemma y las fotos guardadas usarán esa orientación. Se conserva para las próximas ejecuciones mientras el servidor esté abierto.</p>
+    <div class="controls"><button id="camera-preview" type="button">Tomar foto actual</button><label for="camera-rotation">Giro horario<select id="camera-rotation"><option value="0">0° · Original</option><option value="90">90° · Derecha</option><option value="180">180° · Invertida</option><option value="270">270° · Izquierda</option></select></label><button id="camera-apply" type="button" disabled>Aplicar orientación</button></div>
+    <p id="camera-status" class="sub" role="status">La vista previa solo toma una foto; no ejecuta modelos ni inicia una medición.</p>
+    <div class="camera-preview-frame" id="camera-preview-frame" hidden><img id="camera-image" alt="Vista previa de la cámara con el giro seleccionado"></div>
+  </details>
+    </div>
     <h2>Sistema</h2><div class="grid"><article class="card"><p class="sub">CPU</p><p class="metric" id="cpu">—</p></article><article class="card"><p class="sub">Memoria</p><p class="metric" id="memory">—</p><p class="sub" id="memory-detail"></p></article></div>
     <h2>Sensores MQTT</h2><div class="grid"><article class="card sensor-card" data-sprite="sht40"><p class="sub">SHT40</p><p class="metric" id="sht">Sin datos</p></article><article class="card sensor-card" data-sprite="ens160"><p class="sub">ENS160</p><p class="metric" id="ens">Sin datos</p></article><article class="card sensor-card" data-sprite="radar"><p class="sub">Presencia</p><p class="metric" id="presence">Sin datos</p></article></div>
     <h2>Preparación de modelos</h2><div class="grid" id="phases"></div>
@@ -36,6 +45,7 @@
   </div>
   <div class="panel" id="measurement" hidden>
     <p id="measurement-relocated" hidden>La medición está en Experimentación. <button id="measurement-go-experiment" type="button">Ver ejecución</button></p>
+    <div id="measurement-camera"></div>
     <div id="measurement-workspace">
     <div class="measurement-intro page-intro"><span class="page-number">02</span><span class="page-intro-icon" data-sprite="measurement" aria-hidden="true"></span><div><p class="eyebrow">Consola de observación</p><h2 id="measurement-heading">Medición y pruebas</h2><p class="sub">Modos A–F · registro automático y evidencia vigente.</p></div></div>
     <div class="measurement-toolbar"><label for="measurement-mode">Modo<select id="measurement-mode"></select></label><button id="measurement-toggle" disabled>Comenzar</button><p id="measurement-run" class="measurement-run">Sin ejecución · parámetros de piloto</p></div>
@@ -85,6 +95,7 @@
   </div>
   <div class="panel" id="experimentation" hidden>
     <div class="experimentation-intro page-intro"><span class="page-number">03</span><span class="page-intro-icon" data-sprite="experiment" aria-hidden="true"></span><div><p class="eyebrow">Sesión guiada · 30 minutos</p><h2>Experimentación</h2><p class="sub">Elige escenario, modo y repetición. SENSE registra y finaliza automáticamente.</p></div></div>
+    <div id="experimentation-camera"></div>
     <div class="experimentation-toolbar"><label for="experiment-scenario">Escenario<select id="experiment-scenario"><option value="S1">S1 · Ambiente y ocupación estables</option><option value="S2">S2 · Cambios de ocupación</option><option value="S3">S3 · Cambios ambientales</option></select></label><label for="experiment-mode">Caso<select id="experiment-mode"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F · E con fallas</option></select></label><label for="experiment-repetition">Repetición<select id="experiment-repetition"><option value="1">Repetición 1</option><option value="2">Repetición 2</option><option value="3">Repetición 3</option></select></label><div class="experiment-start"><button id="experiment-start" type="button" disabled aria-describedby="experiment-start-note">Comenzar</button><p id="experiment-start-note">Esperando conexión y preparación.</p></div></div>
     <details id="experiment-guide-details" class="experiment-guide-details"><summary>Guion y pasos del escenario <span class="detail-hint">Ver pasos</span></summary>
     <article class="experiment-guide" data-scenario="S1"><p class="experiment-kicker">S1 · Estabilidad</p><h2>Ambiente y ocupación estables</h2><p class="experiment-objective">Objetivo: comprobar cómo trabaja SENSE cuando casi nada cambia.</p><div class="experiment-timeline"><div><strong>0–10 min</strong><span>Aula vacía, sin personas.</span></div><div><strong>10–15 min</strong><span>Ingresa una persona y se sienta.</span></div><div><strong>15–30 min</strong><span>La persona permanece sentada, sin nuevos ingresos ni salidas.</span></div></div><p class="experiment-observe"><strong>Qué observar:</strong> si SENSE reconoce la presencia y mantiene información vigente sin ejecutar YOLO o Gemma innecesariamente.</p></article>
@@ -97,10 +108,12 @@
   </div>
   <div class="panel" id="replay" hidden>
     <div class="replay-intro page-intro"><span class="page-number">04</span><span class="page-intro-icon" data-sprite="replay" aria-hidden="true"></span><div><p class="eyebrow">Archivo local</p><h2>Replay</h2><p class="sub">Recorre muestras, decisiones, tareas y observaciones de una ejecución guardada.</p></div><button id="replay-demo" type="button" hidden>Cargar ejemplo de 30 min</button></div>
+    <div id="replay-camera"></div>
     <div class="replay-upload"><label>ZIP exportado por SENSE<input id="replay-file" type="file" accept=".zip,application/zip"></label><p id="replay-file-note" class="sub" role="status">Hasta 64 MB comprimidos y 128 MB descomprimidos. También admite los ZIP anteriores sin manifiesto.</p></div>
     <p id="replay-error" class="error" role="alert"></p>
     <div id="replay-view" hidden>
       <h2 id="replay-title"></h2>
+      <section class="replay-photo"><h3>Foto analizada</h3><p id="replay-camera-orientation" class="sub"></p><p id="replay-photo-note" class="sub" role="status"></p><img id="replay-photo" alt="Fotografía guardada con la orientación usada por YOLO y Gemma" hidden></section>
       <div class="replay-controls"><div class="replay-player-head"><span class="eyebrow">Línea de tiempo</span><span id="replay-position">00:00 / 30:00</span></div><div class="controls"><button id="replay-prev" type="button" data-sprite="previous" aria-label="Evento anterior">Anterior</button><button id="replay-play" type="button" data-sprite="play">Reproducir</button><button id="replay-next" type="button" data-sprite="next" aria-label="Evento siguiente">Siguiente</button><label>Velocidad<select id="replay-speed"><option value="1">1×</option><option value="5">5×</option><option value="30">30×</option><option value="120">120×</option></select></label></div><label for="replay-seek" class="replay-seek-label">Posición en la traza</label><input id="replay-seek" type="range" min="0" max="1800" step="0.1" value="0"><div id="replay-markers" aria-hidden="true"></div><div id="replay-scale" aria-hidden="true"></div><div class="replay-clock-line"><span id="replay-wall-time"></span><div id="replay-legend" aria-label="Tipos de hitos"></div></div></div>
       <div class="replay-grid"><div><div class="replay-state"><strong id="replay-state">WAIT</strong><p id="replay-gap"></p></div><div id="replay-readings"></div>
         <section><h2>Respuestas guardadas hasta este instante</h2><p id="replay-answers-empty" class="sub">Todavía no hay respuestas registradas.</p><div id="replay-answers"></div></section>
@@ -132,5 +145,6 @@
 <script src="/public/measurement.js"></script>
 <script src="/public/experiment.js"></script>
 <script src="/public/replay.js"></script>
+<script src="/public/camera.js"></script>
 <script src="/public/app.js"></script>
 </html>

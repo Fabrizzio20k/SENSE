@@ -34,7 +34,7 @@ function frontend(){
   get('measurement').append(get('measurement-workspace'));
   const window={location:{pathname:'/offline'},matchMedia:()=>({matches:false,addEventListener(){}}),setInterval(fn){const key=++serial;intervals.set(key,fn);return key;},clearInterval(key){intervals.delete(key);},setTimeout(fn){timeouts.push(fn);return ++serial;}};
   const context=vm.createContext({window,document,console,TextEncoder,TextDecoder,Blob,Response,URL,DecompressionStream,structuredClone,performance:{now:()=>now},Event,requestAnimationFrame:fn=>fn(),setTimeout:window.setTimeout,fetch(...args){network.push(args);throw Error('Unexpected real fetch');},EventSource:class{constructor(){throw Error('Unexpected real SSE');}}});
-  for(const name of ['api.js','replay-data.js','offline.js','measurement.js','experiment.js','replay.js','app.js'])vm.runInContext(fs.readFileSync('public/'+name,'utf8'),context,{filename:name});
+  for(const name of ['api.js','replay-data.js','offline.js','measurement.js','experiment.js','replay.js','camera.js','app.js'])vm.runInContext(fs.readFileSync('public/'+name,'utf8'),context,{filename:name});
   return {get,window,document,network,context,tabs,async flush(){while(timeouts.length)timeouts.shift()();await new Promise(setImmediate);},tick(ms=1000){now+=ms;for(const fn of [...intervals.values()])fn();}};
 }
 module.exports={frontend};

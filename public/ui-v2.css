@@ -357,3 +357,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 @media(max-width:480px) { .reading-grid,.reading-group:first-child .reading-grid { grid-template-columns:1fr } }
 @media(max-width:480px) { #replay-readings .replay-reading-items,#replay-readings .replay-reading-group:nth-child(n+3) .replay-reading-items { grid-template-columns:1fr } }
 @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto } #measurement-workspace .pipeline-node:is(.active,.waiting)::after,#measurement-workspace .fallback-lines>path.flow-burst { animation:none!important } :root #measurement-workspace .pipeline-node:is(.active,.waiting) .node-icon { background-image:var(--state-rest)!important } }
+
+.camera-setup{margin:0 0 1.5rem;padding:1rem;border:1px solid var(--line, #888);background:var(--panel);border-radius:0}
+.camera-setup summary{cursor:pointer;font-weight:600}
+.camera-setup .controls{flex-wrap:wrap;margin-top:1rem}
+.camera-preview-frame{max-width:480px;margin-top:1rem}
+.camera-preview-frame img{display:block;width:100%;aspect-ratio:1;object-fit:contain}
+.replay-photo img{display:block;max-width:100%;max-height:480px;object-fit:contain;margin-block:1rem}
+.replay-photo img[hidden]{display:none}

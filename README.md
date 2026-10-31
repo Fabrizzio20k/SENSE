@@ -70,8 +70,21 @@ una copia de seguridad antes de utilizar datos históricos. Al abrir una base,
 las ejecuciones que quedaron `RUNNING` se marcan `INTERRUPTED`, como antes.
 No se trasladan ni se borran automáticamente los datos del backend Python.
 
-Las fotografías experimentales siguen sin guardarse en SQLite ni exportarse. La
-captura del sandbox permanece en memoria; los temporales de cámara se eliminan.
+En las cuatro pestañas, abre **Orientación de cámara**, pulsa **Tomar foto actual**,
+elige 0°, 90°, 180° o 270° horarios y pulsa **Aplicar orientación**. La vista previa
+no ejecuta modelos. El giro se aplica a los píxeles antes de YOLO; Gemma recibe
+exactamente esa misma imagen. La orientación se mantiene mientras el servidor
+esté abierto y queda registrada por ejecución. Se bloquea durante una ejecución
+y mientras terminen sus workers; cambiarla invalida la foto anterior del sandbox.
+
+Las fotografías experimentales se guardan en SQLite y se incluyen en el ZIP CSV
+bajo `images/`, con la orientación ya aplicada. Replay muestra la última foto
+analizada disponible hasta el instante seleccionado, sin girarla otra vez. Los
+ZIP antiguos sin fotos u orientación siguen siendo compatibles. NDJSON conserva
+el registro y las referencias, sin los archivos JPEG. El sandbox y la vista previa
+permanecen en memoria; los temporales de cámara se eliminan. Guardar fotografías
+aumenta el tamaño de la base y del ZIP; Replay conserva sus límites de 64 MB
+comprimidos y 128 MB descomprimidos.
 
 ## Adaptadores nativos
 

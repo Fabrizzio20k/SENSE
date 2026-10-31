@@ -5,7 +5,7 @@
   const copy=value=>structuredClone(value),iso=(start,second)=>new Date(Date.parse(start)+second*1000).toISOString();
   const config={sensors:{presence_ttl_seconds:6,environment_ttl_seconds:10},vision:{ttl_seconds:60},regions:{camera_region:'rasp_shared_view'}};
   const ready=()=>Object.fromEntries(['yolo','text','vision'].map(key=>[key,{status:'ready',detail:'Disponible · simulación offline'}]));
-  let serial=0,current=null,scene='ready',phases=ready(),sandboxTasks={},captureVersion=0;
+  let serial=0,current=null,scene='ready',phases=ready(),sandboxTasks={},captureVersion=0,cameraRotation=0;
   const id=()=> 'offline-'+(++serial),listeners=new Set(),runs=new Map();
   function sample(start,second){
     const people=Math.floor(second/300)%4,health=Object.fromEntries(['sht40','ens160','radar','camera','gemma'].map(key=>[key,{status:second>=900&&second<950&&key==='camera'?'FAILED':'HEALTHY'}]));
@@ -50,7 +50,7 @@
   }
   function begin(body={},elapsed=0){
     const start=new Date(Date.now()-elapsed*1000).toISOString();
-    current={run:{run_id:id(),mode:body.mode||'C',policy_mode:body.mode==='F'?'E':body.mode||'C',guided:!!body.guided,scenario_id:body.scenario_id||'S2',repetition:body.repetition||1,status:'RUNNING',start_time:start,duration_seconds:1800,observation_region:'rasp_shared_view',simulated:true,data_origin:'offline-demo',config,...Object.fromEntries(['observer','instrument','equipment'].map(key=>[key,body.initial_observation?.[key]||({observer:'Ana · demo',instrument:'Vatímetro · demo',equipment:'Raspberry Pi, todos los sensores y cámara'})[key]]))},elapsed,samples:[],events:[],records:[],requests:[],manual:{mode:'AUTO',detected:null},disabled:[],faults:[],timeouts:{},previous:{power_w:9,visible_people:0}};
+    current={run:{camera_rotation_degrees:cameraRotation,run_id:id(),mode:body.mode||'C',policy_mode:body.mode==='F'?'E':body.mode||'C',guided:!!body.guided,scenario_id:body.scenario_id||'S2',repetition:body.repetition||1,status:'RUNNING',start_time:start,duration_seconds:1800,observation_region:'rasp_shared_view',simulated:true,data_origin:'offline-demo',config,...Object.fromEntries(['observer','instrument','equipment'].map(key=>[key,body.initial_observation?.[key]||({observer:'Ana · demo',instrument:'Vatímetro · demo',equipment:'Raspberry Pi, todos los sensores y cámara'})[key]]))},elapsed,samples:[],events:[],records:[],requests:[],manual:{mode:'AUTO',detected:null},disabled:[],faults:[],timeouts:{},previous:{power_w:9,visible_people:0}};
     event(current,0,'RUN_STARTED',copy(current.run));for(let second=0;second<=Math.min(1799,elapsed);second++)current.samples.push(sample(start,second));
     event(current,elapsed,'RESULT_PUBLISHED',{answers:answers(sample(start,elapsed),start)});
     if(body.initial_observation)current.records.push({...copy(body.initial_observation),record_id:id(),run_id:current.run.run_id,kind:'OBSERVER_RECORD',recorded_at:new Date().toISOString()});
@@ -71,7 +71,7 @@
     const health=copy(s.component_health);for(const component of current.disabled)health[component]={status:'FAILED'};
     return {running:current.run.status==='RUNNING',run:copy(current.run),enabled_modes:[...'ABCDEF'],elapsed_s:current.elapsed,fsm:s.fsm_state,cycle:{actions:['ACQUIRE','ASSESS',s.fsm_state]},observation_region:'rasp_shared_view',context:{observations},answers:answers(s,current.run.start_time),interpretations:['D','E','F'].includes(current.run.mode)?[interpretation(25)]:[],resources:{cpu_total_percent:s.cpu_percent,ram_used_mb:s.ram_used_mb,temperature_c:s.pi_temp_c,main:{rss_mb:650}},component_health:health,presence_control:copy(current.manual),raw_presence:observations.presence,reactive_trigger:{state:s.presence?'NEAR':'FAR',enter_below_cm:30,exit_at_or_above_cm:50,required_samples:3,confirmed_samples:3},fault_control:{disabled:current.disabled,timeouts:current.timeouts,faults:current.faults},observer_requests:copy(current.requests.filter(r=>r.status==='PENDING')),observer_previous:copy(current.previous),quality:quality(current),tasks:{active:[],queued:0,counters:{}},transitions:current.events.filter(e=>e.type==='FSM_TRANSITION').slice(-20).map(e=>({...e.payload,timestamp:e.timestamp})),decisions:[{kind:'VISION',reason:'DEMO_ONLY'}]};
   }
-  function snapshot(){const m=measurement(),s=current?sample(current.run.start_time,current.elapsed):sample(new Date().toISOString(),0);return {phases:copy(phases),system:{cpu_percent:s.cpu_percent,memory_percent:42,memory_used_mb:s.ram_used_mb},telemetry:{schema:'rustio.iot.telemetry.v1',timestamp:new Date().toISOString(),environment:{sht40:{temperature_c:s.temperature_c,humidity_percent:s.humidity_pct},ens160:{aqi:s.aqi,eco2_ppm:s.eco2_ppm_equiv}},presence:{state:s.presence?'Presencia · demo':'Sin presencia · demo',total_distance_cm:s.presence?25:150}},sandbox:{ready:Object.values(phases).every(p=>p.status==='ready'),busy:Object.values(sandboxTasks).some(t=>t.status==='loading')},tasks:copy(sandboxTasks),measurement:m};}
+  function snapshot(){const m=measurement(),s=current?sample(current.run.start_time,current.elapsed):sample(new Date().toISOString(),0);return {camera_rotation_degrees:cameraRotation,phases:copy(phases),system:{cpu_percent:s.cpu_percent,memory_percent:42,memory_used_mb:s.ram_used_mb},telemetry:{schema:'rustio.iot.telemetry.v1',timestamp:new Date().toISOString(),environment:{sht40:{temperature_c:s.temperature_c,humidity_percent:s.humidity_pct},ens160:{aqi:s.aqi,eco2_ppm:s.eco2_ppm_equiv}},presence:{state:s.presence?'Presencia · demo':'Sin presencia · demo',total_distance_cm:s.presence?25:150}},sandbox:{ready:Object.values(phases).every(p=>p.status==='ready'),busy:Object.values(sandboxTasks).some(t=>t.status==='loading')},tasks:copy(sandboxTasks),measurement:m};}
   function emit(){for(const listener of listeners)listener(snapshot());}
   function tick(publish=true){
     if(current?.run.status==='RUNNING'){
@@ -96,6 +96,14 @@
   function response(body,status=200){return new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});}
   async function fetchMock(url,options={}){
     const address=new URL(url,'http://offline.local'),path=address.pathname,body=options.body?JSON.parse(options.body):{},method=options.method||'GET';
+    if(['/api/camera','/api/camera/preview'].includes(path)){
+      if(current?.run.status==='RUNNING'||Object.values(sandboxTasks).some(t=>t.status==='loading'))return response({error:'Finaliza la ejecución antes de ajustar la cámara.'},409);
+      if(path==='/api/camera'){
+        if(![0,90,180,270].includes(body.rotation_degrees))return response({error:'Orientación inválida.'},400);
+        cameraRotation=body.rotation_degrees;delete sandboxTasks.capture;emit();
+      }
+      return response({rotation_degrees:cameraRotation,simulated:true});
+    }
     if(path==='/api/experiments'&&method==='GET')return response({runs:[...runs.values()].reverse().map(t=>({...t.run,quality:quality(t)}))});
     if(path==='/api/experiments/start'){if(current?.run.status==='RUNNING')return response({error:'La demo ya tiene una ejecución activa.'},409);begin(body);emit();return response({run_id:current.run.run_id},202);}
     if(path==='/api/experiments/stop'){stop();emit();return response({ok:true},202);}

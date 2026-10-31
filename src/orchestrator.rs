@@ -135,6 +135,11 @@ impl SenseOrchestrator {
         experiment: &Value,
     ) -> Result<Value> {
         protocol::validate_guided_start(experiment)?;
+        let rotation = crate::agents::camera_rotation(
+            experiment
+                .get("camera_rotation_degrees")
+                .unwrap_or(&json!(0)),
+        )?;
         if truth(&experiment["guided"])
             && number(&self.config["runtime"]["max_run_seconds"]) != 1800.
         {
@@ -171,6 +176,7 @@ impl SenseOrchestrator {
             .as_object_mut()
             .unwrap()
             .extend(values.as_object().unwrap().clone());
+        self.run["camera_rotation_degrees"] = json!(rotation);
         self.started = now;
         self.health = HealthMonitor::new(now, self.config.clone());
         self.faults = FaultInjector::new(now);
@@ -712,6 +718,8 @@ impl SenseOrchestrator {
         self.record_decision("VISION", &decision)?;
         if decision.action.is_some() {
             let mut command=self.command("VisionAgent","vision","Q2",&decision.reason,number(&self.config["vision"]["timeout_seconds"]),json!({"region":self.config["regions"]["camera_region"],"snapshot_id":snapshot.snapshot_id,"trigger_event_id":if self.run["mode"]=="B"{self.policy.reactive_pending["event_id"].clone()}else{Value::Null}}));
+            command["parameters"]["camera_rotation_degrees"] =
+                self.run["camera_rotation_degrees"].clone();
             let fault = self.faults.task_fault("vision");
             Self::fault_parameters(&mut command, fault.as_ref());
             let adapter = self.adapters.clone();
@@ -948,6 +956,11 @@ impl SenseOrchestrator {
             logged[k] = e[k].clone();
         }
         let kind = text(&e["event_type"]);
+        if cmd["action"] == "vision"
+            && let Some(bytes) = event.image.as_ref()
+        {
+            self.log.save_image(id, text(&result["image_id"]), bytes)?;
+        }
         self.log.event(id, kind, &logged)?;
         if self.run["run_id"] == id
             && truth(&self.run["guided"])
@@ -1024,7 +1037,7 @@ impl SenseOrchestrator {
                     "visible_people",
                     text(&result["quality"]),
                     "VALID",
-                    json!({"image_id":result["image_id"],"model_id":self.metadata["model_version"]["yolo"]}),
+                    json!({"image_id":result["image_id"],"camera_rotation_degrees":result["camera_rotation_degrees"],"model_id":self.metadata["model_version"]["yolo"]}),
                 );
                 self.context.put("count", obs.clone(), now, age);
                 self.record(

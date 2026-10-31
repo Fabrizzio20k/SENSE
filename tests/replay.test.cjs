@@ -41,6 +41,8 @@ test('importa directamente el ZIP de producción con su manifiesto, JSON anidado
   assert.equal(trace.legacy,false);assert.equal(trace.samples.length,2);assert.equal(trace.records.length,1);
   assert.equal(trace.records[0].power_w,0);assert.equal(trace.records[0].notes,source().records[0].notes);
   assert.equal(trace.byType.RESULT_PUBLISHED[0].payload.answers.Q2.answer,3);
+  assert.equal(trace.images['images/test-image.jpg'][0],255);
+  assert.equal(trace.images['images/test-image.jpg'][1],216);
 });
 
 test('rechaza ZIP dañados, versiones desconocidas, tamaños abusivos y CSV con cabeceras peligrosas',async()=>{
@@ -101,4 +103,11 @@ test('Replay agrupa las 14 métricas y la leyenda coincide con los marcadores',(
   const markers=new Set(ui.get('replay-markers').children.map(marker=>marker.dataset.category));
   const legend=new Set(ui.get('replay-legend').children.map(item=>item.dataset.category));
   assert.deepEqual(legend,markers);
+});
+
+ test('el importador conserva JPEG binario y rechaza contenido distinto de JPEG',async()=>{
+  const data=library(),entries={...legacyEntries(),'images/test.jpg':new Uint8Array([255,216,255,217])};
+  const trace=await data.read(data.pack(entries));
+  assert.deepEqual(Array.from(trace.images['images/test.jpg']),[255,216,255,217]);
+  await assert.rejects(data.read(data.pack({...legacyEntries(),'images/test.jpg':'<svg onload="bad()"/>'})),/JPEG inválida/);
 });

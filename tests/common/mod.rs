@@ -178,6 +178,7 @@ impl ApiHarness {
             "api.js",
             "offline.js",
             "app.js",
+            "camera.js",
             "replay.js",
             "replay-data.js",
             "replay.css",

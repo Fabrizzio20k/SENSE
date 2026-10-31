@@ -159,13 +159,59 @@ fn export_csv_zip_snapshot(
     )?;
     run["export_event_sequence"] = json!(cutoff);
     run["exported_samples"] = json!(count);
+    let has_images: bool = log.db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='images')",
+        [],
+        |r| r.get(0),
+    )?;
+    let mut image_paths = BTreeMap::new();
+    if has_images {
+        let mut stmt = log
+            .db
+            .prepare("SELECT image_id FROM images WHERE run_id=? ORDER BY image_id")?;
+        let mut rows = stmt.query([id])?;
+        while let Some(row) = rows.next()? {
+            let image_id: String = row.get(0)?;
+            if image_id.is_empty()
+                || image_id.len() > 100
+                || !image_id
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+            {
+                return Err("Identificador de imagen inválido.".into());
+            }
+            image_paths.insert(image_id, ());
+        }
+    }
+    let mut files = vec![
+        "metadata.json".to_owned(),
+        "samples_1s.csv".into(),
+        "events.csv".into(),
+        "ground_truth.csv".into(),
+        "power_readings.csv".into(),
+        "observer_requests.csv".into(),
+    ];
+    files.extend(
+        image_paths
+            .keys()
+            .map(|image_id| format!("images/{image_id}.jpg")),
+    );
     let mut z = ZipWriter::new(&mut out);
     z.start_file("metadata.json", options())?;
     z.write_all(serde_json::to_string_pretty(&run)?.as_bytes())?;
     z.start_file("replay-manifest.json", options())?;
-    z.write_all(json!({"schema":"sense-replay.v1","run_id":id,"event_sequence":cutoff,"files":["metadata.json","samples_1s.csv","events.csv","ground_truth.csv","power_readings.csv","observer_requests.csv"],"images_stored":false}).to_string().as_bytes())?;
+    z.write_all(json!({"schema":"sense-replay.v1","run_id":id,"event_sequence":cutoff,"files":files,"images_stored":!image_paths.is_empty()}).to_string().as_bytes())?;
+    for image_id in image_paths.keys() {
+        let bytes: Vec<u8> = log.db.query_row(
+            "SELECT jpeg FROM images WHERE run_id=? AND image_id=?",
+            rusqlite::params![id, image_id],
+            |r| r.get(0),
+        )?;
+        z.start_file(format!("images/{image_id}.jpg"), options())?;
+        z.write_all(&bytes)?;
+    }
     z.start_file("LEEME.txt", options())?;
-    z.write_all("Snapshot de la ejecución al descargar. CSV UTF-8; celdas vacías = dato desconocido.\nPotencia W manual: hora observada distinta de hora registrada; no es energía ni consumo exclusivo de IA.\nsamples_1s conserva datos retenidos con edad y referencia original. Segundos ausentes: SAMPLE_GAP en events.\nPersonas: región observada, no necesariamente ocupación del aula. Fotografías no almacenadas.\nJSON anidado se conserva en columnas *_json. Tareas tardías pueden llegar después de esta descarga.\nReplay: importa este ZIP en la pestaña Replay; el manifiesto versiona las mismas fuentes CSV, sin duplicarlas.\n".as_bytes())?;
+    z.write_all("Snapshot de la ejecución al descargar. CSV UTF-8; celdas vacías = dato desconocido.\nPotencia W manual: hora observada distinta de hora registrada; no es energía ni consumo exclusivo de IA.\nsamples_1s conserva datos retenidos con edad y referencia original. Segundos ausentes: SAMPLE_GAP en events.\nPersonas: región observada, no necesariamente ocupación del aula. Las fotografías disponibles se incluyen en images/ con la orientación usada por los modelos.\nJSON anidado se conserva en columnas *_json. Tareas tardías pueden llegar después de esta descarga.\nReplay: importa este ZIP en la pestaña Replay; el manifiesto versiona las mismas fuentes CSV, sin duplicarlas.\n".as_bytes())?;
     let mut samples = log
         .db
         .prepare("SELECT payload FROM samples_1s WHERE run_id=? ORDER BY second")?;
@@ -271,7 +317,7 @@ fn export_csv_zip_snapshot(
                         }
                         t["visible_count"] = result["count"].clone();
                         if truth(&result["image_id"]) {
-                            images.entry(text(&result["image_id"]).into()).or_insert(json!({"run_id":id,"task_id":task_id,"image_id":result["image_id"],"captured_at":result["captured_at"],"stored":false}));
+                            images.entry(text(&result["image_id"]).into()).or_insert(json!({"run_id":id,"task_id":task_id,"image_id":result["image_id"],"captured_at":result["captured_at"],"camera_rotation_degrees":result["camera_rotation_degrees"],"stored":image_paths.contains_key(text(&result["image_id"]))}));
                         }
                     }
                 }

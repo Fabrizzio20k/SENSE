@@ -14,4 +14,5 @@
                 requested_at TEXT NOT NULL, reason TEXT NOT NULL, task_id TEXT, event_id TEXT,
                 fields TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING', record_id TEXT);
             CREATE INDEX IF NOT EXISTS observer_requests_run ON observer_requests(run_id, status);
-        
+            CREATE TABLE IF NOT EXISTS images (run_id TEXT NOT NULL, image_id TEXT NOT NULL,
+                jpeg BLOB NOT NULL, PRIMARY KEY(run_id, image_id));

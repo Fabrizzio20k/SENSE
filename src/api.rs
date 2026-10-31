@@ -46,7 +46,7 @@ impl AppState {
         Arc::new(Self {
             root: root.into(),
             state: Arc::new(Mutex::new(
-                json!({"telemetry":{},"telemetry_at":null,"phases":{"yolo":{"status":"waiting","detail":"Pendiente"},"text":{"status":"waiting","detail":"Pendiente"},"vision":{"status":"waiting","detail":"Pendiente"}},"tasks":{},"sandbox_busy":false}),
+                json!({"camera_rotation_degrees":0,"telemetry":{},"telemetry_at":null,"phases":{"yolo":{"status":"waiting","detail":"Pendiente"},"text":{"status":"waiting","detail":"Pendiente"},"vision":{"status":"waiting","detail":"Pendiente"}},"tasks":{},"sandbox_busy":false}),
             )),
             last_capture: Mutex::new(None),
             adapters,
@@ -190,7 +190,11 @@ impl AppState {
                 std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<String> {
                     match name.as_str() {
                         "capture" => {
-                            let (image, _) = (app.adapters.capture)()?;
+                            let rotation = app.state.lock().unwrap()["camera_rotation_degrees"]
+                                .as_u64()
+                                .unwrap_or(0);
+                            let (image, _) =
+                                app.adapters.capture_oriented(rotation, 8 * 1024 * 1024)?;
                             *app.last_capture.lock().unwrap() = Some(image);
                             Ok("Foto lista.".into())
                         }
@@ -379,6 +383,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         "/api/yolo",
         "/api/chat",
         "/api/vision",
+        "/api/camera",
+        "/api/camera/preview",
         "/api/experiments/start",
         "/api/experiments/stop",
         "/api/experiments/query",
@@ -489,6 +495,48 @@ fn api_request(
     query: &str,
     body: Value,
 ) -> Result<Response> {
+    if method == Method::POST && ["/api/camera", "/api/camera/preview"].contains(&path) {
+        let rotation = if path == "/api/camera" {
+            match crate::agents::camera_rotation(&body["rotation_degrees"]) {
+                Ok(v) => Some(v),
+                Err(e) => return Ok(error(400, e)),
+            }
+        } else {
+            None
+        };
+        let _gate = app.gate.lock().unwrap();
+        if truth(&app.state.lock().unwrap()["sandbox_busy"])
+            || app
+                .service
+                .lock()
+                .unwrap()
+                .as_ref()
+                .is_some_and(|s| s.reserved.load(Ordering::SeqCst))
+        {
+            return Ok(error(
+                409,
+                "Finaliza la ejecución y espera a sus workers antes de ajustar la cámara.",
+            ));
+        }
+        if let Some(rotation) = rotation {
+            app.state.lock().unwrap()["camera_rotation_degrees"] = json!(rotation);
+            *app.last_capture.lock().unwrap() = None;
+            app.state.lock().unwrap()["tasks"]
+                .as_object_mut()
+                .unwrap()
+                .shift_remove("capture");
+            return Ok(response(200, json!({"rotation_degrees":rotation})));
+        }
+        let (bytes, _) = app.adapters.capture_oriented(0, 8 * 1024 * 1024)?;
+        return Ok((
+            [
+                (header::CONTENT_TYPE, "image/jpeg"),
+                (header::CACHE_CONTROL, "no-store"),
+            ],
+            bytes,
+        )
+            .into_response());
+    }
     if method == Method::GET && path == "/api/capture" {
         return Ok(match app.last_capture.lock().unwrap().clone() {
             Some(bytes) => (
@@ -562,6 +610,9 @@ fn api_request(
                 return Ok(error(409, e));
             }
         }
+        let mut body = body;
+        body["camera_rotation_degrees"] =
+            app.state.lock().unwrap()["camera_rotation_degrees"].clone();
         return Ok(match s.call("start", body) {
             Ok(run) => response(202, json!({"run_id":run["run_id"]})),
             Err(e) => error(409, e),

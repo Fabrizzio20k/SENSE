@@ -15,6 +15,33 @@ pub struct Adapters {
     pub completion: Completion,
     pub model: String,
 }
+pub fn camera_rotation(value: &Value) -> Result<u64> {
+    value
+        .as_u64()
+        .filter(|v| [0, 90, 180, 270].contains(v))
+        .ok_or_else(|| "La orientación debe ser 0, 90, 180 o 270 grados horarios.".into())
+}
+pub fn rotate_image(bytes: Vec<u8>, rotation: u64) -> Result<Vec<u8>> {
+    camera_rotation(&json!(rotation))?;
+    if rotation == 0 {
+        return Ok(bytes);
+    }
+    let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format()?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(4096);
+    limits.max_image_height = Some(4096);
+    limits.max_alloc = Some(64 * 1024 * 1024);
+    reader.limits(limits);
+    let image = reader.decode()?;
+    let image = match rotation {
+        90 => image.rotate90(),
+        180 => image.rotate180(),
+        _ => image.rotate270(),
+    };
+    let mut out = Vec::new();
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 90).encode_image(&image)?;
+    Ok(out)
+}
 struct Strict(Value);
 impl<'de> Deserialize<'de> for Strict {
     fn deserialize<D: Deserializer<'de>>(d: D) -> std::result::Result<Self, D::Error> {
@@ -150,17 +177,30 @@ pub fn system_prompt(q: &str) -> Option<&'static str> {
     }
 }
 impl Adapters {
-    pub fn vision(&self, command: &Value, max_bytes: usize) -> Result<TaskOutput> {
-        let start = monotonic();
-        let (image, captured) = (self.capture)()?;
-        let capture_seconds = monotonic() - start;
-        if image.len() > max_bytes {
+    pub fn capture_oriented(&self, rotation: u64, max_bytes: usize) -> Result<(Vec<u8>, String)> {
+        let (bytes, captured) = (self.capture)()?;
+        if bytes.len() > max_bytes {
             return Err("La imagen excede el límite de memoria autorizado.".into());
         }
+        let bytes = rotate_image(bytes, rotation)?;
+        if bytes.len() > max_bytes {
+            return Err("La imagen orientada excede el límite de memoria autorizado.".into());
+        }
+        Ok((bytes, captured))
+    }
+    pub fn vision(&self, command: &Value, max_bytes: usize) -> Result<TaskOutput> {
+        let start = monotonic();
+        let rotation = camera_rotation(
+            command["parameters"]
+                .get("camera_rotation_degrees")
+                .unwrap_or(&json!(0)),
+        )?;
+        let (image, captured) = self.capture_oriented(rotation, max_bytes)?;
+        let capture_seconds = monotonic() - start;
         let infer = monotonic();
         let count = (self.detector)(&image)?;
         Ok(TaskOutput {
-            data: json!({"count":count,"image_id":identifier(),"captured_at":captured,"region":command["parameters"]["region"],"capture_seconds":capture_seconds,"inference_seconds":monotonic()-infer,"quality":"uncalibrated_camera_coverage"}),
+            data: json!({"count":count,"image_id":identifier(),"captured_at":captured,"camera_rotation_degrees":rotation,"region":command["parameters"]["region"],"capture_seconds":capture_seconds,"inference_seconds":monotonic()-infer,"quality":"uncalibrated_camera_coverage"}),
             image: Some(Arc::new(image)),
         })
     }

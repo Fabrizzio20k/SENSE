@@ -46,6 +46,12 @@ fn frontend_and_rust_exports() {
     log.human_record("12345", "OBSERVER_RECORD", &record)
         .unwrap();
     log.finish("12345", "COMPLETED", Some(&run)).unwrap();
+    let mut jpeg = std::io::Cursor::new(Vec::new());
+    image::RgbImage::from_pixel(4, 2, image::Rgb([255u8, 0, 0]))
+        .write_to(&mut jpeg, image::ImageFormat::Jpeg)
+        .unwrap();
+    log.save_image("12345", "test-image", &jpeg.into_inner())
+        .unwrap();
     let production = temp.path().join("production.zip");
     let mut bytes = vec![];
     export_csv_zip(&log.path, "12345")

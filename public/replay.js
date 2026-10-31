@@ -7,7 +7,7 @@
   const names={RUN_STARTED:'Inicio de ejecución',RUN_FINISHED:'Fin de ejecución',FSM_TRANSITION:'Transición de estado',TASK_STARTED:'Tarea iniciada',TASK_COMPLETED:'Tarea completada',TASK_FAILED:'Tarea fallida',TASK_TIMEOUT:'Tiempo agotado',RESULT_PUBLISHED:'Respuestas guardadas',OBSERVER_REQUESTED:'Observación solicitada',OBSERVER_RECORDED:'Observación guardada',OBSERVER_RECORD:'Registro humano',SAMPLE_GAP:'Muestras ausentes',SLM_INPUT:'Entrada a Gemma'};
   const readingIcons={temperature_c:'temperature',humidity_pct:'humidity',aqi:'aqi',eco2_ppm_equiv:'eco2',tvoc_ppb:'tvoc',presence:'radar',visible_count:'yolo',distance_cm:'distance',cpu_percent:'cpu',ram_used_mb:'memory',process_rss_mb:'memory',pi_temp_c:'pi',vision_worker_state:'yolo',gemma_worker_state:'gemma-text'};
   const evidenceLabels={VALID:'Vigente',UNKNOWN:'Desconocido',STALE:'Vencido',CONFLICTING:'Conflicto',UNAVAILABLE:'Sin datos',ERROR:'Error'};
-  let trace=null,cursor=0,timer=null,lastTick=0,selected=null,loading=0;
+  let photoURL=null,photoKey=null,trace=null,cursor=0,timer=null,lastTick=0,selected=null,loading=0;
   let lastAnswers=null,lastTasks='',lastModels='',lastHumans='',lastPage='',lastSelected;
   function pause(){if(timer!=null)window.clearInterval(timer);timer=null;byId('replay-play').textContent='Reproducir';byId('replay-play').dataset.sprite='play';}
   function events(){return byId('replay-filter').value==='important'?trace.important:byId('replay-filter').value==='all'?trace.timeline:trace.timeline.filter(e=>e.category===byId('replay-filter').value);}
@@ -33,6 +33,18 @@
     byId('replay-wall-time').textContent=new Date(Date.parse(trace.run.start_time)+cursor*1000).toLocaleString();
     const frame=data.frame(trace,cursor),sample=frame.sample;
     byId('replay-state').textContent=frame.state;
+    const photo=frame.photo,key=photo?.image_id||null;
+    if(photoKey!==key){
+      photoKey=key;if(photoURL)URL.revokeObjectURL(photoURL);photoURL=null;
+      const bytes=key?trace.images?.['images/'+key+'.jpg']:null;
+      byId('replay-photo').hidden=!bytes;
+      if(bytes)byId('replay-photo').src=photoURL=URL.createObjectURL(new Blob([bytes],{type:'image/jpeg'}));
+      else byId('replay-photo').removeAttribute('src');
+    }
+    const rotation=photo?.camera_rotation_degrees??trace.run.camera_rotation_degrees;
+    byId('replay-camera-orientation').textContent=rotation==null?'Orientación no registrada en este archivo.':'Orientación registrada: '+rotation+'° horarios. La fotografía ya tiene ese giro.';
+    byId('replay-photo-note').textContent=photoURL?'Capturada: '+(photo.captured_at||'Sin hora')+(frame.tasks.some(e=>e.payload.result?.image_id===key&&e.payload.late)?' · Resultado tardío':''):key?'Este archivo no incluye la fotografía.':'Todavía no hay una fotografía analizada en este instante.';
+
     byId('replay-gap').textContent=!sample?'Sin muestra todavía.':frame.gap?'Sin muestra en este segundo. Última muestra hace '+frame.sampleAge.toFixed(1)+' s; no se interpola.':'Muestra guardada · segundo '+sample.second;
     byId('replay-gap').dataset.gap=String(frame.gap);
     const groups=[['Ambiente',[['temperature_c','Temperatura','°C'],['humidity_pct','Humedad','%'],['aqi','AQI',''],['eco2_ppm_equiv','eCO₂','ppm eq.'],['tvoc_ppb','TVOC','ppb']]],['Presencia y visión',[['presence','Presencia',''],['visible_count','Conteo YOLO','personas'],['distance_cm','Distancia radar','cm']]],['Recursos',[['cpu_percent','CPU','%'],['ram_used_mb','RAM sistema','MB'],['process_rss_mb','RAM SENSE','MB'],['pi_temp_c','Temp. Pi','°C']]],['Tareas',[['vision_worker_state','Worker YOLO',''],['gemma_worker_state','Worker Gemma','']]]];
@@ -67,7 +79,7 @@
     if(cursor>=trace.duration)pause();
   }
   function load(next,label){
-    pause();trace=next;selected=null;lastAnswers=null;lastTasks=lastModels=lastHumans=lastPage='reset';lastSelected=undefined;byId('replay-view').hidden=false;
+    pause();if(photoURL)URL.revokeObjectURL(photoURL);photoURL=null;photoKey=undefined;byId('replay-photo').removeAttribute('src');trace=next;selected=null;lastAnswers=null;lastTasks=lastModels=lastHumans=lastPage='reset';lastSelected=undefined;byId('replay-view').hidden=false;
     const runStatus={RUNNING:'En ejecución',COMPLETED:'Finalizada',FAILED:'Con error',INTERRUPTED:'Interrumpida'}[trace.run.status]||trace.run.status;
     byId('replay-title').textContent=(trace.run.simulated?'Simulación · ':'')+'Modo '+trace.run.mode+' · '+(trace.run.scenario_id||'Sin escenario')+' · '+runStatus;
     byId('replay-file-note').textContent=label+' · '+trace.samples.length+' muestras · '+trace.events.length+' eventos · '+trace.records.length+' registros humanos'+(trace.legacy?' · ZIP anterior, compatible sin manifiesto.':'.');

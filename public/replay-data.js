@@ -3,6 +3,7 @@
   'use strict';
   const MAX_ZIP=64*1024*1024,MAX_DATA=128*1024*1024,MAX_ROWS=200000;
   const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
+  const imageFile=name=>/^images\/[A-Za-z0-9_-]{1,100}\.jpg$/.test(name);
   const files=['metadata.json','replay-manifest.json','samples_1s.csv','events.csv','ground_truth.csv','power_readings.csv','observer_requests.csv'];
   const crcTable=Uint32Array.from({length:256},(_,n)=>{for(let i=0;i<8;i++)n=n&1?0xedb88320^(n>>>1):n>>>1;return n>>>0;});
   function crc(bytes){let n=0xffffffff;for(const byte of bytes)n=crcTable[(n^byte)&255]^(n>>>8);return (n^0xffffffff)>>>0;}
@@ -24,7 +25,7 @@
       check(next<=directory+directorySize,'Entrada ZIP incompleta.');
       const name=decoder.decode(bytes.subarray(position+46,position+46+length));
       check(!names.has(name)&&!name.includes('\\')&&!name.startsWith('/')&&!name.split('/').includes('..'),'Nombres duplicados o rutas inválidas en el ZIP.');names.add(name);
-      if(files.includes(name)){
+      if(files.includes(name)||imageFile(name)){
         const flags=view.getUint16(position+8,true),method=view.getUint16(position+10,true),compressed=view.getUint32(position+20,true),size=view.getUint32(position+24,true),offset=view.getUint32(position+42,true);
         check(!(flags&1)&&[0,8].includes(method),'El ZIP está cifrado o usa una compresión no compatible.');
         check(size!==0xffffffff&&compressed!==0xffffffff&&offset!==0xffffffff,'ZIP64 no compatible; exporta un archivo menor.');
@@ -50,7 +51,10 @@
         check(written===entry.size,'El ZIP está truncado.');data=inflated;
       }
       check(data.length===entry.size&&crc(data)===entry.checksum,'El ZIP está dañado (tamaño o CRC incorrecto).');
-      output[entry.name]=decoder.decode(data).replace(/^\uFEFF/,'');
+      if(imageFile(entry.name)){
+        check(data.length<=8*1024*1024&&data[0]===255&&data[1]===216&&data[2]===255,'Fotografía JPEG inválida o demasiado grande.');
+        output[entry.name]=data.slice();
+      }else output[entry.name]=decoder.decode(data).replace(/^\uFEFF/,'');
     }
     return output;
   }
@@ -126,7 +130,8 @@
       const key=(e.type==='HISTORICAL_INTERPRETATION'?e.payload:e.payload.result).interpretation_id||e.sequence;
       if(seenInterpretations.has(key))return false;seenInterpretations.add(key);return true;
     });
-    return {run,samples,events,records,requests:source.requests||[],duration,byType,tasks,timeline,important,interpretationEvents,legacy:!!source.legacy};
+    const photoEvents=events.filter(e=>e.type==='TASK_COMPLETED'&&e.payload.command?.action==='vision'&&e.payload.result?.image_id);
+    return {images:source.images||{},photoEvents,run,samples,events,records,requests:source.requests||[],duration,byType,tasks,timeline,important,interpretationEvents,legacy:!!source.legacy};
   }
   async function read(file){
     const entries=await unzip(file);
@@ -136,14 +141,15 @@
     const parse=name=>entries[name]?csv(entries[name]).map(typed):[];
     const humans=new Map();
     for(const row of [...parse('ground_truth.csv'),...parse('power_readings.csv')]){check(!row.run_id||row.run_id===run.run_id,'El ZIP mezcla ejecuciones diferentes.');check(typeof row.record_id==='string','Registro humano sin identificador.');const record=humans.get(row.record_id)||{};for(const [key,value] of Object.entries(row))if(value!=null||record[key]==null)record[key]=value;humans.set(row.record_id,record);}
-    return prepare({run,samples:parse('samples_1s.csv'),events:parse('events.csv').map(row=>({...row,timestamp:row.timestamp_utc,payload:row.payload_json})),records:[...humans.values()],requests:parse('observer_requests.csv'),legacy:!entries['replay-manifest.json']});
+    return prepare({images:Object.fromEntries(Object.entries(entries).filter(([name])=>imageFile(name))),run,samples:parse('samples_1s.csv'),events:parse('events.csv').map(row=>({...row,timestamp:row.timestamp_utc,payload:row.payload_json})),records:[...humans.values()],requests:parse('observer_requests.csv'),legacy:!entries['replay-manifest.json']});
   }
   function frame(trace,at){
     const sample=latest(trace.samples,at),transition=latest(trace.byType.FSM_TRANSITION||[],at),result=latest(trace.byType.RESULT_PUBLISHED||[],at);
     const taskEvents=[...trace.tasks.values()].map(items=>latest(items,at)).filter(Boolean).sort((a,b)=>b.at-a.at);
     const interpretationEnd=latestIndex(trace.interpretationEvents,at)+1,recordEnd=latestIndex(trace.records,at)+1;
     const interpretations=trace.interpretationEvents.slice(Math.max(0,interpretationEnd-10),interpretationEnd);
-    return {sample,gap:!sample||Math.floor(sample.at)!==Math.floor(at),sampleAge:sample?Math.max(0,at-sample.at):null,
+    const photo=latest(trace.photoEvents||[],at);
+    return {photo:photo?.payload.result||null,sample,gap:!sample||Math.floor(sample.at)!==Math.floor(at),sampleAge:sample?Math.max(0,at-sample.at):null,
       state:transition&&(!sample||transition.at>=sample.at)?transition.payload.to:sample?.fsm_state||'WAIT',answers:result?.payload.answers||{},
       tasks:taskEvents.slice(0,12),interpretations,records:trace.records.slice(Math.max(0,recordEnd-10),recordEnd)};
   }
@@ -154,7 +160,7 @@
   function pack(entries){
     const chunks=[],directory=[];let offset=0,total=0;
     for(const [name,text] of Object.entries(entries)){
-      const filename=encoder.encode(name),data=encoder.encode(text),checksum=crc(data),local=new Uint8Array(30+filename.length),lv=new DataView(local.buffer),central=new Uint8Array(46+filename.length),cv=new DataView(central.buffer);
+      const filename=encoder.encode(name),data=ArrayBuffer.isView(text)?text:encoder.encode(text),checksum=crc(data),local=new Uint8Array(30+filename.length),lv=new DataView(local.buffer),central=new Uint8Array(46+filename.length),cv=new DataView(central.buffer);
       total+=data.length;check(total<=MAX_ZIP-65536,'El ZIP simulado supera 64 MB.');
       lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint16(10,0,true);lv.setUint16(12,33,true);lv.setUint32(14,checksum,true);lv.setUint32(18,data.length,true);lv.setUint32(22,data.length,true);lv.setUint16(26,filename.length,true);local.set(filename,30);
       cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(14,33,true);cv.setUint32(16,checksum,true);cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,filename.length,true);cv.setUint32(42,offset,true);central.set(filename,46);
