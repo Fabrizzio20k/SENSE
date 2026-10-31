@@ -8,7 +8,7 @@ test('/offline inicia toda la UI sin fetch, SSE ni recursos externos del backend
   assert.equal(ui.get('measurement-tab').disabled,false);assert.equal(ui.document.head.children.length,0);assert.equal(ui.network.length,0);
   ui.window.senseOffline.scene('loading');assert.equal(ui.get('measurement-tab').disabled,true);assert.equal(ui.get('replay-tab').disabled,false);
   ui.window.senseOffline.scene('failure');assert.equal(ui.get('measurement-fault-panel').hidden,false);
-  ui.window.senseOffline.scene('missing');assert.equal(ui.get('measurement-observations').children[2].children[1].textContent,'—');
+  ui.window.senseOffline.scene('missing');assert.equal(ui.get('measurement-environment-readings').children[0].children[1].textContent,'—');
 });
 
 test('ejecución guiada, pendientes, repetir, exportar e importar funcionan sin API real',async()=>{
@@ -16,7 +16,9 @@ test('ejecución guiada, pendientes, repetir, exportar e importar funcionan sin 
   assert.equal(ui.get('observer-dialog').open,true);
   for(const [key,value] of [['observer-name','Ana'],['observer-instrument','Demo'],['observer-power','9'],['observer-people','0']])ui.get(key).value=value;
   await ui.get('observer-form').onsubmit({preventDefault(){}});
-  ui.window.senseOffline.advance();assert.equal(ui.get('observer-dialog').open,true);
+  ui.window.senseOffline.advance();assert.equal(ui.get('observer-dialog').open,false);
+  assert.equal(ui.get('measurement-pending-list').children.length,1);
+  ui.get('measurement-observe').click();assert.equal(ui.get('observer-dialog').open,true);
   ui.get('observer-power-repeat').click();await ui.get('observer-form').onsubmit({preventDefault(){}});
   assert.equal(ui.get('observer-dialog').open,false);
   const history=await (await ui.window.senseAPI.fetch('/api/experiments')).json(),run=history.runs[0];

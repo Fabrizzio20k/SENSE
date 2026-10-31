@@ -70,6 +70,9 @@ test('aviso persistente conserva formulario al recibir muestras y permite declar
   const {get,calls,ui}=fixture(()=>({observer_requests:[],quality:{}}));
   const data={running:true,run,observer_requests:[request],context:{observations:{count:{value:2,status:'VALID',age_seconds:0}}}};
   ui.render(data,phases,false);
+  assert.equal(get('observer-dialog').open,false);
+  assert.equal(get('measurement-pending-list').children.length,1);
+  get('measurement-observe').onclick();
   assert.equal(get('observer-dialog').open,true);
   get('observer-power').value='12';
   ui.render({...data,elapsed_s:20},phases,false);
@@ -95,6 +98,7 @@ test('dejar pendiente no borra solicitud ni detiene backend; se puede reabrir',(
   const {get,calls,ui}=fixture();
   const data={running:true,run,observer_requests:[request]};
   ui.render(data,phases,false);
+  get('measurement-observe').onclick();
   const eventTime=get('observer-event-time').textContent;
   get('observer-power').value='8.2';get('observer-power').oninput();
   const readingTime=get('observer-power-time').value;
@@ -114,6 +118,7 @@ test('repetir requiere un clic, admite cero y registra cada campo repetido',asyn
   const {get,calls,ui}=fixture(()=>({observer_requests:[],quality:{},observer_previous:{power_w:0,visible_people:3}}));
   const data={running:true,run,observer_previous:{power_w:0,visible_people:0},observer_requests:[request]};
   ui.render(data,phases,false);
+  get('measurement-observe').onclick();
   assert.equal(get('observer-power').value,'');assert.equal(get('observer-people').value,'');
   assert.equal(get('observer-power-repeat').disabled,false);
   get('observer-power-repeat').onclick();get('observer-people-repeat').onclick();
@@ -134,6 +139,7 @@ test('solo pide los campos del evento y el contador crece sin borrar el borrador
   const powerOnly={...request,fields:['power_w'],reason:'TEXT_TASK_STARTED'};
   const data={running:true,run,observer_requests:[powerOnly],observer_previous:{power_w:9}};
   ui.render(data,phases,false);
+  get('measurement-observe').onclick();
   assert.equal(get('observer-people-group').hidden,true);assert.equal(get('observer-action-group').hidden,true);
   assert.equal(get('observer-details').open,false);
   get('observer-power').value='10';get('observer-power').oninput();
@@ -165,6 +171,7 @@ test('guardar un pendiente actualiza inmediatamente el siguiente y los botones d
   const next={...request,request_id:'next',fields:['power_w']};
   const {get,calls,ui}=fixture(()=>({observer_requests:[next],observer_previous:{power_w:12,visible_people:1},quality:{}}));
   ui.render({running:true,run,observer_requests:[request,next],observer_previous:{power_w:8}},phases,false);
+  get('measurement-observe').onclick();
   get('observer-power').value='12';get('observer-people').value='1';
   await get('observer-form').onsubmit({preventDefault(){}});
   assert.equal(get('observer-dialog').open,true);

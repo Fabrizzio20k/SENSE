@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+ <title>SENSE · Iconos y animaciones</title>
+ <link rel="stylesheet" href="../web/sense-icons.css">
+ <style>
+  :root{color-scheme:light;--bg:#F3F0E9;--fg:#24251F;--muted:#5E6056;--line:#C9C7BD;--accent:#C9F75A}*{box-sizing:border-box}body{margin:0;padding:40px;background:var(--bg);color:var(--fg);font:16px/1.5 Arial,sans-serif}body[data-theme="dark"]{color-scheme:dark;--bg:#1C1D19;--fg:#EAE4D3;--muted:#BBB9AA;--line:#55544A}main{max-width:1250px;margin:auto}header{padding-bottom:28px;border-bottom:1px solid var(--line)}h1{font-size:38px;margin:0 0 8px}p{margin:8px 0;color:var(--muted)}.controls{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:24px 0}button,select{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line);min-height:44px;padding:8px 16px;cursor:pointer;border-radius:2px}button[aria-pressed="true"]{background:var(--accent);color:#24251F;border-color:#24251F}button:focus-visible,select:focus-visible{outline:2px solid var(--fg);outline-offset:4px}#gallery{display:grid;grid-template-columns:repeat(8,minmax(120px,1fr));gap:0}.item{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:24px 8px;border-bottom:1px solid var(--line);min-width:0}.item h2{font-size:15px;font-weight:normal;margin:0;min-height:46px;max-width:160px}.item code{font-size:12px;color:var(--muted)}.item .slot{height:64px;display:flex;align-items:center}.item button{font-size:13px;padding:4px 10px;min-height:44px}.tag{height:44px;color:var(--muted);font-size:12px;padding-top:8px}footer{margin-top:32px;border-top:1px solid var(--line);padding-top:20px;font-size:14px}#motion{font-size:14px}a{color:inherit}@media(max-width:900px){body{padding:24px}#gallery{grid-template-columns:repeat(4,minmax(110px,1fr))}}@media(max-width:540px){#gallery{grid-template-columns:repeat(2,minmax(110px,1fr))}h1{font-size:30px}}@media(prefers-reduced-motion:reduce){#motion{font-weight:bold}}
+ .item[hidden]{display:none}</style>
+</head>
+<body data-theme="light"><main>
+ <header><h1>SENSE / Iconos y animaciones</h1><p>64 iconos originales. 18 con actividad opcional. Retícula de 24 px.</p><p>Las animaciones indican actividad, no valores ni mediciones.</p></header>
+ <div class="controls">
+  <button id="toggle-all" type="button" aria-pressed="false">Animar actividad</button>
+  <label for="theme">Tema</label><select id="theme"><option value="light">Hueso y grafito</option><option value="dark">Carbón y marfil</option></select>
+  <label for="size">Tamaño</label><select id="size"><option value="24">24 px</option><option value="48" selected>48 px</option><option value="96">96 px</option></select>
+ </div>
+ <p id="motion" role="status"></p>
+ <label for="search">Buscar icono</label> <input id="search" type="search" placeholder="Sensor, acción o estado…" style="font:inherit;padding:10px;border:1px solid var(--line);background:transparent;color:inherit;width:min(420px,100%);margin-bottom:20px">
+ <section id="gallery" aria-label="Catálogo de iconos"></section>
+ <footer><p>El sistema respeta la preferencia de movimiento reducido. Activa solo las animaciones que correspondan al estado real de SENSE.</p><p><a href="catalogo.png">Ver catálogo estático</a> · <a href="animaciones.gif">Ver muestra GIF</a> · <a href="../LEEME.md">Guía de integración</a></p></footer>
+ </main>
+ <script src="../web/sense-icons.js"></script>
+ <script>
+ const labels=Object.fromEntries(SenseIcons.catalog.map(x=>[x.id,x.label]));
+ const animated=new Set(SenseIcons.catalog.filter(x=>x.animated).map(x=>x.id));
+ const controllers=[];const gallery=document.getElementById('gallery');
+ for(const name of SenseIcons.icons){const card=document.createElement('article');card.className='item';const slot=document.createElement('div');slot.className='slot';const icon=SenseIcons.create({name,size:48});slot.append(icon.element);const title=document.createElement('h2');title.textContent=labels[name];const code=document.createElement('code');code.textContent=name;card.append(slot,title,code);let button;if(animated.has(name)){button=document.createElement('button');button.type='button';button.textContent='Animar';button.setAttribute('aria-pressed','false');button.setAttribute('aria-label','Animar '+labels[name]);button.addEventListener('click',()=>{const active=button.getAttribute('aria-pressed')!=='true';icon.setActive(active);button.setAttribute('aria-pressed',String(active));button.textContent=active?'Detener':'Animar';});card.append(button);}else{const tag=document.createElement('span');tag.className='tag';tag.textContent='Estático';card.append(tag);}card.dataset.search=(name+' '+labels[name]).toLowerCase();controllers.push({icon,button,card});gallery.append(card);}
+ document.getElementById('toggle-all').addEventListener('click',function(){const active=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',String(active));this.textContent=active?'Detener actividad':'Animar actividad';for(const {icon,button}of controllers){icon.setActive(active);if(button){button.setAttribute('aria-pressed',String(active));button.textContent=active?'Detener':'Animar';}}});
+ document.getElementById('theme').addEventListener('change',function(){document.body.dataset.theme=this.value;});
+ document.getElementById('size').addEventListener('change',function(){for(const {icon}of controllers){icon.element.setAttribute('width',this.value);icon.element.setAttribute('height',this.value);}});
+ document.getElementById('search').addEventListener('input',function(){const q=this.value.toLowerCase().trim();for(const {card} of controllers)card.hidden=!card.dataset.search.includes(q);});
+ const motion=matchMedia('(prefers-reduced-motion: reduce)');function showMotion(){document.getElementById('motion').textContent=motion.matches?'Movimiento reducido activo: se muestra el primer fotograma.':'Vista inicial estática. Puedes probar la actividad de cada icono.';}showMotion();motion.addEventListener('change',showMotion);
+ </script>
+</body></html>

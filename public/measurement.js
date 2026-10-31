@@ -3,48 +3,117 @@
   'use strict';
   const byId = id => document.getElementById(id);
   const labels = {WAIT:'Espera', ACQUIRE:'Sensores', ASSESS:'Política', VISION:'YOLO', INTERPRET:'Interpretación', REPORT:'Registro', DEGRADED:'Degradado'};
+  const stateDescriptions = {WAIT:'Esperando datos o un disparador',ACQUIRE:'Recopilando observaciones',ASSESS:'Evaluando la evidencia',VISION:'Capturando imagen y ejecutando YOLO',INTERPRET:'Solicitando interpretación',REPORT:'Guardando respuestas',DEGRADED:'Continuando con información parcial'};
   const statusLabels = {VALID:'Vigente', UNKNOWN:'Desconocido', STALE:'Vencido', CONFLICTING:'Conflicto', UNAVAILABLE:'Sin datos', ERROR:'Error'};
   const modes = {A:'A · Periódico', B:'B · Reactivo', C:'C · Adaptativo', D:'D · Adaptativo + texto', E:'E · Adaptativo + multimodal', F:'F · Multimodal + fallas por software'};
   const answerStatuses = {RESOLVED:'Resuelta',PARTIAL:'Con limitaciones',ABSTAINED:'Evidencia insuficiente',PENDING:'Pendiente',INTERPRETED:'Interpretación disponible',NOT_APPLICABLE:'No aplica'};
   const runStatuses = {RUNNING:'En ejecución',COMPLETED:'Finalizada',FAILED:'Finalizada con error',INTERRUPTED:'Interrumpida'};
   const informationNames = {PRESENCE_REQUIRED:'presencia vigente del radar',VISUAL_COUNT_REQUIRED:'conteo visual vigente',ENVIRONMENT_STATUS_REQUIRED:'lecturas ambientales',CONFLICT_RESOLUTION_REQUIRED:'evidencia para aclarar el conflicto',TEXT_INTERPRETATION_REQUIRED:'interpretación textual adicional',MULTIMODAL_INTERPRETATION_REQUIRED:'interpretación de una imagen pertinente',temperature:'temperatura',humidity:'humedad',aqi:'AQI ENS160',tvoc:'TVOC',eco2:'eCO₂ estimado',presence:'presencia',count:'conteo visual'};
   const eventNames = {TEMP_RISE:'Subida de temperatura',HUMIDITY_RISE:'Subida de humedad',AQI_WORSENED:'Empeoramiento del AQI ENS160',ECO2_THRESHOLD_CROSSED:'Cruce del umbral de eCO₂ estimado'};
+  const scenarioSteps={
+    S1:[['0–10 min','Aula vacía','Mantén el aula sin personas.'],['10–15 min','Entra una persona','Registra cuándo ingresó y se sentó.'],['15–30 min','Permanece sentada','Observa si se mantiene la evidencia sin tareas innecesarias.']],
+    S2:[['0–5 min','Aula vacía','Mantén el aula sin personas.'],['5–10 min','Entra una persona','Registra la entrada real.'],['10–15 min','Entran dos personas','Registra la entrada real de otras dos personas.'],['15–20 min','Permanecen tres','Observa sin provocar un nuevo cambio.'],['20–25 min','Salen dos personas','Registra cuándo salen.'],['25–30 min','Sale la última','Registra la salida real.']],
+    S3:[['0–10 min','Condición inicial','Dos personas presentes; observa el ambiente inicial.'],['10–20 min','Cambio de ventilación','Modifica la ventilación de forma segura y registra la acción.'],['20–30 min','Restaurar condición','Restablece la condición inicial y observa la evolución.']]
+  };
   const timeLabel = value => {const date=new Date(value);return value&&!Number.isNaN(date.getTime())?date.toLocaleTimeString():'—';};
-  let current = {}, connected = false, pending = false, ready = false, sandboxBusy = false, historyKey = '', lastDetails = '', lastInterpretations = '', flow = null, flowPulse = null;
+  let current = {}, connected = false, pending = false, ready = false, sandboxBusy = false, historyKey = '', lastDetails = '', lastInterpretations = '', lastGuidance = '', flow = null, flowPulse = null, fallbackStage = null, selectedState = null, seenTransitionKey;
+  const fallbackView={x:0,y:0,scale:1};
   const text = (id, value) => {const node=byId(id); const next=String(value ?? '—'); if(node.textContent!==next)node.textContent=next;};
   const make = (tag, value, className) => {const node=document.createElement(tag); if(value!==undefined)node.textContent=String(value); if(className)node.className=className; return node;};
   const graphEdges=[['WAIT','ACQUIRE'],['ACQUIRE','ASSESS'],['ASSESS','VISION'],['VISION','ASSESS'],['ASSESS','INTERPRET'],['INTERPRET','REPORT'],['ASSESS','REPORT'],['REPORT','WAIT'],['ASSESS','DEGRADED'],['VISION','DEGRADED'],['INTERPRET','DEGRADED'],['REPORT','DEGRADED'],['DEGRADED','REPORT']];
   const graphPositions={WAIT:{x:90,y:260},ACQUIRE:{x:285,y:260},ASSESS:{x:470,y:260},VISION:{x:470,y:410},INTERPRET:{x:670,y:410},REPORT:{x:860,y:260},DEGRADED:{x:670,y:85}};
+  const graphIcon=state=>'/public/assets/sense-icons-v2/svg/'+(document.documentElement.dataset.theme==='dark'?'dark':'light')+'/'+state.toLowerCase()+'.svg';
   const compactFlow=window.matchMedia?.('(max-width:640px)');
+  function applyFallback(){if(fallbackStage)fallbackStage.style.transform=`translate(${fallbackView.x}px,${fallbackView.y}px) scale(${fallbackView.scale})`;}
+  function fitFallback(){
+    const graph=byId('measurement-graph');if(!graph.clientWidth||!graph.clientHeight||compactFlow?.matches)return;
+    fallbackView.scale=Math.min((graph.clientWidth-32)/1000,(graph.clientHeight-32)/500);
+    fallbackView.x=(graph.clientWidth-1000*fallbackView.scale)/2;
+    fallbackView.y=(graph.clientHeight-500*fallbackView.scale)/2;applyFallback();
+  }
+  function zoomFallback(amount){
+    const graph=byId('measurement-graph'),old=fallbackView.scale,next=Math.max(.35,Math.min(2,old+amount));
+    const centerX=(graph.clientWidth||1000)/2,centerY=(graph.clientHeight||500)/2;
+    fallbackView.x=centerX-(centerX-fallbackView.x)*next/old;
+    fallbackView.y=centerY-(centerY-fallbackView.y)*next/old;
+    fallbackView.scale=next;applyFallback();
+  }
+  function initFallback(){
+    if(fallbackStage)return;
+    const graph=byId('measurement-graph');fallbackStage=make('div',undefined,'flow-fallback-stage');
+    fallbackStage.append(byId('measurement-fallback-lines'),byId('measurement-pipeline'));graph.append(fallbackStage);
+    graph.addEventListener('wheel',event=>{if(flow||compactFlow?.matches||!byId('measurement-inspection').open)return;event.preventDefault();zoomFallback(event.deltaY<0?.12:-.12);},{passive:false});
+    let dragging=false,startX=0,startY=0;
+    graph.addEventListener('pointerdown',event=>{if(flow||compactFlow?.matches||!byId('measurement-inspection').open||event.target.closest?.('button,.pipeline-node'))return;dragging=true;startX=event.clientX;startY=event.clientY;graph.setPointerCapture?.(event.pointerId);graph.classList.add('is-dragging');});
+    graph.addEventListener('pointermove',event=>{if(!dragging)return;fallbackView.x+=event.clientX-startX;fallbackView.y+=event.clientY-startY;startX=event.clientX;startY=event.clientY;applyFallback();});
+    const stop=()=>{dragging=false;graph.classList.remove('is-dragging');};graph.addEventListener('pointerup',stop);graph.addEventListener('pointercancel',stop);
+  }
   function graphStyle(){
     const palette=getComputedStyle(document.documentElement), color=name=>palette.getPropertyValue('--'+name).trim();
     return [
-      {selector:'node',style:{'shape':'round-rectangle','width':142,'height':72,'background-color':color('panel'),'border-width':2,'border-color':color('strong-line'),'label':'data(label)','color':color('ink'),'font-size':12,'font-weight':700,'text-wrap':'wrap','text-max-width':120,'text-valign':'center','text-halign':'center','line-height':1.45}},
+      {selector:'node',style:{'shape':'round-rectangle','width':150,'height':106,'background-color':color('panel'),'border-width':2,'border-color':color('strong-line'),'background-image':'data(icon)','background-fit':'none','background-width':'42px','background-height':'42px','background-position-x':'50%','background-position-y':'16%','background-repeat':'no-repeat','label':'data(label)','color':color('ink'),'font-size':13,'font-weight':400,'text-wrap':'wrap','text-max-width':130,'text-valign':'center','text-halign':'center','text-margin-y':28,'line-height':1.35}},
       {selector:'edge',style:{'width':3,'line-color':color('strong-line'),'target-arrow-color':color('strong-line'),'target-arrow-shape':'triangle','curve-style':'bezier','arrow-scale':1.2}},
       {selector:'node.done',style:{'background-color':color('success-bg'),'border-color':color('success'),'color':color('success')}},
       {selector:'node.waiting',style:{'background-color':color('soft'),'border-color':color('strong-line')}},
       {selector:'node.active',style:{'background-color':color('info-bg'),'border-color':color('info'),'border-width':5,'underlay-color':color('info'),'underlay-opacity':.22,'underlay-padding':11,'color':color('info')}},
       {selector:'node.degraded',style:{'background-color':color('danger-bg'),'border-color':color('danger'),'color':color('danger')}},
+      {selector:'node.inspected',style:{'border-color':color('accent'),'border-width':5,'underlay-color':color('accent'),'underlay-opacity':.18,'underlay-padding':13}},
       {selector:'edge.active',style:{'width':6,'line-color':color('info'),'target-arrow-color':color('info'),'line-style':'dashed','line-dash-pattern':[10,7],'line-dash-offset':-30,'overlay-color':color('info'),'overlay-opacity':.12,'overlay-padding':8}},
-      {selector:'edge.done',style:{'line-color':color('success'),'target-arrow-color':color('success')}}
+      {selector:'edge.done',style:{'line-color':color('success'),'target-arrow-color':color('success')}},
+      {selector:'edge.inspected',style:{'overlay-color':color('accent'),'overlay-opacity':.12,'overlay-padding':10}}
     ];
   }
   function graphVisibility(){
+    initFallback();
     const graphical=!!flow&&!compactFlow?.matches;
     byId('measurement-pipeline').hidden=graphical;
+    const fallback=byId('measurement-fallback-lines');if(fallback)fallback.hidden=graphical;
+    fallbackStage.hidden=graphical;
     byId('measurement-flow-canvas').hidden=!graphical;
-    byId('measurement-flow-controls').hidden=!graphical;
+    byId('measurement-flow-controls').hidden=!!compactFlow?.matches;
   }
   function initFlow(){
-    if(flow||!window.cytoscape||compactFlow?.matches){graphVisibility();return;}
+    if(flow||!byId('measurement-inspection').open||!window.cytoscape||compactFlow?.matches){graphVisibility();return;}
     const canvas=byId('measurement-flow-canvas'); if(!canvas)return;
     canvas.hidden=false;
-    flow=window.cytoscape({container:canvas,elements:{nodes:Object.entries(labels).map(([id,label])=>({data:{id,label:id+'\n'+label},position:graphPositions[id]})),edges:graphEdges.map(([source,target])=>({data:{id:source+'-'+target,source,target}}))},style:graphStyle(),layout:{name:'preset',fit:true,padding:55},wheelSensitivity:.18});
+    flow=window.cytoscape({container:canvas,elements:{nodes:Object.entries(labels).map(([id,label])=>({data:{id,label:id+'\n'+label,icon:graphIcon(id)},position:graphPositions[id]})),edges:graphEdges.map(([source,target])=>({data:{id:source+'-'+target,source,target}}))},style:graphStyle(),layout:{name:'preset',fit:true,padding:55},wheelSensitivity:.18});
+    flow.on('tap','node',event=>selectState(event.target.id()));
     graphVisibility();
-    if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)flowPulse=window.setInterval(()=>{if(!flow||compactFlow?.matches)return;flow.nodes('.active').animate({style:{'underlay-opacity':.4}},{duration:450}).animate({style:{'underlay-opacity':.12}},{duration:450});flow.edges('.active').animate({style:{'line-dash-offset':-90}},{duration:900});},950);
+    if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)flowPulse=window.setInterval(()=>{if(!flow||compactFlow?.matches||!byId('measurement-inspection').open||document.documentElement.dataset.motion!=='on')return;flow.nodes('.active,.waiting').animate({style:{'underlay-opacity':.4}},{duration:450}).animate({style:{'underlay-opacity':.12}},{duration:450});},950);
+    updateSelectionVisual();
+  }
+  function updateSelectionVisual(){
+    for(const [state,{node}] of Object.entries(nodes)){node.dataset.selected=String(state===selectedState);node.setAttribute('aria-pressed',String(state===selectedState));}
+    const paths=byId('measurement-fallback-lines').querySelectorAll?.('path[data-edge]')||[];
+    for(const path of paths)path.classList.toggle('inspected',!!selectedState&&path.dataset.edge.split('-').includes(selectedState));
+    if(flow){flow.elements().removeClass('inspected');if(selectedState){flow.$id(selectedState).addClass('inspected');for(const [from,to] of graphEdges)if(from===selectedState||to===selectedState)flow.$id(from+'-'+to).addClass('inspected');}}
+  }
+  function updateInspector(){
+    const panel=byId('measurement-graph-inspector');panel.hidden=!selectedState;if(!selectedState)return;
+    byId('measurement-graph-inspector-icon').dataset.sprite=selectedState.toLowerCase();
+    text('measurement-graph-inspector-title',selectedState+' · '+labels[selectedState]);
+    const active=current.running&&current.fsm===selectedState,done=(current.cycle?.actions||[]).includes(selectedState)&&!active;
+    text('measurement-graph-inspector-status',(active?'En curso':done?'Completado en este ciclo':current.run?'Sin actividad en este ciclo':'Sin ejecución')+' · '+stateDescriptions[selectedState]);
+    const incoming=graphEdges.filter(([,to])=>to===selectedState).map(([from])=>from),outgoing=graphEdges.filter(([from])=>from===selectedState).map(([,to])=>to);
+    text('measurement-graph-inspector-routes','Desde '+incoming.join(', ')+' · Hacia '+outgoing.join(', '));
+  }
+  function selectState(state){
+    if(state&&!labels[state])return;
+    selectedState=state||null;byId('measurement-graph-picker').value=selectedState||'';
+    updateSelectionVisual();updateInspector();
   }
   function updateFlow(data,lastTransition,actions){
-    initFlow(); if(!flow)return;
+    initFlow();
+    const paths=byId('measurement-fallback-lines').querySelectorAll?.('path[data-edge]')||[];
+    for(const path of paths){const [from,to]=path.dataset.edge.split('-');path.classList.toggle('done',(data.transitions||[]).some(item=>item.from===from&&item.to===to));path.classList.toggle('active',lastTransition?.from===from&&lastTransition?.to===to);}
+    const transitionKey=lastTransition?(data.run?.run_id||'')+':'+(lastTransition.timestamp||lastTransition.elapsed_seconds||(data.transitions||[]).length)+':'+lastTransition.from+'-'+lastTransition.to:'';
+    if(seenTransitionKey!==undefined&&transitionKey&&transitionKey!==seenTransitionKey&&data.running&&document.documentElement?.dataset.motion==='on'){
+      const path=Array.from(paths).find(item=>item.dataset.edge===lastTransition.from+'-'+lastTransition.to);
+      if(path){path.classList.remove('flow-burst');void path.getBoundingClientRect?.();path.classList.add('flow-burst');window.setTimeout?.(()=>path.classList.remove('flow-burst'),1500);}
+      if(flow)flow.$id(lastTransition.from+'-'+lastTransition.to).animate({style:{'line-dash-offset':-90}},{duration:900});
+    }
+    seenTransitionKey=transitionKey;
+    if(!flow)return;
     flow.elements().removeClass('active done waiting degraded');
     for(const state of actions)flow.$id(state).addClass('done');
     const active=data.running?data.fsm:null;
@@ -53,6 +122,7 @@
     flow.edges().removeClass('active done');
     for(const transition of data.transitions||[])flow.$id(transition.from+'-'+transition.to).addClass('done');
     if(lastTransition)flow.$id(lastTransition.from+'-'+lastTransition.to).removeClass('done').addClass('active');
+    updateSelectionVisual();
   }
   function answerText(answer){
     const value=answer.answer;
@@ -71,22 +141,26 @@
   const nodes = {};
   for (const [state,label] of Object.entries(labels)) {
     const node=make('li',undefined,'pipeline-node'), icon=make('span','○','node-icon'), title=make('strong',state,'node-title'), detail=make('span',label,'node-label');
-    node.dataset.state=state;node.append(icon,title,detail); byId('measurement-pipeline').append(node); nodes[state]={node,icon,detail,label};
+    node.dataset.state=state;node.setAttribute('role','button');node.setAttribute('tabindex','0');node.setAttribute('aria-label','Inspeccionar '+state+' · '+label);node.onclick=()=>selectState(state);node.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();selectState(state);}};
+    icon.setAttribute('aria-hidden','true');node.append(icon,title,detail); byId('measurement-pipeline').append(node); nodes[state]={node,icon,detail,label};
   }
   const observations = {presence:['Radar','presence'], count:['Personas visibles','visible_people'], temperature:['Temperatura','°C'], humidity:['Humedad','%RH'], aqi:['AQI ENS160','ENS160 AQI'], tvoc:['TVOC','ppb'], eco2:['eCO₂ estimado','ppm equivalent']};
   const cards = {};
   const answerNodes = {};
   const interpretationNodes = new Map();
   for (const [key,[label]] of Object.entries(observations)) {
-    const card=make('article',undefined,'card'), title=make('p',label,'sub'), value=make('p','—','measurement-value'), age=make('p','Sin evidencia','evidence-age'), status=make('span','Desconocido','evidence-status');
+    const card=make('article',undefined,'card'), title=make('p',label,'sub'), value=make('p','—','measurement-value'), age=make('p','Sin evidencia','evidence-age'), status=make('span','Desconocido','evidence-status'), source=make('p',{presence:'Fuente · radar',count:'Fuente · YOLO',temperature:'Fuente · SHT40',humidity:'Fuente · SHT40',aqi:'Fuente · ENS160',tvoc:'Fuente · ENS160',eco2:'Fuente · ENS160'}[key],'evidence-source'), captured=make('p','Hora sin registrar','evidence-time'), info=make('p','Región sin registrar','evidence-detail'), details=make('details',undefined,'reading-details');
+    const sprite={presence:'radar',count:'yolo',temperature:'temperature',humidity:'humidity',aqi:'aqi',tvoc:'tvoc',eco2:'eco2'}[key];if(sprite)card.dataset.sprite=sprite;
+    const summary=make('summary','Detalles');summary.setAttribute('aria-label','Detalles de '+label);details.append(summary,info,source,captured);
     const control=key==='presence'?make('div',undefined,'presence-control'):null;
+    const distance=key==='presence'?make('p',undefined,'reading-distance'):null;
     if(control){
       const mode=make('button','Auto'), toggle=make('button','No detectada');
       mode.onclick=()=>setPresence(current.presence_control?.mode==='MANUAL'?{mode:'auto'}:current.run?.mode==='B'?{mode:'manual',detected:!!current.context?.observations?.presence?.value,near:current.reactive_trigger?.state==='NEAR'}:{mode:'manual',detected:!!current.context?.observations?.presence?.value});
       toggle.onclick=()=>setPresence({mode:'manual',detected:!(current.run?.mode==='B'?current.presence_control?.near:current.presence_control?.detected)});
       control.append(mode,toggle);
     }
-    card.append(title,value,age,status); if(control)card.append(control); byId('measurement-observations').append(card); cards[key]={title,value,age,status,control};
+    card.append(title,value,age,status); if(control)card.append(control);if(distance)card.append(distance);card.append(details); byId(['presence','count'].includes(key)?'measurement-presence-readings':'measurement-environment-readings').append(card); cards[key]={title,value,age,status,source,captured,info,details,control,distance};
   }
   const modeSelect = byId('measurement-mode');
   for(const [mode,label] of Object.entries(modes)){const option=make('option',label);option.value=mode;modeSelect.append(option);}
@@ -109,7 +183,8 @@
     finally{pending=false;controls();}
   }
   function controls(){
-    byId('measurement-toggle').disabled=!!(pending||!connected||(!current.running&&(!ready||sandboxBusy||current.reserved)));
+    byId('measurement-toggle').disabled=!!(pending||!connected||current.reserved||(!current.running&&(!ready||sandboxBusy)));
+    byId('measurement-toggle').dataset.running=String(!!current.running);
     modeSelect.disabled=!!(pending||current.running||current.reserved);
     byId('measurement-toggle').textContent=pending?'Procesando…':current.running?'Finalizar':'Comenzar';
     byId('measurement-query').disabled=pending||!connected||!current.running;
@@ -131,16 +206,22 @@
     catch(error){text('measurement-error',error.message);}
     finally{pending=false;controls();}
   }
-  byId('measurement-toggle').onclick=async()=>{
+  async function toggleRun(){
     if(pending)return;pending=true;controls();text('measurement-error','');
     try{
       const stopping=current.running;
       await post('/api/experiments/'+(stopping?'stop':'start'),{mode:modeSelect.value});
-      if(stopping)current={...current,running:false,reserved:true};
-      else current={...current,running:true,reserved:true};
+      current={...current,reserved:true};
+      text('measurement-state','Solicitud aceptada; esperando confirmación de SENSE.');
     }catch(error){text('measurement-error',error.message);}
     finally{pending=false;controls();}
+  }
+  byId('measurement-toggle').onclick=()=>{
+    if(current.running){byId('finish-dialog').showModal();return;}
+    return toggleRun();
   };
+  byId('finish-cancel').onclick=()=>byId('finish-dialog').close();
+  byId('finish-accept').onclick=async()=>{byId('finish-dialog').close();await toggleRun();};
   byId('measurement-query').onclick=async()=>{
     pending=true;controls();
     try{await post('/api/experiments/query',{question_id:byId('measurement-question').value});}
@@ -153,12 +234,13 @@
     for(const answer of Object.values(data.answers||{})){
       let nodes=answerNodes[answer.question_id];
       if(!nodes){
-        const article=make('article',undefined,'question-result'),heading=make('h3'),value=make('p',undefined,'answer-value'),status=make('p',undefined,'answer-meta'),pending=make('p',undefined,'answer-limitations'),detail=make('details'),contract=make('pre');
-        detail.append(make('summary','Evidencia y contrato'),contract);article.append(heading,value,status,pending,detail);byId('measurement-answers').append(article);
-        nodes=answerNodes[answer.question_id]={article,heading,value,status,pending,contract};
+        const article=make('article',undefined,'question-result'),heading=make('h3'),value=make('p',undefined,'answer-value'),status=make('p',undefined,'answer-meta'),pending=make('p',undefined,'answer-limitations'),detail=make('details'),fullAnswer=make('p',undefined,'answer-full'),contract=make('pre');
+        detail.append(make('summary','Respuesta completa y evidencia'),fullAnswer,contract);article.append(heading,value,status,pending,detail);byId('measurement-answers').append(article);
+        nodes=answerNodes[answer.question_id]={article,heading,value,status,pending,fullAnswer,contract};
       }
       nodes.heading.textContent=answer.question_id+' · '+answer.question;
       nodes.value.textContent=answerText(answer);
+      nodes.fullAnswer.textContent=answerText(answer);
       const source=answer.interpretation_id?'Gemma':{Q1:data.context?.observations?.presence?.metadata?.source_kind==='MANUAL_CONTROL'?'Control manual':'Radar',Q2:'YOLO',Q3:'Sensores ambientales',Q4:'Reglas ambientales',Q5:'Reglas de contexto',Q6:'Reglas de contexto',Q7:'Análisis de imagen'}[answer.question_id]||'SENSE';
       nodes.status.textContent=(answerStatuses[answer.status]||answer.status||'Sin evaluar')+' · '+source+' · '+timeLabel(answer.evaluated_at);
       nodes.article.dataset.status=answer.status;
@@ -203,6 +285,19 @@
     }catch(error){text('measurement-history-note',error.message);}
   }
   byId('measurement-history-details').addEventListener('toggle',()=>{if(byId('measurement-history-details').open)history();});
+  function renderGuidance(run,elapsed){
+    const panel=byId('measurement-guidance'),steps=scenarioSteps[run?.scenario_id];panel.hidden=!run?.guided||!steps;
+    if(panel.hidden)return;
+    const starts={S1:[0,600,900],S2:[0,300,600,900,1200,1500],S3:[0,600,1200]}[run.scenario_id];
+    const active=Math.max(0,starts.findLastIndex(second=>elapsed>=second));
+    const stage=steps[active],next=steps[active+1];
+    text('measurement-scenario-label',run.scenario_id+' · '+(run.repetition?'Repetición '+run.repetition:'Guion'));
+    text('measurement-step',run.status==='RUNNING'?stage[1]:'Sesión '+(run.status==='COMPLETED'?'finalizada':'interrumpida'));
+    text('measurement-step-note',run.status==='RUNNING'?stage[0]+' · tiempos orientativos. '+stage[2]:'Consulta el registro y completa las observaciones pendientes.');
+    text('measurement-next',run.status==='RUNNING'&&next?'Siguiente · '+next[0]+' · '+next[1]:'Registra la hora real de cada acción.');
+    const key=run.scenario_id+'/'+active+'/'+run.status;
+    if(key!==lastGuidance){lastGuidance=key;byId('measurement-scenario-timeline').replaceChildren(...steps.map((item,i)=>{const node=make('li');node.className=i===active&&run.status==='RUNNING'?'current':i<active?'past':'';node.append(make('strong',item[0]),make('span',item[1]));if(i===active&&run.status==='RUNNING')node.setAttribute('aria-current','step');return node;}));}
+  }
   window.measurement = {
     formatAnswer:answerText,
     connection(value){connected=value;controls();window.experimentation?.connection(value);if(!value){text('measurement-state','Conexión interrumpida; estado sin actualizar.');text('measurement-answer-note','Conexión interrumpida. Se muestran las últimas respuestas recibidas.');}},
@@ -215,9 +310,11 @@
       if(visualQuestion)visualQuestion.disabled=!['E','F'].includes(current.run?.mode);
       if(visualQuestion?.disabled&&byId('measurement-question').value==='Q7')byId('measurement-question').value='Q1';
       const run=current.run;
+      renderGuidance(run,current.elapsed_s||0);
+      text('measurement-current-fsm',current.running?current.fsm||'—':'—');
       text('measurement-heading',run?.guided?'Medición experimental':'Medición y pruebas');
-      text('measurement-run',run?(modes[run.mode]||run.mode)+' · '+(runStatuses[run.status]||run.status):'Sin ejecución · parámetros de piloto');
-      const stateLabel={WAIT:'Esperando datos o un disparador',ACQUIRE:'Recopilando observaciones',ASSESS:'Evaluando la evidencia',VISION:'Capturando imagen y ejecutando YOLO',INTERPRET:'Solicitando interpretación',REPORT:'Guardando respuestas',DEGRADED:'Continuando con información parcial'}[current.fsm]||current.fsm;
+      text('measurement-run',current.running?'En ejecución':run?(modes[run.mode]||run.mode)+' · '+(runStatuses[run.status]||run.status):'Sin ejecución');
+      const stateLabel=stateDescriptions[current.fsm]||current.fsm;
       text('measurement-state',current.running?stateLabel:current.reserved?'Esperando a que terminen las tareas activas':run?'Ejecución finalizada':'Listo para comenzar');
       text('measurement-run-metadata',JSON.stringify({run,cycle:current.cycle,config_version:current.config_version},null,2));
       const download=byId('measurement-current-export');download.hidden=!run;if(run)window.senseAPI.setExportLink(download,run.run_id,'ndjson');
@@ -232,27 +329,35 @@
         node.setAttribute('aria-current',active?'step':'false');icon.textContent=waiting?'⌛':active?'↻':done?'✓':skipped?'−':'○';detail.textContent=waiting?label+' · esperando evento':active?label+' · ejecutando':done?label+' · completado':skipped?label+' · sin ejecutar':label+' · pendiente';
       }
       updateFlow(current,lastTransition,actions);
-      text('measurement-transition-live',lastTransition?'Última transición: '+lastTransition.from+' → '+lastTransition.to+' · '+lastTransition.reason:'Esperando inicio.');
-      const background=byId('measurement-background-tasks'), activeTasks=(current.tasks?.active||[]);
-      background.hidden=!activeTasks.length;
-      background.replaceChildren(...activeTasks.map(task=>make('span',task.question_id+' · '+(task.simulated?'simulación, modelo sin ejecutar':task.status==='RUNNING'?'en segundo plano':'esperando finalización')+' · '+task.elapsed_seconds+' s','background-task '+(task.status==='RUNNING'?'running':''))));
+      updateInspector();
+      byId('measurement-transition-live').hidden=!lastTransition;
+      if(lastTransition)text('measurement-transition-live','Última transición: '+lastTransition.from+' → '+lastTransition.to+' · '+lastTransition.reason);
+      const background=byId('measurement-background-tasks'), activeTasks=(current.tasks?.active||[]), queued=Array.isArray(current.tasks?.queued)?current.tasks.queued.length:Number(current.tasks?.queued)||0;
+      background.hidden=!activeTasks.length&&!queued;
+      background.replaceChildren(...activeTasks.map(task=>make('span',task.question_id+' · '+(task.simulated?'simulación, modelo sin ejecutar':task.status==='RUNNING'?'en segundo plano':'esperando finalización')+' · '+task.elapsed_seconds+' s','background-task '+(task.status==='RUNNING'?'running':''))),...(queued?[make('span',queued+' tareas en cola','background-task')]:[]));
       byId('measurement-degraded').classList.toggle('active',current.fsm==='DEGRADED'||actions.includes('DEGRADED'));
       byId('measurement-degraded').hidden=!actions.includes('DEGRADED')&&current.fsm!=='DEGRADED';
       text('measurement-degraded','Este ciclo produjo información parcial o una abstención por falta de evidencia.');
       for(const [key,card] of Object.entries(cards)){
         const observation=current.context?.observations?.[key],status=observation?.status||'UNKNOWN';
         card.value.textContent=observation?.value==null?'—':key==='presence'?(observation.value?'Detectada':'No detectada'):String(observation.value)+(key==='temperature'?' °C':key==='humidity'?' %':key==='tvoc'?' ppb':key==='eco2'?' ppm eq.':'');
-        card.age.textContent=observation?Math.floor(observation.age_seconds)+' s · '+observation.region:'Sin evidencia';
+        card.age.textContent=observation?(observation.age_seconds==null?'Edad desconocida':Math.floor(observation.age_seconds)+' s'):'Sin evidencia';
+        card.info.textContent='Región · '+(observation?.region||'Sin registrar');
         card.status.textContent=statusLabels[status]||status;card.status.dataset.status=status;
+        card.captured.textContent=observation?.captured_at?'Lectura · '+timeLabel(observation.captured_at):'Hora sin registrar';
+        if(observation?.metadata?.source_kind==='MANUAL_CONTROL')card.source.textContent='Fuente · control manual';
+        else if(key==='presence')card.source.textContent='Fuente · radar';
         if(key==='presence'){
           const metadata=observation?.metadata||{},trigger=current.reactive_trigger;
           const source={total_distance_cm:'distancia total',motion_distance_cm:'blanco en movimiento',static_distance_cm:'blanco estático'}[metadata.trigger_distance_source];
           card.title.textContent=run?.mode==='B'?'Radar · zona B':'Radar';
-          if(metadata.trigger_distance_cm!=null)card.age.textContent+='\n'+metadata.trigger_distance_cm+' cm · '+(source||'blanco activo');
+          const distanceParts=[];
+          if(metadata.trigger_distance_cm!=null)distanceParts.push(metadata.trigger_distance_cm+' cm · '+(source||'blanco activo'));
           if(run?.mode==='B'){
             card.value.textContent={NEAR:'Dentro de zona',FAR:'Fuera de zona',CONFIRMING:'Confirmando…',UNKNOWN:'Zona desconocida'}[trigger?.state]||'Zona desconocida';
-            if(observation?.value!=null)card.age.textContent+='\n'+(status==='VALID'?'Radar: ':'Última lectura: ')+(observation.value?'presencia detectada':'sin presencia detectada');
+            if(observation?.value!=null)distanceParts.push((status==='VALID'?'Radar: ':'Última lectura: ')+(observation.value?'presencia detectada':'sin presencia detectada'));
           }
+          card.distance.textContent=distanceParts.join(' · ');card.distance.hidden=!distanceParts.length;
           if(card.control){
             const manual=current.presence_control?.mode==='MANUAL';
             card.control.hidden=!['B','C','D','E','F'].includes(run?.mode);
@@ -260,8 +365,9 @@
             mode.textContent=manual?'Manual':'Auto';mode.className=manual?'manual':'';
             toggle.textContent=run?.mode==='B'?(current.presence_control?.near?'Dentro de zona':'Fuera de zona'):(current.presence_control?.detected?'Detectada':'No detectada');
             if(manual){
-              card.age.textContent+='\nControl manual fijado; no es lectura del radar.';
-              if(current.raw_presence)card.age.textContent+='\nÚltimo radar real: '+(current.raw_presence.value==null?'desconocido':current.raw_presence.value?'presencia':'sin presencia')+' · '+timeLabel(current.raw_presence.captured_at);
+              card.status.textContent+=' · Manual';
+              card.info.textContent+='\nControl manual fijado; no es lectura del radar.';
+              if(current.raw_presence)card.info.textContent+='\nÚltimo radar real: '+(current.raw_presence.value==null?'desconocido':current.raw_presence.value?'presencia':'sin presencia')+' · '+timeLabel(current.raw_presence.captured_at);
             }
           }
         }
@@ -306,11 +412,13 @@
       window.experimentation?.render(current,ready,sandboxBusy);
       const nextHistory=(run?.run_id||'')+'/'+(run?.status||'');if(nextHistory!==historyKey){historyKey=nextHistory;if(byId('measurement-history-details').open)history();}
     },
-    resizeGraph(){initFlow();graphVisibility();if(flow&&!compactFlow?.matches){flow.resize();flow.fit(flow.elements(),55);}}
+    resizeGraph(){initFlow();graphVisibility();if(flow&&!compactFlow?.matches){updateFlow(current,(current.transitions||[]).at(-1),current.cycle?.actions||[]);flow.resize();flow.fit(flow.elements(),55);}else fitFallback();}
   };
-  document.addEventListener?.('themechange',()=>{if(flow)flow.style(graphStyle()).update();});
+  document.addEventListener?.('themechange',()=>{if(flow){for(const state of Object.keys(labels))flow.$id(state).data('icon',graphIcon(state));flow.style(graphStyle()).update();}});
+  byId('measurement-inspection').addEventListener('toggle',()=>{if(byId('measurement-inspection').open){window.measurement.resizeGraph();if(!selectedState&&current.fsm)selectState(current.fsm);}});
+  byId('measurement-graph-picker').onchange=event=>selectState(event.target.value);
   compactFlow?.addEventListener('change',()=>window.measurement.resizeGraph());
-  byId('measurement-flow-zoom-in').onclick=()=>{if(flow)flow.zoom({level:flow.zoom()+.2,renderedPosition:{x:byId('measurement-graph').clientWidth/2,y:byId('measurement-graph').clientHeight/2}});};
-  byId('measurement-flow-zoom-out').onclick=()=>{if(flow)flow.zoom({level:Math.max(flow.minZoom(),flow.zoom()-.2),renderedPosition:{x:byId('measurement-graph').clientWidth/2,y:byId('measurement-graph').clientHeight/2}});};
-  byId('measurement-flow-reset').onclick=()=>{if(flow)flow.fit(flow.elements(),55);};
+  byId('measurement-flow-zoom-in').onclick=()=>{if(flow)flow.zoom({level:flow.zoom()+.2,renderedPosition:{x:byId('measurement-graph').clientWidth/2,y:byId('measurement-graph').clientHeight/2}});else zoomFallback(.15);};
+  byId('measurement-flow-zoom-out').onclick=()=>{if(flow)flow.zoom({level:Math.max(flow.minZoom(),flow.zoom()-.2),renderedPosition:{x:byId('measurement-graph').clientWidth/2,y:byId('measurement-graph').clientHeight/2}});else zoomFallback(-.15);};
+  byId('measurement-flow-reset').onclick=()=>{if(flow)flow.fit(flow.elements(),55);else fitFallback();};
 })();
