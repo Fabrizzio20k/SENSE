@@ -251,3 +251,34 @@ test('B guiado conserva Auto/Manual sin inventar distancia',async()=>{
   assert.equal(control.children[0].disabled,true);assert.equal(control.children[1].disabled,true);
   await control.children[1].onclick();assert.equal(calls.length,2);
 });
+
+test('Finalizar permanece disponible con reserva, fallos y workers pendientes; exige confirmación',async()=>{
+  for(const fsm of ['WAIT','VISION','INTERPRET','DEGRADED']){
+    const {ui,get,calls}=fixture();
+    ui.render({running:true,reserved:true,fsm,run:{run_id:'run',mode:'F',status:'RUNNING'},error:'Fallo del modelo',tasks:{active:[{question_id:'Q7',status:'DRAINING',elapsed_seconds:10}],queued:1}}, {yolo:{status:'error'},text:{status:'error'},vision:{status:'loading'}},true);
+    assert.equal(get('measurement-toggle').disabled,false,fsm);
+    get('measurement-toggle').onclick();
+    assert.equal(get('finish-dialog').open,true);
+    assert.equal(calls.length,0);
+    get('finish-cancel').onclick();
+    assert.equal(calls.length,0);
+    get('measurement-toggle').onclick();
+    await get('finish-accept').onclick();
+    assert.equal(calls.length,1);
+    assert.equal(calls[0].url,'/api/experiments/stop');
+    assert.equal(get('measurement-toggle').disabled,true);
+    ui.render({running:false,reserved:true,run:{run_id:'run',mode:'F',status:'COMPLETED'},tasks:{active:[{question_id:'Q7',status:'DRAINING',elapsed_seconds:11}]}},phases,false);
+    assert.equal(get('measurement-toggle').disabled,true,'No comienza otra sesión mientras drenan los workers');
+    assert.match(get('measurement-state').textContent,/Medición finalizada/);
+  }
+});
+
+test('confirmar un cierre después del fin automático nunca inicia otra medición',async()=>{
+  const {ui,get,calls}=fixture();
+  ui.render({running:true,reserved:true,run:{run_id:'run',mode:'C',status:'RUNNING'}},phases,false);
+  get('measurement-toggle').onclick();
+  ui.render({running:false,reserved:false,run:{run_id:'run',mode:'C',status:'COMPLETED'}},phases,false);
+  await get('finish-accept').onclick();
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].url,'/api/experiments/stop');
+});

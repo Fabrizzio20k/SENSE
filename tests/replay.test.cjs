@@ -2,7 +2,6 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-const {execFileSync}=require('node:child_process');
 const {frontend}=require('./frontend-fixture.cjs');
 
 function library(){const context={window:{},TextEncoder,TextDecoder,Blob,DecompressionStream};vm.runInNewContext(fs.readFileSync('public/replay-data.js','utf8'),context);return context.window.senseReplayData;}
@@ -30,33 +29,14 @@ test('buscar hacia atrás no filtra respuestas futuras y conserva huecos, edad y
 
 function legacyEntries(){return {'metadata.json':JSON.stringify(source().run),'samples_1s.csv':'second,elapsed_s,visible_count\r\n0,0,0\r\n2,2,3\r\n','events.csv':'sequence,timestamp_utc,type,payload_json\r\n1,'+at(2)+',RESULT_PUBLISHED,"{""answers"":{}}"\r\n'};}
 
-test('importa ZIP comprimido con zipfile de Python y acepta exportaciones anteriores sin manifiesto',async()=>{
+test('importa ZIP comprimido con Rust y acepta exportaciones anteriores sin manifiesto',async()=>{
   const data=library(),entries=legacyEntries();
-  const binary=execFileSync('python3',['-c','import io,json,sys,zipfile; output=io.BytesIO(); z=zipfile.ZipFile(output,"w",zipfile.ZIP_DEFLATED); [z.writestr(k,v) for k,v in json.load(sys.stdin).items()]; z.close(); sys.stdout.buffer.write(output.getvalue())'],{input:JSON.stringify(entries)});
+  const binary=fs.readFileSync(process.env.SENSE_RUST_LEGACY_ZIP);
   const trace=await data.read(new Blob([binary]));assert.equal(trace.legacy,true);assert.equal(trace.samples[0].visible_count,0);assert.equal(trace.events[0].type,'RESULT_PUBLISHED');
 });
 
 test('importa directamente el ZIP de producción con su manifiesto, JSON anidado y texto del observador',async()=>{
-  const binary=execFileSync('python3',['-c',`
-import json,sys,tempfile
-from pathlib import Path
-from sense.storage import ExperimentLog
-from sense.trace import export_csv_zip
-source=json.load(sys.stdin)
-with tempfile.TemporaryDirectory() as directory:
-    log=ExperimentLog(Path(directory)/'trace.sqlite3')
-    run=source['run']; log.begin(run)
-    for row in source['samples']:
-        row['timestamp_utc']=run['start_time']; log.sample(run['run_id'],row['second'],row)
-    for row in source['events']:
-        log.event(run['run_id'],row['type'],dict(row['payload'],timestamp=row['timestamp'],cycle_id='test-cycle'))
-    for row in source['records']:
-        log.human_record(run['run_id'],row['kind'],row)
-    log.finish(run['run_id'],'COMPLETED',run)
-    with export_csv_zip(log.path,run['run_id']) as archive:
-        sys.stdout.buffer.write(archive.read())
-    log.db.close()
-`],{input:JSON.stringify(source())});
+  const binary=fs.readFileSync(process.env.SENSE_RUST_PRODUCTION_ZIP);
   const trace=await library().read(new Blob([binary]));
   assert.equal(trace.legacy,false);assert.equal(trace.samples.length,2);assert.equal(trace.records.length,1);
   assert.equal(trace.records[0].power_w,0);assert.equal(trace.records[0].notes,source().records[0].notes);
