@@ -1,0 +1,23 @@
+{
+  "source_sha256": {
+    "sense/__init__.py": "5ae6e1145362cf097c3cf9b1b1136d20172b344f38231e80811083c320bcdca6",
+    "sense/acquisition.py": "f70ac604d0f1cf830219d55c56e19daf68a6ed8f0165075e7bf91b2dbc61cb51",
+    "sense/agents.py": "e0902a6a45e5bacc6de2e603a05cbcb37895b458375515179dd95e1fcb19972b",
+    "sense/config.py": "f4d35a01d22dd0afc7caf878403bedac7cdd0843160c2f1a1097ea9924ae1265",
+    "sense/context.py": "41ddf17d1816509f71cdb9015f58ff2ca5de9128db7ea301e4e6c9963abfdf8e",
+    "sense/contracts.py": "f58ec75e7bb7e8b91fb06341be9c588d55b8a9607d7b74581788a2e714145e8a",
+    "sense/faults.py": "8be438adbb541ba0d3142230fc10a5be458da2046ff63a1b1f7cae32ec67129e",
+    "sense/health.py": "2593c9ea052a984a1dc8e1637a8dcdc42cd716fd9687e03f86c2057a12aadc0e",
+    "sense/inference.py": "5851e8e5eae5d7e23a384930061363b8f1532763b64a3b06820646224850778f",
+    "sense/orchestrator.py": "045408e67122624ea8e00a41f85f2c39647b34e281ecbccbd1d6b25e9f7564c6",
+    "sense/policy.py": "3451e35cdf11b4db1944ac0706c8ecb136efee6aa9357d5ce4f9a1bacb023c87",
+    "sense/protocol.py": "347ebd368eb35a7865dfebd621a9098477b77393705cb14c63a5769d31c7bf1d",
+    "sense/runtime.py": "83cc25994c162b8a67bd38a8301f906a34f92993e8e4ca4a261c9331871e61c8",
+    "sense/service.py": "8d013903525581e420afcc7ecc0af0a34c8bcca59cb544b5bd32ec11591de7bf",
+    "sense/storage.py": "6b0405950caca965f95f8ed84197043b3462666a5f06a705f0b2623ca0297885",
+    "sense/telemetry.py": "64d0fbada24444490110099173e80175c2753d178ba83a563951d53363516140",
+    "sense/trace.py": "85d53bb42b961ed2372150336e170af65a24117812016f3cbd87086f30073b71"
+  },
+  "cases": 37,
+  "operations": 3133
+}

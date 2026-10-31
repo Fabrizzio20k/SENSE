@@ -1,0 +1,195 @@
+{
+  "snapshot": {
+    "schema": "sense.v1",
+    "snapshot_id": "3fa18871992646d8acf2d31d093a44d7",
+    "created_at": "2026-10-31T18:09:45.377368+00:00",
+    "observations": {
+      "temperature": {
+        "observation_id": "75a90f0ba2cc4d80a9765c363147c390",
+        "source_agent": "EnvironmentAgent",
+        "captured_at": "2026-10-24T00:00:00Z",
+        "received_at": "2026-10-24T00:00:00Z",
+        "region": "sensor_location",
+        "value": 26.33,
+        "unit": "°C",
+        "quality": "sensor_reported",
+        "status": "VALID",
+        "metadata": {
+          "device_id": "test",
+          "field": "temperature_c"
+        },
+        "schema": "sense.v1",
+        "age_seconds": 0
+      },
+      "humidity": {
+        "observation_id": "a0be439323cf490cb9816222f7c6e728",
+        "source_agent": "EnvironmentAgent",
+        "captured_at": "2026-10-24T00:00:00Z",
+        "received_at": "2026-10-24T00:00:00Z",
+        "region": "sensor_location",
+        "value": 70.63,
+        "unit": "%RH",
+        "quality": "sensor_reported",
+        "status": "VALID",
+        "metadata": {
+          "device_id": "test",
+          "field": "humidity_percent"
+        },
+        "schema": "sense.v1",
+        "age_seconds": 0
+      },
+      "aqi": {
+        "observation_id": "5d48979a40cb4b74b35aca5855ddde1b",
+        "source_agent": "EnvironmentAgent",
+        "captured_at": "2026-10-24T00:00:00Z",
+        "received_at": "2026-10-24T00:00:00Z",
+        "region": "sensor_location",
+        "value": 2,
+        "unit": "ENS160 AQI",
+        "quality": "sensor_reported",
+        "status": "VALID",
+        "metadata": {
+          "device_id": "test",
+          "field": "aqi"
+        },
+        "schema": "sense.v1",
+        "age_seconds": 0
+      },
+      "tvoc": {
+        "observation_id": "85898dca882a465b8c7073167f91b36c",
+        "source_agent": "EnvironmentAgent",
+        "captured_at": "2026-10-24T00:00:00Z",
+        "received_at": "2026-10-24T00:00:00Z",
+        "region": "sensor_location",
+        "value": 70,
+        "unit": "ppb",
+        "quality": "sensor_reported",
+        "status": "VALID",
+        "metadata": {
+          "device_id": "test",
+          "field": "tvoc_ppb"
+        },
+        "schema": "sense.v1",
+        "age_seconds": 0
+      },
+      "eco2": {
+        "observation_id": "41902f1a22b94ac6bf8f8fb412fde009",
+        "source_agent": "EnvironmentAgent",
+        "captured_at": "2026-10-24T00:00:00Z",
+        "received_at": "2026-10-24T00:00:00Z",
+        "region": "sensor_location",
+        "value": 497,
+        "unit": "ppm equivalent",
+        "quality": "sensor_reported",
+        "status": "VALID",
+        "metadata": {
+          "device_id": "test",
+          "field": "eco2_ppm"
+        },
+        "schema": "sense.v1",
+        "age_seconds": 0
+      },
+      "presence": {
+        "observation_id": "335f8ce992d044aba743ad99b7cf289b",
+        "source_agent": "PresenceAgent",
+        "captured_at": "2026-10-24T00:00:00Z",
+        "received_at": "2026-10-24T00:00:00Z",
+        "region": "rasp_shared_view",
+        "value": 1,
+        "unit": "presence",
+        "quality": "coverage_limited",
+        "status": "VALID",
+        "metadata": {
+          "state_code": 2,
+          "motion_distance_cm": null,
+          "static_distance_cm": null,
+          "total_distance_cm": null,
+          "motion_energy": null,
+          "static_energy": null,
+          "trigger_distance_cm": null,
+          "trigger_distance_source": null
+        },
+        "schema": "sense.v1",
+        "age_seconds": 0
+      }
+    },
+    "environment_events": [],
+    "environment_conditions": {
+      "temperature": {
+        "state": "NORMAL",
+        "count": 0,
+        "recovery": 0,
+        "reference": null,
+        "armed": false,
+        "rearmed_epoch_s": null,
+        "evaluable": false
+      },
+      "humidity": {
+        "state": "NORMAL",
+        "count": 0,
+        "recovery": 0,
+        "reference": null,
+        "armed": false,
+        "rearmed_epoch_s": null,
+        "evaluable": false
+      },
+      "aqi": {
+        "state": "NORMAL",
+        "count": 0,
+        "recovery": 0,
+        "reference": null,
+        "armed": false,
+        "rearmed_epoch_s": null,
+        "evaluable": false
+      },
+      "eco2": {
+        "state": "NORMAL",
+        "count": 0,
+        "recovery": 0,
+        "reference": null,
+        "armed": true,
+        "rearmed_epoch_s": null,
+        "evaluable": true
+      }
+    },
+    "session_baseline": {
+      "temperature": {
+        "captured_epoch_s": 1792800000.0,
+        "id": "75a90f0ba2cc4d80a9765c363147c390",
+        "value": 26.33
+      },
+      "humidity": {
+        "captured_epoch_s": 1792800000.0,
+        "id": "a0be439323cf490cb9816222f7c6e728",
+        "value": 70.63
+      },
+      "aqi": {
+        "captured_epoch_s": 1792800000.0,
+        "id": "5d48979a40cb4b74b35aca5855ddde1b",
+        "value": 2
+      },
+      "tvoc": {
+        "captured_epoch_s": 1792800000.0,
+        "id": "85898dca882a465b8c7073167f91b36c",
+        "value": 70
+      },
+      "eco2": {
+        "captured_epoch_s": 1792800000.0,
+        "id": "41902f1a22b94ac6bf8f8fb412fde009",
+        "value": 497
+      }
+    },
+    "conflict": false,
+    "physical_state": "NOT_DIRECTLY_OBSERVABLE",
+    "component_health": {}
+  },
+  "config_hash": "814c068a41f8c49643f15c0ed6433c8e58e5107e1e0093bb6e0405a859d4439c",
+  "prompts": {
+    "Q6": "Valores: <presence>=1; <presence_source>=radar; <count>=None; <events>=sin eventos ambientales confirmados. Estados: {\"temperature\": \"VALID\", \"humidity\": \"VALID\", \"aqi\": \"VALID\", \"tvoc\": \"VALID\", \"eco2\": \"VALID\", \"presence\": \"VALID\"}; salud observada: {}.",
+    "Q7": "Q7. Contexto: {\"observations\":{\"temperature\":26.33,\"humidity\":70.63,\"aqi\":2,\"tvoc\":70,\"eco2\":497,\"presence\":1},\"events\":[],\"presence_source\":\"radar\",\"data_status\":{\"temperature\":\"VALID\",\"humidity\":\"VALID\",\"aqi\":\"VALID\",\"tvoc\":\"VALID\",\"eco2\":\"VALID\",\"presence\":\"VALID\"},\"component_health\":{}}"
+  },
+  "system": {
+    "Q6": "JSON: {\"inferences\":[\"\"],\"unknowns\":[\"\"],\"recommendations\":[\"\"]}. Una frase por lista. Copia esta estructura de inferencia: \"Presence=<presence> (fuente=<presence_source>); cámara count=<count>; eventos=<events> coinciden temporalmente, sin probar causalidad.\" No añadas etiquetas ni hechos. Unknowns: \"Estas fuentes no determinan la ocupación total ni la causa física de los fallos.\" Recomendación no crítica: monitorear los eventos listados.",
+    "Q7": "JSON: {\"inferences\":[\"\"],\"unknowns\":[\"\"],\"recommendations\":[\"\"]}. Una frase breve por lista. La imagen adjunta es evidencia. Describe solo una observación visual no identificatoria; no nombres personas, no infieras cantidad ni reemplaces el conteo YOLO. No afirmes causalidad. Si la imagen no basta, indícalo en unknowns. Recomendación solo no crítica."
+  }
+}

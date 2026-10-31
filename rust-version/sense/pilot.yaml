@@ -1,0 +1,72 @@
+# Valores iniciales para caracterización, NO parámetros científicamente validados.
+config_version: sense-pilot-5-software-faults
+hardware_profile: Raspberry Pi 5 / 8 GB / IMX219 / SHT40 / ENS160 / LD2410C
+enabled_modes: [A, B, C, D, E, F]
+regions:
+  radar_region: rasp_shared_view
+  camera_region: rasp_shared_view
+  environment_region: sensor_location
+  radar_camera_comparable: true
+  comparison_max_skew_seconds: 3
+environment:
+  window_seconds: 300
+  reference_tolerance_seconds: 10
+  history_capacity: 512
+  confirmation_samples: 3
+  max_confirmation_gap_seconds: 6
+  temperature_rise_c: 1.0
+  humidity_rise_pp: 5.0
+  aqi_increase_levels: 1
+  eco2_threshold_ppm_equiv: 700
+  temperature_rearm_c: 0.5
+  humidity_rearm_pp: 2.5
+  aqi_rearm_levels: 0
+  eco2_rearm_threshold: 650
+sensors:
+  environment_ttl_seconds: 10
+  presence_ttl_seconds: 6
+  max_future_skew_seconds: 5
+vision:
+  ttl_seconds: 60
+  cooldown_seconds: 30
+  max_requests_per_window: 10
+  request_window_seconds: 300
+  timeout_seconds: 20
+  image_ttl_seconds: 120
+  max_image_bytes: 2097152
+interpretation:
+  max_concurrent: 1
+  relationship_alignment_seconds: 60
+  queue_capacity: 1
+  textual:
+    timeout_seconds: 90
+    cooldown_seconds: 30
+    max_requests_per_window: 3
+    request_window_seconds: 300
+    max_tokens: 256
+  multimodal:
+    timeout_seconds: 180
+    cooldown_seconds: 60
+    max_requests_per_window: 3
+    request_window_seconds: 300
+    max_tokens: 256
+runtime:
+  tick_seconds: 0.25
+  evaluation_interval_seconds: 1
+  publish_interval_seconds: 1
+  cycle_timeout_seconds: 25
+  max_cycle_requests: 3
+  max_run_seconds: 1800
+  inbox_capacity: 32
+  min_available_mb: 1024
+  max_rss_mb: 2048
+  max_cpu_percent: 95
+  resource_interval_seconds: 1
+  max_database_mb: 512
+  min_disk_free_mb: 256
+modes:
+  periodic_interval_seconds: 30
+  reactive_debounce_samples: 3
+  reactive_min_interval_seconds: 30
+  reactive_enter_below_cm: 30
+  reactive_exit_at_or_above_cm: 50

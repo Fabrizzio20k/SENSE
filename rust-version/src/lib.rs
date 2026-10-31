@@ -1,0 +1,21 @@
+pub mod acquisition;
+pub mod agents;
+pub mod api;
+pub mod config;
+pub mod context;
+pub mod contracts;
+pub mod faults;
+pub mod hardware;
+pub mod health;
+pub mod inference;
+pub mod orchestrator;
+pub mod policy;
+pub mod protocol;
+pub mod runtime;
+pub mod service;
+pub mod storage;
+pub mod telemetry;
+pub mod trace;
+
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
+pub type Result<T> = std::result::Result<T, Error>;
