@@ -39,6 +39,10 @@ YOLO, Gemma de texto y Gemma multimodal, igual que el backend original. La
 medición se crea al utilizar sus endpoints; una configuración inválida de medición
 no impide servir Preparación ni la UI offline.
 
+Ctrl+C inicia el apagado: cierra las conexiones de actualizaciones del panel
+en el siguiente segundo y guarda el cierre de una medición activa con el motivo
+`PROCESS_SHUTDOWN`. LiteRT-LM y el broker se detienen desde sus propias terminales.
+
 Para servir únicamente la UI simulada, sin modelos, cámara, MQTT ni base de datos:
 
 ```sh

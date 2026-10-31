@@ -14,7 +14,10 @@ use std::{
     convert::Infallible,
     io::Read,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, atomic::Ordering},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 use tokio_stream::{
     StreamExt,
@@ -29,6 +32,7 @@ pub struct AppState {
     service: Mutex<Option<Arc<ExperimentService>>>,
     gate: Mutex<()>,
     system: Mutex<sysinfo::System>,
+    shutting_down: AtomicBool,
 }
 impl AppState {
     pub fn new(root: &Path) -> Arc<Self> {
@@ -50,6 +54,7 @@ impl AppState {
             service: Mutex::new(None),
             gate: Mutex::new(()),
             system: Mutex::new(sysinfo::System::new_all()),
+            shutting_down: AtomicBool::new(false),
         })
     }
     pub fn get_service(&self) -> Result<Arc<ExperimentService>> {
@@ -80,7 +85,11 @@ impl AppState {
         *service = Some(s.clone());
         Ok(s)
     }
+    pub fn begin_shutdown(&self) {
+        self.shutting_down.store(true, Ordering::SeqCst);
+    }
     pub fn close(&self) {
+        self.begin_shutdown();
         if let Some(s) = self.service.lock().unwrap().as_ref() {
             s.close();
         }
@@ -412,7 +421,14 @@ async fn dispatch(State(app): State<Arc<AppState>>, request: Request) -> Respons
     }
     if method == Method::GET && path == "/events" {
         let stream = IntervalStream::new(tokio::time::interval(std::time::Duration::from_secs(1)))
-            .map(move |_| Ok::<_, Infallible>(Event::default().data(app.snapshot().to_string())));
+            .map_while(move |_| {
+                if app.shutting_down.load(Ordering::SeqCst) {
+                    return None;
+                }
+                Some(Ok::<_, Infallible>(
+                    Event::default().data(app.snapshot().to_string()),
+                ))
+            });
         return Sse::new(stream).into_response();
     }
     if method == Method::GET && ["/", "/offline", "/offline/"].contains(&path.as_str()) {

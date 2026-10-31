@@ -7,6 +7,39 @@ use std::{
     sync::atomic::Ordering,
 };
 #[tokio::test]
+async fn shutdown_ends_sse_and_persists_the_active_run() {
+    use tokio_stream::StreamExt;
+    use tower::ServiceExt;
+
+    let h = ApiHarness::new();
+    let id = h.start("E").await;
+    let response = sense_people_counter::api::router(h.app.clone())
+        .oneshot(
+            axum::http::Request::builder()
+                .uri("/events")
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let mut stream = response.into_body().into_data_stream();
+    stream.next().await.unwrap().unwrap();
+
+    h.app.begin_shutdown();
+    assert!(
+        tokio::time::timeout(std::time::Duration::from_secs(2), stream.next())
+            .await
+            .expect("SSE kept the server alive after shutdown")
+            .is_none()
+    );
+    h.app.close();
+    let log = ExperimentLog::reader(&h.temp.path().join("data/experiments.sqlite3")).unwrap();
+    let run = log.run(&id).unwrap().unwrap();
+    assert_eq!(run["finish_reason"], "PROCESS_SHUTDOWN");
+    assert_ne!(run["status"], "RUNNING");
+}
+
+#[tokio::test]
 async fn start_contract_and_exclusive_sandbox() {
     let h = ApiHarness::new();
     let id = h.start("E").await;

@@ -39,10 +39,13 @@ async fn main() -> Result<()> {
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let state = AppState::new(&root);
     let mqtt = state.start_background();
+    let shutdown_state = state.clone();
     tracing::info!("Panel: http://localhost:{}", address.port());
     let result = axum::serve(listener, api::router(state.clone()))
-        .with_graceful_shutdown(async {
+        .with_graceful_shutdown(async move {
             let _ = tokio::signal::ctrl_c().await;
+            tracing::info!("Ctrl+C recibido; cerrando el panel y la medición…");
+            shutdown_state.begin_shutdown();
         })
         .await;
     mqtt.abort();
