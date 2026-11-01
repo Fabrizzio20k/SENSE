@@ -126,7 +126,7 @@ fn manual_b_triggers_zone_changes_without_centimeters_or_fake_samples() {
     h.step(0.);
     assert_eq!(
         h.c.tasks.active["vision"].as_ref().unwrap().command["reason"],
-        "MANUAL_ZONE_ENTERED"
+        "RADAR_NEAR_CONFIRMED"
     );
     assert!(
         h.c.context.observations["presence"]["metadata"]
@@ -137,15 +137,26 @@ fn manual_b_triggers_zone_changes_without_centimeters_or_fake_samples() {
         h.c.view(h.now).unwrap()["reactive_trigger"]["required_samples"],
         1
     );
+    assert!(
+        h.event("RADAR_NEAR_CONFIRMED")["payload"]
+            .get("source")
+            .is_none()
+    );
     h.finish_lane("vision", 0.1);
     h.c.set_presence(&json!(false), h.now + 31., &Value::Null)
         .unwrap();
     h.step(31.);
     assert_eq!(
         h.c.tasks.active["vision"].as_ref().unwrap().command["reason"],
-        "MANUAL_ZONE_EXITED"
+        "RADAR_ZONE_EXITED"
     );
     h.finish_lane("vision", 31.1);
+    h.c.set_presence(&json!(true), h.now + 31.2, &Value::Null)
+        .unwrap();
+    assert_eq!(
+        h.c.policy.reactive_pending["event_type"],
+        "RADAR_ZONE_ENTERED"
+    );
     h.c.set_presence(&Value::Null, h.now + 32., &Value::Null)
         .unwrap();
     assert_eq!(
@@ -168,7 +179,20 @@ fn manual_controls_available_b_through_f_but_not_a_or_as_ground_truth() {
                 .observer_requests(text(&r["run_id"]), false)
                 .unwrap()
                 .iter()
-                .any(|r| r["reason"] == "MANUAL_PRESENCE_CHANGED")
+                .any(|r| r["reason"] == "SENSOR_PRESENCE_CHANGED")
+        );
+        let event = h.event("SENSOR_PRESENCE_CHANGED");
+        assert_eq!(event["payload"]["detected"], true);
+        assert!(event["payload"].get("mode").is_none());
+        assert!(
+            h.events()
+                .iter()
+                .all(|e| !text(&e["type"]).starts_with("MANUAL_"))
+        );
+        assert!(
+            h.event("PRESENCE_CHANGED")["payload"]
+                .get("source")
+                .is_none()
         );
         h.c.stop("USER_STOP", h.now + 0.1).unwrap();
     }
@@ -477,6 +501,6 @@ fn explicit_manual_actions_do_not_depend_on_sensor_timestamp_ordering() {
         .unwrap();
     assert_eq!(
         h.c.policy.reactive_pending["event_type"],
-        "MANUAL_ZONE_EXITED"
+        "RADAR_ZONE_EXITED"
     );
 }

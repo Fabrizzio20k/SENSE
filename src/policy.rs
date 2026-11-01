@@ -334,15 +334,7 @@ impl PolicyEngine {
         if previous.is_none() && !near {
             return Ok(vec![]);
         }
-        let mut ev = json!({"event_id":identifier(),"event_type":if previous.is_none(){"RADAR_NEAR_CONFIRMED"}else if near{"RADAR_ZONE_ENTERED"}else{"RADAR_ZONE_EXITED"},"previous":previous,"near":near,"distance_cm":distance,"distance_source":meta["trigger_distance_source"],"enter_below_cm":modes["reactive_enter_below_cm"],"exit_at_or_above_cm":modes["reactive_exit_at_or_above_cm"],"confirmation_samples":self.reactive_evidence.len(),"region":o["region"],"evidence_ids":self.reactive_evidence,"captured_at":o["captured_at"]});
-        if manual {
-            ev["event_type"] = json!(if near {
-                "MANUAL_ZONE_ENTERED"
-            } else {
-                "MANUAL_ZONE_EXITED"
-            });
-            ev["source"] = json!("MANUAL_CONTROL");
-        }
+        let ev = json!({"event_id":identifier(),"event_type":if previous.is_none(){"RADAR_NEAR_CONFIRMED"}else if near{"RADAR_ZONE_ENTERED"}else{"RADAR_ZONE_EXITED"},"previous":previous,"near":near,"distance_cm":distance,"distance_source":meta["trigger_distance_source"],"enter_below_cm":modes["reactive_enter_below_cm"],"exit_at_or_above_cm":modes["reactive_exit_at_or_above_cm"],"confirmation_samples":self.reactive_evidence.len(),"region":o["region"],"evidence_ids":self.reactive_evidence,"captured_at":o["captured_at"]});
         self.reactive_pending = ev.clone();
         Ok(vec![ev])
     }

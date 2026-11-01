@@ -30,6 +30,17 @@ const phases={yolo:{status:'ready'},text:{status:'ready'},vision:{status:'ready'
 const request={request_id:'request',requested_at:'2026-10-27T12:00:00Z',reason:'VISION_TASK_STARTED',task_id:'task',fields:['power_w','visible_people']};
 const run={run_id:'run',mode:'C',guided:true,scenario_id:'S2',repetition:2,status:'RUNNING',duration_seconds:1800};
 
+test('cambios de presencia B–F se muestran como cambios del sensor, incluidos pendientes anteriores',()=>{
+  for(const mode of ['B','C','D','E','F'])for(const reason of ['SENSOR_PRESENCE_CHANGED','MANUAL_PRESENCE_CHANGED']){
+    const {get,ui}=fixture();
+    ui.render({running:true,run:{...run,mode},observer_requests:[{...request,reason,fields:['power_w','visible_people','action']}]},phases,false);
+    assert.equal(get('measurement-pending-list').children[0].children[1].children[0].textContent,'Cambio del sensor de presencia');
+    get('measurement-observe').onclick();
+    assert.equal(get('observer-title').textContent,'Cambio del sensor de presencia');
+    assert.equal(get('observer-action-group').hidden,false);
+  }
+});
+
 test('comenzar exige condiciones iniciales y envía escenario, repetición y W reales',async()=>{
   const {get,calls,ui}=fixture();
   ui.render({running:false,observation_region:'configured_view',run:{...run,status:'COMPLETED',observation_region:'previous_view'}},phases,false);

@@ -238,7 +238,7 @@ impl SenseOrchestrator {
                     None,
                 )?;
             }
-            if kind == "MANUAL_PRESENCE_CHANGED" {
+            if kind == "SENSOR_PRESENCE_CHANGED" {
                 self.log.request_observer(
                     id,
                     kind,
@@ -414,7 +414,7 @@ impl SenseOrchestrator {
         } else {
             None
         };
-        self.record("MANUAL_PRESENCE_CHANGED",&json!({"event_id":identifier(),"mode":if detected.is_null(){"AUTO"}else{"MANUAL"},"detected":detected,"near":self.manual_near,"raw_observation_id":self.last_raw_presence["observation_id"],"elapsed_s":now-self.started}))?;
+        self.record("SENSOR_PRESENCE_CHANGED",&json!({"event_id":identifier(),"detected":detected,"near":self.manual_near,"raw_observation_id":self.last_raw_presence["observation_id"],"elapsed_s":now-self.started}))?;
         self.dirty = true;
         if detected.is_null() {
             self.context.presence_samples = 0;
@@ -460,7 +460,7 @@ impl SenseOrchestrator {
             }
         }
         if previous.is_null() || previous["value"] != p["value"] {
-            let e = json!({"event_id":identifier(),"event_type":"PRESENCE_CHANGED","source":"MANUAL_CONTROL","previous":previous["value"],"value":p["value"],"evidence_ids":[p["observation_id"]],"captured_at":p["captured_at"]});
+            let e = json!({"event_id":identifier(),"event_type":"PRESENCE_CHANGED","previous":previous["value"],"value":p["value"],"evidence_ids":[p["observation_id"]],"captured_at":p["captured_at"]});
             self.record("PRESENCE_CHANGED", &e)?;
             self.events.push(e);
             let excess = self

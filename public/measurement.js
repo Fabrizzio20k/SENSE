@@ -381,7 +381,7 @@
         const reason={RADAR_DISTANCE_UNKNOWN:'Sin distancia válida y vigente; esperando al radar.',RADAR_ZONE_CONFIRMING:'Confirmando zona: '+trigger.confirmed_samples+'/'+trigger.required_samples+'.',
           COOLDOWN_ACTIVE:'Esperando el intervalo mínimo entre capturas.',CAMERA_UNAVAILABLE:'YOLO no está disponible.',DUPLICATE_REQUEST:'Captura visual en curso.',
           INSUFFICIENT_MEMORY:'Captura pospuesta por memoria disponible.',CPU_BUDGET:'Captura pospuesta por carga de CPU.',RATE_LIMIT:'Esperando el presupuesto de activaciones.',
-          RADAR_NEAR_CONFIRMED:'Zona próxima inicial confirmada: captura autorizada.',RADAR_ZONE_ENTERED:'Entrada confirmada: captura autorizada.',RADAR_ZONE_EXITED:'Salida confirmada: captura autorizada.',MANUAL_ZONE_ENTERED:'Entrada manual: captura autorizada si hay recursos.',MANUAL_ZONE_EXITED:'Salida manual: captura autorizada si hay recursos.'}[visionDecision?.reason];
+          RADAR_NEAR_CONFIRMED:'Zona próxima inicial confirmada: captura autorizada.',RADAR_ZONE_ENTERED:'Entrada confirmada: captura autorizada.',RADAR_ZONE_EXITED:'Salida confirmada: captura autorizada.',MANUAL_ZONE_ENTERED:'Entrada confirmada: captura autorizada si hay recursos.',MANUAL_ZONE_EXITED:'Salida confirmada: captura autorizada si hay recursos.'}[visionDecision?.reason];
         triggerText=rule+' '+(reason||(trigger.state==='UNKNOWN'?'Sin distancia válida y vigente.':trigger.state==='CONFIRMING'?'Confirmando zona: '+trigger.confirmed_samples+'/'+trigger.required_samples+'.':'Esperando otro cambio confirmado de zona.'));
         if(current.context?.observations?.count?.status==='STALE')triggerText+=' El conteo está vencido; B no lo renueva únicamente por antigüedad.';
       }
