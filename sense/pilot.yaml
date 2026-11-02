@@ -62,7 +62,7 @@ runtime:
   max_rss_mb: 2048
   max_cpu_percent: 95
   resource_interval_seconds: 1
-  max_database_mb: 512
+  max_database_mb: 10240
   min_disk_free_mb: 256
 modes:
   periodic_interval_seconds: 30

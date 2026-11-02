@@ -1,7 +1,27 @@
 mod common;
-use common::ApiHarness;
-use sense_people_counter::telemetry::ResourceMonitor;
-use serde_json::Value;
+use common::{ApiHarness, config, resources};
+use sense_people_counter::telemetry::{ResourceMonitor, budget_reason};
+use serde_json::{Value, json};
+
+#[test]
+fn storage_budget_allows_up_to_ten_gib_and_keeps_free_space_guard() {
+    let cfg = config();
+    assert_eq!(cfg["runtime"]["max_database_mb"], 10240);
+    let mut sample = resources();
+    sample["database_mb"] = json!(10239.99);
+    assert_eq!(budget_reason(&sample, &cfg["runtime"]), None);
+    sample["database_mb"] = json!(10240);
+    assert_eq!(
+        budget_reason(&sample, &cfg["runtime"]),
+        Some("STORAGE_BUDGET")
+    );
+    sample["database_mb"] = json!(512);
+    sample["disk_free_mb"] = json!(255);
+    assert_eq!(
+        budget_reason(&sample, &cfg["runtime"]),
+        Some("STORAGE_BUDGET")
+    );
+}
 
 fn assert_two_decimal_numbers(document: &Value, keys: &[&str]) {
     for key in keys {

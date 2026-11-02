@@ -63,7 +63,11 @@ Se conservan las variables originales:
 | `SENSE_CONFIG` | `sense/pilot.yaml` de esta carpeta |
 | `SENSE_DATA_DIR` | `data/` de esta carpeta |
 
-El YAML conserva los valores originales y su hash. SQLite usa el mismo esquema;
+El YAML conserva los valores originales salvo el límite de almacenamiento,
+ampliado a **10 GiB (10240 MiB)** para la base y sus archivos auxiliares. Se mantiene
+un mínimo de **256 MiB libres** en el disco. Reinicia el backend tras cambiar la
+configuración; no requiere recompilar ni borrar datos. El hash identifica los
+valores efectivos. SQLite usa el mismo esquema;
 para consultar el historial Python existente, indica su directorio con
 `SENSE_DATA_DIR` y detén antes cualquier backend que use esa misma base. Guarda
 una copia de seguridad antes de utilizar datos históricos. Al abrir una base,
@@ -122,7 +126,8 @@ adquisición, contexto y políticas contra resultados capturados de Python. Se
 normalizan los UUID de eventos/snapshots y la hora de creación generados durante
 la prueba; valores, estados, evidencia, decisiones y límites se comparan.
 `tests/fixtures/provenance.json` conserva las huellas de los módulos de referencia.
-También se comparan exactamente los prompts Q6/Q7 y el hash de configuración.
+También se comparan exactamente los prompts Q6/Q7 y el hash de configuración
+original, restaurando en la prueba su límite histórico de 512 MiB.
 
 Las demás pruebas trasladan los escenarios de workers, interpretación, API,
 observador, fallas, recuperación, trazabilidad y servidor offline. Incluyen

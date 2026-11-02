@@ -199,5 +199,17 @@ fn prompts_and_config_hash_match_python_exactly() {
             fixture["system"][q].as_str().unwrap()
         );
     }
-    assert_eq!(config()["config_hash"], fixture["config_hash"]);
+    let mut current = config();
+    let current_hash = current
+        .as_object_mut()
+        .unwrap()
+        .remove("config_hash")
+        .unwrap();
+    assert_eq!(current_hash, hash(python_json(&current).as_bytes()));
+    // La referencia Python usaba 512 MiB; el piloto actual permite 10 GiB.
+    current["runtime"]["max_database_mb"] = json!(512);
+    assert_eq!(
+        hash(python_json(&current).as_bytes()),
+        fixture["config_hash"]
+    );
 }
