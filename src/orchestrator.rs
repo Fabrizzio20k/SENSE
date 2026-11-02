@@ -407,6 +407,10 @@ impl SenseOrchestrator {
             );
         }
         let previous = self.context.observations["presence"].clone();
+        let previous_near = self
+            .manual_near
+            .or(self.policy.reactive_confirmed)
+            .unwrap_or(false);
         let was_manual = self.manual_presence.is_some();
         self.manual_presence = detected.as_bool();
         self.manual_near = if self.run["mode"] == "B" {
@@ -414,7 +418,19 @@ impl SenseOrchestrator {
         } else {
             None
         };
-        self.record("SENSOR_PRESENCE_CHANGED",&json!({"event_id":identifier(),"detected":detected,"near":self.manual_near,"raw_observation_id":self.last_raw_presence["observation_id"],"elapsed_s":now-self.started}))?;
+        let next_value = detected
+            .as_bool()
+            .map(|v| json!(i32::from(v)))
+            .unwrap_or_else(|| {
+                self.sensor_observations
+                    .get("presence")
+                    .map_or(Value::Null, |(o, _, _)| o["value"].clone())
+            });
+        if previous["value"] != next_value
+            || self.manual_near.is_some_and(|near| previous_near != near)
+        {
+            self.record("SENSOR_PRESENCE_CHANGED",&json!({"event_id":identifier(),"detected":detected,"near":self.manual_near,"raw_observation_id":self.last_raw_presence["observation_id"],"elapsed_s":now-self.started}))?;
+        }
         self.dirty = true;
         if detected.is_null() {
             self.context.presence_samples = 0;

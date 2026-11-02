@@ -165,6 +165,102 @@ fn manual_b_triggers_zone_changes_without_centimeters_or_fake_samples() {
     );
 }
 #[test]
+fn switching_to_manual_preserves_presence_without_requesting_an_observation() {
+    for mode in ["B", "C", "D", "E", "F"] {
+        for detected in [false, true] {
+            let mut h = harness();
+            h.disable_models();
+            let run = h.guided(mode, "S1", 1);
+            for second in 0..3 {
+                let mut p = telemetry(h.wall + second as f64);
+                p["presence"]["state_code"] = json!(if detected { 2 } else { 0 });
+                p["presence"]["static_distance_cm"] = json!(20);
+                h.ingest(second as f64, Some(p));
+            }
+            let requests =
+                h.c.log
+                    .observer_requests(text(&run["run_id"]), false)
+                    .unwrap();
+            let changes = h.events().len();
+            let near = if mode == "B" {
+                json!(detected)
+            } else {
+                Value::Null
+            };
+            for second in 3..5 {
+                h.c.set_presence(&json!(detected), h.now + second as f64, &near)
+                    .unwrap();
+                assert_eq!(h.c.manual_presence, Some(detected));
+                assert_eq!(
+                    h.c.context.observations["presence"]["value"],
+                    i32::from(detected)
+                );
+                assert_eq!(h.events().len(), changes, "{mode}, detected={detected}");
+                assert_eq!(
+                    h.c.log
+                        .observer_requests(text(&run["run_id"]), false)
+                        .unwrap(),
+                    requests
+                );
+            }
+            h.c.set_presence(&json!(!detected), h.now + 5., &Value::Null)
+                .unwrap();
+            assert_eq!(
+                h.event("SENSOR_PRESENCE_CHANGED")["payload"]["detected"],
+                !detected
+            );
+            h.event("PRESENCE_CHANGED");
+            assert_eq!(
+                h.c.log
+                    .observer_requests(text(&run["run_id"]), false)
+                    .unwrap()
+                    .len(),
+                requests.len() + 1
+            );
+            h.c.set_presence(&json!(detected), h.now + 6., &near)
+                .unwrap();
+            let changes = h.events().len();
+            h.c.set_presence(&Value::Null, h.now + 7., &Value::Null)
+                .unwrap();
+            assert_eq!(h.events().len(), changes);
+            assert_eq!(h.c.manual_presence, None);
+        }
+    }
+}
+#[test]
+fn manual_zone_change_is_recorded_even_when_presence_stays_detected() {
+    let mut h = harness();
+    h.disable_models();
+    let run = h.guided("B", "S1", 1);
+    let mut p = telemetry(h.wall);
+    p["presence"]["static_distance_cm"] = json!(300);
+    h.ingest(0., Some(p));
+    h.c.set_presence(&json!(true), h.now + 1., &json!(false))
+        .unwrap();
+    assert!(
+        !h.events()
+            .iter()
+            .any(|e| e["type"] == "SENSOR_PRESENCE_CHANGED")
+    );
+    let requests =
+        h.c.log
+            .observer_requests(text(&run["run_id"]), false)
+            .unwrap()
+            .len();
+    h.c.set_presence(&json!(true), h.now + 2., &json!(true))
+        .unwrap();
+    assert_eq!(h.event("SENSOR_PRESENCE_CHANGED")["payload"]["near"], true);
+    h.event("RADAR_ZONE_ENTERED");
+    assert_eq!(
+        h.c.log
+            .observer_requests(text(&run["run_id"]), false)
+            .unwrap()
+            .len(),
+        requests + 1
+    );
+    assert!(!h.events().iter().any(|e| e["type"] == "PRESENCE_CHANGED"));
+}
+#[test]
 fn manual_controls_available_b_through_f_but_not_a_or_as_ground_truth() {
     let mut h = harness();
     for mode in ["B", "C", "D", "E", "F"] {
