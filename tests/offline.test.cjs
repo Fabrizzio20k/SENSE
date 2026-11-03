@@ -41,3 +41,33 @@ test('sandbox y presencia/fallas son simulados, y una ruta desconocida falla sin
   const unknown=await ui.window.senseAPI.fetch('/api/not-implemented');assert.equal(unknown.status,404);
   assert.equal(ui.network.length,0);
 });
+
+test('cierre completo descarga el ZIP, bloquea la repetición y permite volver a medir sin perder el resultado',async()=>{
+  const ui=frontend(),api=ui.window.senseAPI,fetchMock=api.fetch;let exports=0;
+  api.fetch=(url,...args)=>{if(url.includes('/export'))exports++;return fetchMock(url,...args);};
+  ui.window.senseOffline.scene('finished');
+  assert.equal(exports,0);
+  ui.get('measurement-observe').click();
+  for(const [key,value] of [['observer-power','2.9'],['observer-people','0'],['observer-action','Terminó el guion']])ui.get(key).value=value;
+  await ui.get('observer-form').onsubmit({preventDefault(){}});await ui.flush();
+  assert.equal(exports,1);assert.equal(ui.get('experiment-start').disabled,true);
+  assert.equal(ui.get('experiment-completed').hidden,false);
+  assert.match(ui.get('experiment-download-note').textContent,/Descarga del ZIP solicitada/);
+  ui.tick();assert.equal(exports,1);
+  const history=await (await api.fetch('/api/experiments')).json(),old=history.completed_repetitions.find(r=>r.mode==='E');
+  const body={mode:'E',guided:true,scenario_id:'S2',repetition:1,initial_observation:{power_w:2.9,visible_people:0}};
+  assert.equal((await api.fetch('/api/experiments/start',{method:'POST',body:JSON.stringify(body)})).status,409);
+  ui.get('experiment-remeasure').click();
+  for(const [key,value] of [['observer-name','Ana'],['observer-instrument','Demo'],['observer-power','2.9'],['observer-people','0']])ui.get(key).value=value;
+  await ui.get('observer-form').onsubmit({preventDefault(){}});
+  let runs=await (await api.fetch('/api/experiments')).json();
+  assert.equal(runs.runs[0].replaces_run_id,old.run_id);
+  assert.equal(runs.completed_repetitions.find(r=>r.mode==='E').run_id,old.run_id);
+  await api.fetch('/api/experiments/stop',{method:'POST'});
+  runs=await (await api.fetch('/api/experiments')).json();
+  assert.equal(runs.completed_repetitions.find(r=>r.mode==='E').run_id,old.run_id);
+  const archive=await (await api.fetch('/api/experiments/'+old.run_id+'/export?format=csv')).blob();
+  const trace=await ui.window.senseReplayData.read(archive);
+  assert.equal(trace.records.at(-1).power_w,2.9);assert.equal(trace.run.finish_reason,'MAX_RUN_DURATION');
+  assert.equal(ui.network.length,0);
+});

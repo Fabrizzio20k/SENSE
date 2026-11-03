@@ -311,6 +311,9 @@ fn start_and_timestamp_validation() {
         json!({"repetition":true}),
         json!({"scenario_id":"S4"}),
         json!({"initial_observation":null}),
+        json!({"replaces_run_id":true}),
+        json!({"replaces_run_id":""}),
+        json!({"guided":false,"replaces_run_id":"old"}),
     ] {
         let mut p = exp.clone();
         p.as_object_mut()
@@ -321,6 +324,94 @@ fn start_and_timestamp_validation() {
     let mut p = initial();
     p["power_observed_at"] = json!("2040-01-01T00:00:00Z");
     assert!(protocol::validate_observation(&p, &["power_w".into()]).is_err());
+}
+#[test]
+fn completed_repetitions_require_explicit_remeasurement_and_keep_history() {
+    let mut h = Harness::new();
+    h.disable_models();
+    let mut payload = json!({"guided":true,"scenario_id":"S2","mode":"C","repetition":2,"initial_observation":initial()});
+    let early = h.guided("C", "S2", 2);
+    h.c.stop("USER_STOP", h.now + 10.).unwrap();
+    assert!(h.c.log.completed_repetitions().unwrap().is_empty());
+    let first = h.guided("C", "S2", 2);
+    h.c.stop("MAX_RUN_DURATION", h.now + 1800.).unwrap();
+    assert!(h.c.log.completed_repetitions().unwrap().is_empty());
+    let resolve = |h: &Harness, id: &str| {
+        let mut observation = initial();
+        observation["action"] = json!("Cierre observado");
+        for request in h.c.log.observer_requests(id, true).unwrap() {
+            h.c.log
+                .resolve_observer(id, text(&request["request_id"]), &observation)
+                .unwrap();
+        }
+    };
+    resolve(&h, text(&first["run_id"]));
+    assert!(
+        h.c.log
+            .request_observer(
+                text(&first["run_id"]),
+                "EXTRA",
+                &["power_w"],
+                None,
+                None,
+                None
+            )
+            .is_err()
+    );
+    assert_eq!(
+        h.c.log.completed_repetitions().unwrap()[0]["run_id"],
+        first["run_id"]
+    );
+    let before = h.c.run.clone();
+    assert!(h.c.start("C", h.now, "session", "S2", &payload).is_err());
+    assert_eq!(h.c.run, before);
+    payload["replaces_run_id"] = json!("wrong-run");
+    assert!(h.c.start("C", h.now, "session", "S2", &payload).is_err());
+    payload["replaces_run_id"] = first["run_id"].clone();
+    let aborted = h.c.start("C", h.now, "session", "S2", &payload).unwrap();
+    h.c.stop("USER_STOP", h.now + 30.).unwrap();
+    resolve(&h, text(&aborted["run_id"]));
+    assert_eq!(
+        h.c.log.completed_repetitions().unwrap()[0]["run_id"],
+        first["run_id"]
+    );
+    let replacement = h.c.start("C", h.now, "session", "S2", &payload).unwrap();
+    assert_eq!(replacement["replaces_run_id"], first["run_id"]);
+    h.c.stop("MAX_RUN_DURATION", h.now + 1800.).unwrap();
+    assert_eq!(
+        h.c.log.completed_repetitions().unwrap()[0]["run_id"],
+        first["run_id"]
+    );
+    resolve(&h, text(&replacement["run_id"]));
+    let completed = h.c.log.completed_repetitions().unwrap();
+    assert_eq!(completed.len(), 1);
+    assert_eq!(completed[0]["run_id"], replacement["run_id"]);
+    assert!(h.c.start("C", h.now, "session", "S2", &payload).is_err());
+    assert_eq!(
+        h.c.log.run(text(&early["run_id"])).unwrap().unwrap()["finish_reason"],
+        "USER_STOP"
+    );
+    assert_eq!(
+        h.c.log.run(text(&first["run_id"])).unwrap().unwrap()["finish_reason"],
+        "MAX_RUN_DURATION"
+    );
+    assert!(export_csv_zip(&h.c.log.path, text(&first["run_id"])).is_ok());
+    // El bloqueo no depende de las últimas 100 filas del historial ni de la memoria del proceso.
+    for _ in 0..101 {
+        h.c.log
+            .begin(&json!({"run_id":identifier(),"start_time":utc_now()}))
+            .unwrap();
+    }
+    let reopened = ExperimentLog::reader(&h.c.log.path).unwrap();
+    assert_eq!(reopened.completed_repetitions().unwrap(), completed);
+    assert_eq!(list(&reopened.runs().unwrap()).len(), 100);
+    let mut other = payload.clone();
+    other["mode"] = json!("D");
+    other.as_object_mut().unwrap().remove("replaces_run_id");
+    reopened.validate_repetition_start(&other).unwrap();
+    other["mode"] = json!("C");
+    other["repetition"] = json!(3);
+    reopened.validate_repetition_start(&other).unwrap();
 }
 #[test]
 fn deadline_cancels_queue_before_poll_can_start_another_inference() {

@@ -12,6 +12,27 @@ su estado. `run.sh` se conserva tal como fue copiado. El backend no ejecuta
 Python. LiteRT-LM y el broker son servicios externos existentes; `run.sh` continúa
 siendo exclusivamente el lanzador de LiteRT-LM.
 
+En Experimentación, cada combinación de escenario, modo y repetición se bloquea
+al completar los 30 minutos y resolver todas las observaciones, incluida la de
+cierre. Las mediciones detenidas antes de tiempo, fallidas o interrumpidas no
+bloquean la repetición. El bloqueo persiste al recargar o reiniciar el backend;
+si ya había varios resultados completos con la misma etiqueta, se toma el
+intento más reciente. Las advertencias de cobertura y datos no observados se
+conservan: terminar el protocolo no certifica la calidad de las mediciones.
+
+«Volver a medir» autoriza un nuevo intento para esa combinación. Solo cuando
+también termine el protocolo sustituirá al resultado vigente; si se interrumpe,
+el anterior sigue vigente. El historial distingue el resultado vigente de los
+anteriores y conserva sus datos y exportaciones. No se borra ni migra la base.
+
+Con la página abierta, al completar el cierre se solicita automáticamente el
+ZIP, después de finalizar los workers pendientes. Se recuerda la solicitud en
+ese navegador para evitar repetirla al recargar. El navegador puede bloquear
+la descarga o pedir dónde guardar: «Descargar ZIP» permite reintentar. Con la
+página cerrada no se pueden iniciar descargas; al volver a conectarse se revisa
+la ejecución actual. Las ejecuciones anteriores siguen descargables desde el
+historial. La UI `/offline` reproduce este recorrido con datos simulados.
+
 ## Compilar y ejecutar
 
 Requiere Rust 1.92+, Cargo, herramientas de compilación C y acceso a Internet para

@@ -60,12 +60,61 @@ impl ExperimentLog {
     }
     pub fn begin(&self, m: &Value) -> Result<()> {
         self.transaction(|| {
+            self.validate_repetition_start(m)?;
             self.db.execute(
                 "INSERT INTO runs VALUES (?, ?, NULL, 'RUNNING', ?)",
                 params![text(&m["run_id"]), text(&m["start_time"]), m.to_string()],
             )?;
             Ok(())
         })
+    }
+    pub fn completed_repetitions(&self) -> Result<Vec<Value>> {
+        let mut query = self.db.prepare(
+            "SELECT run_id, metadata FROM runs r
+             WHERE status='COMPLETED' AND json_extract(metadata,'$.guided')=1
+               AND json_extract(metadata,'$.finish_reason')='MAX_RUN_DURATION'
+               AND json_extract(metadata,'$.elapsed_s')>=1800
+               AND json_extract(metadata,'$.scenario_id') IN ('S1','S2','S3')
+               AND json_extract(metadata,'$.mode') IN ('A','B','C','D','E','F')
+               AND json_extract(metadata,'$.repetition') IN (1,2,3)
+               AND NOT EXISTS (SELECT 1 FROM observer_requests q WHERE q.run_id=r.run_id AND q.status='PENDING')
+             ORDER BY r.rowid DESC",
+        )?;
+        let rows = query.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+        let mut seen = std::collections::HashSet::new();
+        let mut out = vec![];
+        for row in rows {
+            let (id, meta) = row?;
+            let m: Value = serde_json::from_str(&meta)?;
+            let key = (
+                text(&m["scenario_id"]).to_owned(),
+                text(&m["mode"]).to_owned(),
+                m["repetition"].as_u64(),
+            );
+            if seen.insert(key) {
+                out.push(json!({"run_id":id,"scenario_id":m["scenario_id"],"mode":m["mode"],"repetition":m["repetition"]}));
+            }
+        }
+        Ok(out)
+    }
+    pub fn validate_repetition_start(&self, m: &Value) -> Result<()> {
+        if !truth(&m["guided"]) {
+            return Ok(());
+        }
+        let completed = self.completed_repetitions()?.into_iter().find(|r| {
+            ["scenario_id", "mode", "repetition"]
+                .iter()
+                .all(|key| r[key] == m[key])
+        });
+        match completed {
+            Some(r) if m["replaces_run_id"] != r["run_id"] => {
+                Err("Esta repetición está completada y bloqueada. Usa Volver a medir.".into())
+            }
+            None if !m["replaces_run_id"].is_null() => Err(
+                "La repetición vigente cambió. Actualiza la página antes de volver a medir.".into(),
+            ),
+            _ => Ok(()),
+        }
     }
     pub fn finish(&self, id: &str, status: &str, meta: Option<&Value>) -> Result<()> {
         self.transaction(|| {
@@ -114,7 +163,14 @@ impl ExperimentLog {
         for (id, start, end, status, meta) in rows {
             let m: Value = serde_json::from_str(&meta)?;
             let mut row = json!({"run_id":id,"start_time":start,"end_time":end,"status":status,"quality":self.quality(&id)?});
-            for k in ["mode", "scenario_id", "repetition", "guided"] {
+            for k in [
+                "mode",
+                "scenario_id",
+                "repetition",
+                "guided",
+                "finish_reason",
+                "replaces_run_id",
+            ] {
                 if let Some(v) = m.get(k) {
                     row[k] = v.clone();
                 }
@@ -158,7 +214,13 @@ impl ExperimentLog {
     ) -> Result<String> {
         let request = identifier();
         let at = requested.map(str::to_owned).unwrap_or_else(utc_now);
-        self.transaction(||{self.db.execute("INSERT INTO observer_requests VALUES (?,?,?,?,?,?,?,'PENDING',NULL)",params![request,id,at,reason,task,event_id,json!(fields).to_string()])?;self.event(id,"OBSERVER_REQUESTED",&json!({"request_id":request,"reason":reason,"task_id":task,"event_id":event_id,"fields":fields,"requested_at":at}))})?;
+        self.transaction(|| {
+            if self.completed_repetitions()?.iter().any(|r| r["run_id"] == id) {
+                return Err("Esta repetición está bloqueada. Usa Volver a medir para registrar un nuevo intento.".into());
+            }
+            self.db.execute("INSERT INTO observer_requests VALUES (?,?,?,?,?,?,?,'PENDING',NULL)",params![request,id,at,reason,task,event_id,json!(fields).to_string()])?;
+            self.event(id,"OBSERVER_REQUESTED",&json!({"request_id":request,"reason":reason,"task_id":task,"event_id":event_id,"fields":fields,"requested_at":at}))
+        })?;
         Ok(request)
     }
     pub fn observer_requests(&self, id: &str, pending: bool) -> Result<Vec<Value>> {

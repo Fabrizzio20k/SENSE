@@ -59,6 +59,66 @@ async fn start_contract_and_exclusive_sandbox() {
     );
 }
 #[tokio::test]
+async fn completed_repetitions_are_locked_by_api_and_replacement_is_explicit() {
+    let h = ApiHarness::new();
+    let path = h.app.get_service().unwrap().path.clone();
+    let log = ExperimentLog::reader(&path).unwrap();
+    let completed = json!({"run_id":"completed","guided":true,"mode":"C","scenario_id":"S2","repetition":2,"start_time":utc_now(),"finish_reason":"MAX_RUN_DURATION","elapsed_s":1800});
+    log.begin(&completed).unwrap();
+    log.finish("completed", "COMPLETED", Some(&completed))
+        .unwrap();
+    let mut start = json!({"mode":"C","guided":true,"scenario_id":"S2","repetition":2,"initial_observation":initial()});
+    assert_eq!(
+        h.request("POST", "/api/experiments/start", start.clone())
+            .await
+            .0,
+        409
+    );
+    assert_eq!(
+        h.request(
+            "POST",
+            "/api/experiments/completed/observer-requests",
+            json!({})
+        )
+        .await
+        .0,
+        409
+    );
+    let (_, history, _) = h.request("GET", "/api/experiments", Value::Null).await;
+    assert_eq!(history["completed_repetitions"][0]["run_id"], "completed");
+    start["replaces_run_id"] = json!("stale");
+    assert_eq!(
+        h.request("POST", "/api/experiments/start", start.clone())
+            .await
+            .0,
+        409
+    );
+    start["replaces_run_id"] = json!("completed");
+    let (status, body, _) = h.request("POST", "/api/experiments/start", start).await;
+    assert_eq!(status, 202, "{body}");
+    let id = text(&body["run_id"]);
+    assert_ne!(id, "completed");
+    assert_eq!(
+        log.run(id).unwrap().unwrap()["replaces_run_id"],
+        "completed"
+    );
+    h.request("POST", "/api/experiments/stop", json!({})).await;
+    assert_eq!(
+        log.completed_repetitions().unwrap()[0]["run_id"],
+        "completed"
+    );
+    assert_eq!(
+        h.request(
+            "GET",
+            "/api/experiments/completed/export?format=csv",
+            Value::Null
+        )
+        .await
+        .0,
+        200
+    );
+}
+#[tokio::test]
 async fn invalid_inputs_do_not_start() {
     let h = ApiHarness::new();
     for body in [

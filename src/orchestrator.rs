@@ -165,6 +165,10 @@ impl SenseOrchestrator {
         if let Some(r) = reason {
             return Err(format!("No se puede iniciar: {r}").into());
         }
+        let mut repetition = experiment.clone();
+        repetition["mode"] = json!(mode);
+        repetition["scenario_id"] = json!(scenario);
+        self.log.validate_repetition_start(&repetition)?;
         self.context = ContextStore::new(self.config.clone());
         self.policy = PolicyEngine::new(self.config.clone(), mode, now);
         self.run = self.metadata.clone();
@@ -177,6 +181,7 @@ impl SenseOrchestrator {
             .unwrap()
             .extend(values.as_object().unwrap().clone());
         self.run["camera_rotation_degrees"] = json!(rotation);
+        self.run["replaces_run_id"] = experiment["replaces_run_id"].clone();
         self.started = now;
         self.health = HealthMonitor::new(now, self.config.clone());
         self.faults = FaultInjector::new(now);
@@ -1196,7 +1201,7 @@ impl SenseOrchestrator {
         }
         let id = text(&self.run["run_id"]);
         Ok(
-            json!({"running":self.running(),"run":run,"fsm":self.fsm,"cycle":self.cycle,"observation_region":self.config["regions"]["camera_region"],"component_health":if has{self.health.components.clone()}else{json!({})},"fault_control":if has&&self.run["mode"]=="F"{self.faults.view()}else{Value::Null},"raw_presence":raw,"elapsed_s":if self.running(){(now-self.started).min(number(&self.run["duration_seconds"]))}else{number(&self.run["elapsed_s"])},"observer_requests":if has{self.log.observer_requests(id,true)?}else{vec![]},"observer_previous":if has{self.log.observer_previous(id)?}else{json!({})},"quality":if has{self.log.quality(id)?}else{Value::Null},"transitions":self.transitions,"context":context,"answers":self.answers,"needs":if has{self.policy.needs.as_object().unwrap().values().cloned().collect::<Vec<_>>()}else{vec![]},"tasks":self.tasks.view(now),"interpretations":self.interpretations,"decisions":self.decisions,"errors":self.errors,"resources":self.resources,"enabled_modes":self.config["enabled_modes"],"config_version":self.config["config_version"],"questions":self.answers.as_object().unwrap().iter().map(|(k,v)|(k.clone(),v["question"].clone())).collect::<serde_json::Map<_,_>>(),"reactive_trigger":if has&&self.run["mode"]=="B"{self.policy.reactive_view(&context)}else{Value::Null},"presence_control":if has&&["B","C","D","E","F"].contains(&text(&self.run["mode"])){json!({"mode":if self.manual_presence.is_some(){"MANUAL"}else{"AUTO"},"detected":self.manual_presence,"near":self.manual_near})}else{Value::Null}}),
+            json!({"running":self.running(),"run":run,"completed_repetitions":self.log.completed_repetitions()?,"fsm":self.fsm,"cycle":self.cycle,"observation_region":self.config["regions"]["camera_region"],"component_health":if has{self.health.components.clone()}else{json!({})},"fault_control":if has&&self.run["mode"]=="F"{self.faults.view()}else{Value::Null},"raw_presence":raw,"elapsed_s":if self.running(){(now-self.started).min(number(&self.run["duration_seconds"]))}else{number(&self.run["elapsed_s"])},"observer_requests":if has{self.log.observer_requests(id,true)?}else{vec![]},"observer_previous":if has{self.log.observer_previous(id)?}else{json!({})},"quality":if has{self.log.quality(id)?}else{Value::Null},"transitions":self.transitions,"context":context,"answers":self.answers,"needs":if has{self.policy.needs.as_object().unwrap().values().cloned().collect::<Vec<_>>()}else{vec![]},"tasks":self.tasks.view(now),"interpretations":self.interpretations,"decisions":self.decisions,"errors":self.errors,"resources":self.resources,"enabled_modes":self.config["enabled_modes"],"config_version":self.config["config_version"],"questions":self.answers.as_object().unwrap().iter().map(|(k,v)|(k.clone(),v["question"].clone())).collect::<serde_json::Map<_,_>>(),"reactive_trigger":if has&&self.run["mode"]=="B"{self.policy.reactive_view(&context)}else{Value::Null},"presence_control":if has&&["B","C","D","E","F"].contains(&text(&self.run["mode"])){json!({"mode":if self.manual_presence.is_some(){"MANUAL"}else{"AUTO"},"detected":self.manual_presence,"near":self.manual_near})}else{Value::Null}}),
         )
     }
 }

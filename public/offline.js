@@ -45,12 +45,21 @@
     return trace;
   }
   const example=demo();runs.set(example.run.run_id,example);
+  function completedRepetitions(){
+    const latest=new Map();
+    for(const trace of runs.values()){
+      const r=trace.run;
+      if(r.guided&&r.status==='COMPLETED'&&r.finish_reason==='MAX_RUN_DURATION'&&r.elapsed_s>=1800&&!trace.requests.some(q=>q.status==='PENDING'))latest.set([r.scenario_id,r.mode,r.repetition].join(':'),{run_id:r.run_id,scenario_id:r.scenario_id,mode:r.mode,repetition:r.repetition});
+    }
+    return [...latest.values()];
+  }
   function recordRequest(reason,fields){
     const request={request_id:id(),run_id:current.run.run_id,requested_at:iso(current.run.start_time,current.elapsed),reason,fields,status:'PENDING'};current.requests.push(request);event(current,current.elapsed,'OBSERVER_REQUESTED',request);return request;
   }
   function begin(body={},elapsed=0){
     const start=new Date(Date.now()-elapsed*1000).toISOString();
     current={run:{camera_rotation_degrees:cameraRotation,run_id:id(),mode:body.mode||'C',policy_mode:body.mode==='F'?'E':body.mode||'C',guided:!!body.guided,scenario_id:body.scenario_id||'S2',repetition:body.repetition||1,status:'RUNNING',start_time:start,duration_seconds:1800,observation_region:'rasp_shared_view',simulated:true,data_origin:'offline-demo',config,...Object.fromEntries(['observer','instrument','equipment'].map(key=>[key,body.initial_observation?.[key]||({observer:'Ana · demo',instrument:'Vatímetro · demo',equipment:'Raspberry Pi, todos los sensores y cámara'})[key]]))},elapsed,samples:[],events:[],records:[],requests:[],manual:{mode:'AUTO',detected:null},disabled:[],faults:[],timeouts:{},previous:{power_w:9,visible_people:0}};
+    if(body.replaces_run_id)current.run.replaces_run_id=body.replaces_run_id;
     event(current,0,'RUN_STARTED',copy(current.run));for(let second=0;second<=Math.min(1799,elapsed);second++)current.samples.push(sample(start,second));
     event(current,elapsed,'RESULT_PUBLISHED',{answers:answers(sample(start,elapsed),start)});
     if(body.initial_observation)current.records.push({...copy(body.initial_observation),record_id:id(),run_id:current.run.run_id,kind:'OBSERVER_RECORD',recorded_at:new Date().toISOString()});
@@ -64,12 +73,12 @@
   }
   function quality(trace){const missing=Math.max(0,(trace.run.expected_samples||trace.samples.length)-trace.samples.length),unavailable=trace.records.filter(r=>r.unavailable_fields?.length).length,pending=trace.requests.filter(r=>r.status==='PENDING').length;return {samples:trace.samples.length,missing_samples:missing,unavailable_observations:unavailable,pending_observations:pending,record_complete:trace.run.status==='COMPLETED'&&!missing&&!unavailable&&!pending,task_failures:0,task_timeouts:0,sensor_incomplete_samples:0};}
   function measurement(){
-    if(!current)return {running:false,enabled_modes:[...'ABCDEF'],observation_region:'rasp_shared_view',observer_requests:[]};
+    if(!current)return {running:false,enabled_modes:[...'ABCDEF'],observation_region:'rasp_shared_view',observer_requests:[],completed_repetitions:completedRepetitions()};
     const s=sample(current.run.start_time,current.elapsed),missing=scene==='missing';
     const observations={};
     for(const [key,field,unit] of [['temperature','temperature_c','°C'],['humidity','humidity_pct','%RH'],['aqi','aqi','ENS160 AQI'],['eco2','eco2_ppm_equiv','ppm equivalent'],['presence','presence','presence'],['count','visible_count','visible_people']])observations[key]={value:missing&&key==='temperature'?null:key==='presence'&&current.manual.mode==='MANUAL'?Number(current.manual.detected):s[field],unit,status:missing&&key==='temperature'?'UNAVAILABLE':'VALID',captured_at:s[key+'_observed_at'],age_seconds:s[key+'_age_s'],region:'rasp_shared_view',metadata:key==='presence'?{state_code:s.presence?2:0,trigger_distance_cm:s.presence?25:150,trigger_distance_source:'static_distance_cm'}:{}};
     const health=copy(s.component_health);for(const component of current.disabled)health[component]={status:'FAILED'};
-    return {running:current.run.status==='RUNNING',run:copy(current.run),enabled_modes:[...'ABCDEF'],elapsed_s:current.elapsed,fsm:s.fsm_state,cycle:{actions:['ACQUIRE','ASSESS',s.fsm_state]},observation_region:'rasp_shared_view',context:{observations},answers:answers(s,current.run.start_time),interpretations:['D','E','F'].includes(current.run.mode)?[interpretation(25)]:[],resources:{cpu_total_percent:s.cpu_percent,ram_used_mb:s.ram_used_mb,temperature_c:s.pi_temp_c,main:{rss_mb:650}},component_health:health,presence_control:copy(current.manual),raw_presence:observations.presence,reactive_trigger:{state:s.presence?'NEAR':'FAR',enter_below_cm:30,exit_at_or_above_cm:50,required_samples:3,confirmed_samples:3},fault_control:{disabled:current.disabled,timeouts:current.timeouts,faults:current.faults},observer_requests:copy(current.requests.filter(r=>r.status==='PENDING')),observer_previous:copy(current.previous),quality:quality(current),tasks:{active:[],queued:0,counters:{}},transitions:current.events.filter(e=>e.type==='FSM_TRANSITION').slice(-20).map(e=>({...e.payload,timestamp:e.timestamp})),decisions:[{kind:'VISION',reason:'DEMO_ONLY'}]};
+    return {completed_repetitions:completedRepetitions(),running:current.run.status==='RUNNING',run:copy(current.run),enabled_modes:[...'ABCDEF'],elapsed_s:current.elapsed,fsm:s.fsm_state,cycle:{actions:['ACQUIRE','ASSESS',s.fsm_state]},observation_region:'rasp_shared_view',context:{observations},answers:answers(s,current.run.start_time),interpretations:['D','E','F'].includes(current.run.mode)?[interpretation(25)]:[],resources:{cpu_total_percent:s.cpu_percent,ram_used_mb:s.ram_used_mb,temperature_c:s.pi_temp_c,main:{rss_mb:650}},component_health:health,presence_control:copy(current.manual),raw_presence:observations.presence,reactive_trigger:{state:s.presence?'NEAR':'FAR',enter_below_cm:30,exit_at_or_above_cm:50,required_samples:3,confirmed_samples:3},fault_control:{disabled:current.disabled,timeouts:current.timeouts,faults:current.faults},observer_requests:copy(current.requests.filter(r=>r.status==='PENDING')),observer_previous:copy(current.previous),quality:quality(current),tasks:{active:[],queued:0,counters:{}},transitions:current.events.filter(e=>e.type==='FSM_TRANSITION').slice(-20).map(e=>({...e.payload,timestamp:e.timestamp})),decisions:[{kind:'VISION',reason:'DEMO_ONLY'}]};
   }
   function snapshot(){const m=measurement(),s=current?sample(current.run.start_time,current.elapsed):sample(new Date().toISOString(),0);return {camera_rotation_degrees:cameraRotation,phases:copy(phases),system:{cpu_percent:s.cpu_percent,memory_percent:42,memory_used_mb:s.ram_used_mb},telemetry:{schema:'rustio.iot.telemetry.v1',timestamp:new Date().toISOString(),environment:{sht40:{temperature_c:s.temperature_c,humidity_percent:s.humidity_pct},ens160:{aqi:s.aqi,eco2_ppm:s.eco2_ppm_equiv}},presence:{state:s.presence?'Presencia · demo':'Sin presencia · demo',total_distance_cm:s.presence?25:150}},sandbox:{ready:Object.values(phases).every(p=>p.status==='ready'),busy:Object.values(sandboxTasks).some(t=>t.status==='loading')},tasks:copy(sandboxTasks),measurement:m};}
   function emit(){for(const listener of listeners)listener(snapshot());}
@@ -104,8 +113,15 @@
       }
       return response({rotation_degrees:cameraRotation,simulated:true});
     }
-    if(path==='/api/experiments'&&method==='GET')return response({runs:[...runs.values()].reverse().map(t=>({...t.run,quality:quality(t)}))});
-    if(path==='/api/experiments/start'){if(current?.run.status==='RUNNING')return response({error:'La demo ya tiene una ejecución activa.'},409);begin(body);emit();return response({run_id:current.run.run_id},202);}
+    if(path==='/api/experiments'&&method==='GET')return response({runs:[...runs.values()].reverse().map(t=>({...t.run,quality:quality(t)})),completed_repetitions:completedRepetitions()});
+    if(path==='/api/experiments/start'){
+      if(current?.run.status==='RUNNING')return response({error:'La demo ya tiene una ejecución activa.'},409);
+      if(body.guided){
+        const done=completedRepetitions().find(r=>['scenario_id','mode','repetition'].every(key=>r[key]===body[key]));
+        if(done?body.replaces_run_id!==done.run_id:body.replaces_run_id!=null)return response({error:'Repetición bloqueada. Usa Volver a medir sobre el resultado vigente.'},409);
+      }
+      begin(body);emit();return response({run_id:current.run.run_id},202);
+    }
     if(path==='/api/experiments/stop'){stop();emit();return response({ok:true},202);}
     if(path==='/api/experiments/query'){if(current){event(current,current.elapsed,'QUESTION_REQUESTED',body);if(current.run.guided)recordRequest('VISION_TASK_STARTED',['power_w','visible_people']);}emit();return response({ok:true},202);}
     if(path==='/api/experiments/presence'){if(current)current.manual={mode:body.mode==='auto'?'AUTO':'MANUAL',detected:body.mode==='auto'?null:body.detected,near:body.near};emit();return response({ok:true},202);}
@@ -130,6 +146,7 @@
         const lines=[{type:'RUN',payload:trace.run},...trace.events,...trace.records.map(r=>({type:r.kind,payload:r})),...trace.samples.map(s=>({type:'SAMPLE_1S',payload:s}))];return new Response(lines.map(r=>JSON.stringify(r)).join('\n'),{headers:{'Content-Type':'application/x-ndjson'}});
       }
       if(action==='observer-requests'&&method==='POST'){
+        if(completedRepetitions().some(r=>r.run_id===trace.run.run_id))return response({error:'Repetición bloqueada. Usa Volver a medir.'},409);
         if(trace!==current)return response({error:'Abre una escena activa para registrar eventos.'},400);
         recordRequest('OBSERVER_EVENT',['power_w','visible_people','action']);emit();return response({observer_requests:pending()},201);
       }
@@ -137,9 +154,9 @@
         const requested=pending().find(r=>r.request_id===decodeURIComponent(action.split('/')[1]));if(!requested)return response({error:'Solicitud ya resuelta.'},400);
         const record={...copy(body),kind:'OBSERVER_RECORD',record_id:id(),run_id:trace.run.run_id,request_id:requested.request_id,reason:requested.reason,event_at:requested.requested_at,recorded_at:iso(trace.run.start_time,trace.elapsed||0)};trace.records.push(record);requested.status='RESOLVED';requested.record_id=record.record_id;
         trace.previous??={};for(const key of ['power_w','visible_people'])if(requested.fields.includes(key)&&record[key]!=null)trace.previous[key]=record[key];
-        return response({record_id:record.record_id,observer_requests:pending(),observer_previous:trace.previous,quality:quality(trace)},201);
+        return response({record_id:record.record_id,observer_requests:pending(),observer_previous:trace.previous,quality:quality(trace),completed_repetitions:completedRepetitions()},201);
       }
-      if(!action)return response({run:trace.run,events:trace.events,observer_requests:pending(),observer_previous:trace.previous||{power_w:9,visible_people:0},quality:quality(trace)});
+      if(!action)return response({run:trace.run,events:trace.events,observer_requests:pending(),observer_previous:trace.previous||{power_w:9,visible_people:0},quality:quality(trace),completed_repetitions:completedRepetitions()});
     }
     return response({error:'Ruta no simulada; no se enviaron datos al backend.'},404);
   }

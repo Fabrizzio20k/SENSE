@@ -8,6 +8,21 @@
   const connectedEquipment='Raspberry Pi, todos los sensores y cámara';
   let observationRegion='rasp_shared_view', previous={}, repeated=new Set();
   const drafts=new Map();
+  let completed=[], replacing=null;
+  const exportAttempts=new Set();
+  const completedFor=(mode=byId('experiment-mode').value,repetition=Number(byId('experiment-repetition').value))=>completed.find(r=>r.scenario_id===byId('experiment-scenario').value&&r.mode===mode&&r.repetition===repetition);
+  async function autoDownload(runId){
+    if(!runId||!completed.some(r=>r.run_id===runId)||exportAttempts.has(runId))return;
+    if(current.run?.run_id===runId&&(current.running||current.reserved||current.tasks?.active?.length||current.tasks?.queued))return;
+    exportAttempts.add(runId);
+    try{if(window.localStorage?.getItem('sense-export-'+runId))return;}catch{}
+    text('experiment-download-note','Preparando descarga automática del ZIP…');
+    try{
+      await window.senseAPI.downloadRun(runId);
+      try{window.localStorage?.setItem('sense-export-'+runId,'requested');}catch{}
+      text('experiment-download-note','Descarga del ZIP solicitada. Si el navegador la bloqueó, usa Descargar ZIP.');
+    }catch(error){text('experiment-download-note',error.message);}
+  }
   const draftIds=['name','instrument','power','people','action','power-time','people-time','notes','missing'];
   const draftKey=()=>setupMode?['setup',setupMode,byId('experiment-scenario').value,byId('experiment-repetition').value].join(':'):selectedRequest?.request_id;
   const fieldIds={power_w:'power',visible_people:'people',action:'action'};
@@ -25,11 +40,19 @@
   }
   function controls(){
     const locked=!!(current.running||current.reserved||starting||saving);
-    byId('experiment-start').disabled=locked||!connected||!ready||busy||!!requests.length;
+    const done=completedFor();
+    byId('experiment-start').disabled=locked||!connected||!ready||busy||!!requests.length||!!done;
     for(const id of ['experiment-scenario','experiment-mode','experiment-repetition'])byId(id).disabled=locked;
     text('experiment-start-note',!connected?'Sin conexión. SENSE sigue registrando en el backend.':current.running?'Medición activa. Cierre automático al completar 30 minutos.':current.reserved?'Esperando a los workers.':requests.length?'Completa las observaciones pendientes.':!ready?'Esperando a que termine la preparación.':busy?'Espera a que termine el sandbox.':'Registra las condiciones iniciales para comenzar.');
+    for(const option of byId('experiment-repetition').options)option.textContent='Repetición '+option.value+(completedFor(undefined,Number(option.value))?' · Completada 🔒':'');
+    byId('experiment-completed').hidden=!done;
+    byId('experiment-remeasure').disabled=locked||!connected||!ready||busy||!!requests.length;
+    if(done){
+      if(!locked&&!requests.length)text('experiment-start-note','Completada y bloqueada. Usa Volver a medir para reemplazar el resultado vigente.');
+      window.senseAPI.setExportLink(byId('experiment-completed-export'),done.run_id);
+    }
     byId('measurement-observe').disabled=!connected||!requests.length||saving;
-    byId('measurement-add-observation').disabled=!connected||!current.run||saving;
+    byId('measurement-add-observation').disabled=!connected||!current.run||saving||completed.some(r=>r.run_id===current.run.run_id);
     text('observer-pending-count',setupMode?'':requests.length+' pendientes');
     text('observer-pending-toggle','Pendientes · '+requests.length);
     byId('observer-pending-toggle').hidden=!requests.length;
@@ -100,7 +123,7 @@
     const label=reasons[reason]||(reason.endsWith('_TASK_FAILED')?'Falló '+(reason.startsWith('VISION')?'YOLO':'Gemma'):reason.endsWith('_TASK_TIMEOUT')?'Tiempo de espera agotado · '+(reason.startsWith('VISION')?'YOLO':'Gemma'):reason.startsWith('PERIODIC_W:')?'Lectura periódica común A–F · '+clock(Number(reason.split(':')[1])):reason.startsWith('SCENARIO_CHECKPOINT:')?'Cambio del guion · '+clock(Number(reason.split(':')[1])):'Evento del sistema: '+reason);
     text('observer-title',setup?'Comenzar · '+byId('experiment-scenario').value+' · '+setupMode:label);
     text('observer-event-time',setup?'El cronómetro comienza al guardar.':'Evento · '+new Date(selectedRequest.requested_at).toLocaleString());
-    text('observer-description',setup?'Registra W y personas iniciales.':'Completa solo lo que observaste. Si no lo viste, marca No observado.');
+    text('observer-description',setup?(replacing?'Volverás a medir esta repetición. El resultado anterior seguirá vigente hasta completar los 30 minutos y resolver las observaciones de este intento.':'Registra W y personas iniciales.'):'Completa solo lo que observaste. Si no lo viste, marca No observado.');
     text('observer-save',setup?'Guardar y comenzar 30 min':'Guardar observación');
     text('observer-later',setup?'Cancelar':'Dejar pendiente');
     missingFields();
@@ -110,10 +133,13 @@
     if(!requests.length)return;
     setupMode=null;selectedRequest=requests[0];openForm();
   }
-  function begin(mode){
+  function begin(mode,replaces=null){
     if(!connected||!ready||busy||current.running||current.reserved||starting)return;
     if(requests.length){openPending();return;}
-    byId('experiment-mode').value=mode;showTab();setupMode=mode;selectedRequest=null;reviewRun=null;openForm();
+    byId('experiment-mode').value=mode;
+    const done=completedFor();
+    if(done&&done.run_id!==replaces){controls();return;}
+    replacing=replaces;showTab();setupMode=mode;selectedRequest=null;reviewRun=null;openForm();
   }
   for(const id of Object.values(fieldIds))byId('observer-'+id+'-unavailable').onchange=missingFields;
   for(const [field,id] of Object.entries(fieldIds))if(id!=='action'){
@@ -127,7 +153,7 @@
   function closeForm(){
     if(saving)return;
     saveDraft();
-    setupMode=null;selectedRequest=null;dialog.close();controls();
+    setupMode=null;selectedRequest=null;replacing=null;dialog.close();controls();
   }
   dialog.addEventListener('cancel',event=>{event.preventDefault();closeForm();});
   byId('observer-later').onclick=closeForm;
@@ -149,11 +175,14 @@
       if(setupMode){
         for(const [key,id] of [['observer','observer-name'],['instrument','observer-instrument']])payload[key]=byId(id).value.trim();
         payload.equipment=connectedEquipment;
-        const started=await post('/api/experiments/start',{mode:setupMode,guided:true,scenario_id:byId('experiment-scenario').value,repetition:Number(byId('experiment-repetition').value),initial_observation:payload});
-        drafts.delete(draftKey());starting=current.run?.run_id!==started.run_id;setupMode=null;showTab();
+        const started=await post('/api/experiments/start',{mode:setupMode,guided:true,scenario_id:byId('experiment-scenario').value,repetition:Number(byId('experiment-repetition').value),initial_observation:payload,...(replacing?{replaces_run_id:replacing}:{})});
+        drafts.delete(draftKey());starting=current.run?.run_id!==started.run_id;setupMode=null;replacing=null;showTab();
       }else{
         const runId=reviewRun?.run_id||current.run.run_id;
         const data=await post('/api/experiments/'+encodeURIComponent(runId)+'/observer-requests/'+encodeURIComponent(selectedRequest.request_id),payload);
+        completed=data.completed_repetitions||completed;
+        current.completed_repetitions=completed;
+        autoDownload(runId);
         drafts.delete(selectedRequest.request_id);previous=data.observer_previous||previous;
         resolved.add(selectedRequest.request_id);requests=data.observer_requests.filter(r=>!resolved.has(r.request_id));
         if(!reviewRun){current.observer_requests=requests;current.observer_previous=previous;current.quality=data.quality;}
@@ -167,6 +196,11 @@
     finally{saving=false;byId('observer-save').disabled=false;byId('observer-later').disabled=false;controls();}
   };
   byId('experiment-start').onclick=()=>begin(byId('experiment-mode').value);
+  byId('experiment-remeasure').onclick=()=>{
+    if(byId('experiment-remeasure').disabled)return;
+    const done=completedFor();if(done)begin(done.mode,done.run_id);
+  };
+  for(const id of ['experiment-scenario','experiment-mode','experiment-repetition'])byId(id).addEventListener('change',controls);
   byId('measurement-observe').onclick=openPending;
   byId('observer-pending-toggle').onclick=openPending;
   byId('measurement-go-experiment').onclick=showTab;
@@ -185,11 +219,12 @@
     },
     connection(value){connected=value;controls();if(!value)text('measurement-clock-note','Sin conexión: última duración recibida. El backend controla el cierre.');},
     async review(runId){
-      try{const response=await window.senseAPI.fetch('/api/experiments/'+encodeURIComponent(runId));const data=await response.json();if(!response.ok)throw new Error(data.error);reviewRun=data.run;previous=data.observer_previous||{};requests=data.observer_requests.filter(r=>!resolved.has(r.request_id));renderPending();if(requests.length)openPending();else text('measurement-error','Esta ejecución no tiene observaciones pendientes.');controls();}
+      try{const response=await window.senseAPI.fetch('/api/experiments/'+encodeURIComponent(runId));const data=await response.json();if(!response.ok)throw new Error(data.error);completed=data.completed_repetitions||completed;reviewRun=data.run;previous=data.observer_previous||{};requests=data.observer_requests.filter(r=>!resolved.has(r.request_id));renderPending();if(requests.length)openPending();else text('measurement-error','Esta ejecución no tiene observaciones pendientes.');controls();}
       catch(error){text('measurement-error',error.message);}
     },
     render(data,isReady,sandboxBusy){
       current=data||{};connected=true;ready=isReady;busy=sandboxBusy;
+      completed=current.completed_repetitions||[];
       for(const option of byId('experiment-mode').options)option.disabled=!!current.enabled_modes&&!current.enabled_modes.includes(option.value);
       if(current.run?.run_id!==lastRun){
         lastRun=current.run?.run_id||'';starting=false;
@@ -217,6 +252,7 @@
       text('measurement-quality',q?`${q.samples} muestras · ${q.missing_samples} segundos sin muestra · ${q.unavailable_observations} registros con datos no observados · ${q.task_failures||0} fallos · ${q.task_timeouts||0} timeouts · ${q.sensor_incomplete_samples||0} muestras con sensores incompletos. ${!current.running?(q.record_complete?'Traza completa.':'Registro con pendientes o datos faltantes.'):'Cobertura provisional.'}`:'El registro mostrará su cobertura y datos faltantes.');
       byId('experimentation').classList.toggle('is-running',!!current.run?.guided&&!!current.running);
       controls();
+      autoDownload(current.run?.run_id);
     }
   };
 })();

@@ -665,7 +665,10 @@ fn api_request(
     if method == Method::GET && path == "/api/experiments" {
         let service = app.get_service()?;
         let log = ExperimentLog::reader(&service.path)?;
-        return Ok(response(200, json!({"runs":log.runs()?})));
+        return Ok(response(
+            200,
+            json!({"runs":log.runs()?,"completed_repetitions":log.completed_repetitions()?}),
+        ));
     }
     let parts: Vec<_> = path.trim_matches('/').split('/').collect();
     if parts.len() < 3 || parts[0] != "api" || parts[1] != "experiments" {
@@ -687,7 +690,7 @@ fn api_request(
         };
         return Ok(response(
             200,
-            json!({"run":run,"events":log.events(id,after,200)?,"observer_requests":log.observer_requests(id,true)?,"observer_previous":log.observer_previous(id)?,"quality":log.quality(id)?}),
+            json!({"run":run,"events":log.events(id,after,200)?,"observer_requests":log.observer_requests(id,true)?,"observer_previous":log.observer_previous(id)?,"quality":log.quality(id)?,"completed_repetitions":log.completed_repetitions()?}),
         ));
     }
     if method == Method::GET && parts.len() == 4 && parts[3] == "export" {
@@ -710,14 +713,16 @@ fn api_request(
         ));
     }
     if method == Method::POST && parts.len() == 4 && parts[3] == "observer-requests" {
-        log.request_observer(
+        if let Err(e) = log.request_observer(
             id,
             "OBSERVER_EVENT",
             &["power_w", "visible_people", "action"],
             None,
             None,
             None,
-        )?;
+        ) {
+            return Ok(error(409, e));
+        }
         return Ok(response(
             201,
             json!({"observer_requests":log.observer_requests(id,true)?}),
@@ -730,7 +735,7 @@ fn api_request(
         return Ok(match log.resolve_observer(id, parts[4], &body) {
             Ok(record) => response(
                 201,
-                json!({"record_id":record,"observer_requests":log.observer_requests(id,true)?,"observer_previous":log.observer_previous(id)?,"quality":log.quality(id)?}),
+                json!({"record_id":record,"observer_requests":log.observer_requests(id,true)?,"observer_previous":log.observer_previous(id)?,"quality":log.quality(id)?,"completed_repetitions":log.completed_repetitions()?}),
             ),
             Err(e) => error(400, e),
         });

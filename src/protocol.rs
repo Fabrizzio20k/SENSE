@@ -79,6 +79,13 @@ pub fn validate_observation(p: &Value, fields: &[String]) -> Result<()> {
     Ok(())
 }
 pub fn validate_guided_start(p: &Value) -> Result<()> {
+    if let Some(id) = p.get("replaces_run_id")
+        && (!truth(&p["guided"]) || id.as_str().is_none_or(|s| s.is_empty() || s.len() > 100))
+    {
+        return Err(
+            "replaces_run_id requiere una ejecución guiada y un identificador válido.".into(),
+        );
+    }
     if p.get("guided").is_some_and(|v| !v.is_boolean()) {
         return Err("guided debe ser booleano.".into());
     }

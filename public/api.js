@@ -11,14 +11,19 @@
       return ()=>stream.close();
     },
     captureURL:()=>offline?window.senseOffline.captureURL:'/api/capture?t='+Date.now(),
+    async downloadRun(runId,format='csv'){
+      const response=await api.fetch('/api/experiments/'+encodeURIComponent(runId)+'/export'+(format==='csv'?'?format=csv':''));
+      if(!response.ok)throw new Error('No se pudo descargar. Usa Descargar ZIP para reintentar.');
+      const blob=await response.blob(),href=URL.createObjectURL(blob),anchor=document.createElement('a');
+      anchor.href=href;anchor.download='sense-'+(offline?'demo-':'')+runId+(format==='csv'?'.zip':'.ndjson');
+      try{anchor.click();}finally{setTimeout(()=>URL.revokeObjectURL(href),60000);}
+    },
     setExportLink(link,runId,format='csv'){
       const url='/api/experiments/'+encodeURIComponent(runId)+'/export'+(format==='csv'?'?format=csv':'');
       link.href=offline?'#':url;
       link.onclick=offline?async event=>{
         event.preventDefault();
-        const response=await api.fetch(url),blob=await response.blob(),href=URL.createObjectURL(blob),anchor=document.createElement('a');
-        anchor.href=href;anchor.download='sense-demo-'+runId+(format==='csv'?'.zip':'.ndjson');
-        anchor.click();setTimeout(()=>URL.revokeObjectURL(href),1000);
+        try{await api.downloadRun(runId,format);}catch(error){window.alert(error.message);}
       }:null;
     }
   };

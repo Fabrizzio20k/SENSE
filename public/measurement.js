@@ -273,9 +273,12 @@
   async function history(){
     try{
       const response=await window.senseAPI.fetch('/api/experiments');if(!response.ok)throw new Error('No se pudo cargar el historial.');
-      const {runs}=await response.json();
+      const {runs,completed_repetitions=[]}=await response.json();
       byId('measurement-history').replaceChildren(...runs.map(run=>{
-        const row=make('tr');for(const value of [new Date(run.start_time).toLocaleString(),run.mode,runStatuses[run.status]||run.status])row.append(make('td',value));
+        const official=completed_repetitions.find(r=>['scenario_id','mode','repetition'].every(key=>r[key]===run[key]));
+        const result=official?.run_id===run.run_id?' · Vigente':official&&run.finish_reason==='MAX_RUN_DURATION'&&!run.quality?.pending_observations?' · Anterior':'';
+        const label=run.guided?run.scenario_id+' · '+run.mode+' · Repetición '+run.repetition:run.mode;
+        const row=make('tr');for(const value of [new Date(run.start_time).toLocaleString(),label,(runStatuses[run.status]||run.status)+result])row.append(make('td',value));
         const cell=make('td'),link=make('a','CSV · ZIP'),raw=make('a','NDJSON'),observe=make('button','Completar observaciones');
         window.senseAPI.setExportLink(link,run.run_id);window.senseAPI.setExportLink(raw,run.run_id,'ndjson');
         observe.hidden=!run.quality?.pending_observations;observe.onclick=()=>window.experimentation?.review(run.run_id);

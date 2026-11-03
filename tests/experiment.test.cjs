@@ -3,8 +3,8 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 
-function fixture(respond=()=>({})){
-  const elements=new Map(),calls=[];
+function fixture(respond=()=>({}),storage=new Map()){
+  const elements=new Map(),calls=[],downloads=[];
   class Element{
     constructor(id=''){this.id=id;this.children=[];this.dataset={};this.attributes={};this.textContent='';this.value='';this.hidden=false;this.disabled=false;this.checked=false;this.open=false;this.listeners={};this.classList={toggle(){}};}
     append(...nodes){for(const node of nodes){if(node.parent)node.parent.children=node.parent.children.filter(n=>n!==node);node.parent=this;this.children.push(node);}}
@@ -21,14 +21,63 @@ function fixture(respond=()=>({})){
   const guides=['S1','S2','S3'].map(s=>Object.assign(new Element(),{dataset:{scenario:s}}));
   const tabs=['preparation','measurement','experimentation'].map(s=>Object.assign(new Element(),{dataset:{panel:s}}));
   const document={getElementById:get,createElement:()=>new Element(),querySelectorAll:s=>s==='.experiment-guide'?guides:s==='.tab'?tabs:s==='.panel'?['preparation','measurement','experimentation'].map(get):[]};
-  const context=vm.createContext({document,window:{location:{pathname:'/'}},console,fetch:async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>({run_id:'new-run',runs:[],...respond(url,options)})};}});
+  const context=vm.createContext({document,window:{location:{pathname:'/'},localStorage:{getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)}},console,fetch:async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>({run_id:'new-run',runs:[],...respond(url,options)})};}});
   for(const file of ['api.js','measurement.js','experiment.js'])vm.runInContext(fs.readFileSync('public/'+file,'utf8'),context);
+  context.window.senseAPI.downloadRun=async id=>{downloads.push(id);};
   get('experiment-scenario').value='S2';get('experiment-mode').value='C';get('experiment-repetition').value='2';
-  return {get,calls,guides,ui:context.window.measurement,experiment:context.window.experimentation};
+  return {get,calls,guides,downloads,storage,window:context.window,ui:context.window.measurement,experiment:context.window.experimentation};
 }
 const phases={yolo:{status:'ready'},text:{status:'ready'},vision:{status:'ready'}};
 const request={request_id:'request',requested_at:'2026-10-27T12:00:00Z',reason:'VISION_TASK_STARTED',task_id:'task',fields:['power_w','visible_people']};
 const run={run_id:'run',mode:'C',guided:true,scenario_id:'S2',repetition:2,status:'RUNNING',duration_seconds:1800};
+
+test('una repetición completada se bloquea, descarga una vez y solo Volver a medir autoriza reemplazarla',async()=>{
+  const f=fixture(),{get,ui,downloads,calls}=f;
+  const done={run_id:run.run_id,scenario_id:'S2',mode:'C',repetition:2};
+  const data={running:false,run:{...run,status:'COMPLETED',finish_reason:'MAX_RUN_DURATION'},observer_requests:[],completed_repetitions:[done]};
+  ui.render({...data,reserved:true},phases,false);assert.equal(downloads.length,0);
+  ui.render(data,phases,false);await Promise.resolve();
+  assert.deepEqual(downloads,['run']);
+  assert.equal(get('experiment-start').disabled,true);assert.equal(get('experiment-completed').hidden,false);
+  assert.equal(get('measurement-add-observation').disabled,true);
+  assert.equal(get('experiment-completed-export').href,'/api/experiments/run/export?format=csv');
+  get('experiment-start').onclick();assert.equal(get('observer-dialog').open,false);
+  get('experiment-repetition').value='3';get('experiment-repetition').listeners.change();
+  assert.equal(get('experiment-start').disabled,false);assert.equal(get('experiment-completed').hidden,true);
+  get('experiment-repetition').value='2';get('experiment-repetition').listeners.change();
+  get('experiment-remeasure').onclick();assert.equal(get('observer-dialog').open,true);
+  assert.match(get('observer-description').textContent,/anterior seguirá vigente/);
+  for(const [id,value] of [['observer-name','Ana'],['observer-instrument','V1'],['observer-power','2.9'],['observer-people','0']])get(id).value=value;
+  await get('observer-form').onsubmit({preventDefault(){}});
+  assert.equal(JSON.parse(calls[0].options.body).replaces_run_id,'run');
+  ui.render(data,phases,false);assert.equal(downloads.length,1);
+  const reloaded=fixture(undefined,f.storage);reloaded.ui.render(data,phases,false);
+  assert.equal(reloaded.downloads.length,0);assert.equal(reloaded.get('experiment-start').disabled,true);
+});
+
+test('una ejecución detenida antes de tiempo no se bloquea ni descarga automáticamente',()=>{
+  const {ui,get,downloads}=fixture();
+  ui.render({running:false,run:{...run,status:'COMPLETED',finish_reason:'USER_STOP'},observer_requests:[],completed_repetitions:[]},phases,false);
+  assert.equal(get('experiment-start').disabled,false);assert.equal(get('experiment-completed').hidden,true);assert.equal(downloads.length,0);
+});
+
+test('resolver la última observación bloquea y descarga también una ejecución histórica',async()=>{
+  const done={run_id:'old-run',scenario_id:'S2',mode:'C',repetition:2};
+  const f=fixture(url=>url.endsWith('/old-run')?{run:{...run,run_id:'old-run',status:'COMPLETED'},observer_requests:[request]}:{observer_requests:[],completed_repetitions:[done],quality:{}});
+  f.ui.render({running:false},phases,false);await f.experiment.review('old-run');
+  f.get('observer-power').value='2.9';f.get('observer-people').value='0';
+  await f.get('observer-form').onsubmit({preventDefault(){}});
+  assert.deepEqual(f.downloads,['old-run']);assert.equal(f.get('experiment-start').disabled,true);
+});
+
+test('una descarga fallida muestra cómo reintentar y no se repite con cada actualización',async()=>{
+  const f=fixture();let attempts=0;
+  f.window.senseAPI.downloadRun=async()=>{attempts++;throw new Error('Descarga fallida. Usa Descargar ZIP.');};
+  const data={run:{...run,status:'COMPLETED'},completed_repetitions:[{...run}]};
+  f.ui.render(data,phases,false);await new Promise(setImmediate);
+  assert.match(f.get('experiment-download-note').textContent,/Descarga fallida/);
+  assert.equal(f.storage.size,0);f.ui.render(data,phases,false);assert.equal(attempts,1);
+});
 
 test('cambios de presencia B–F se muestran como cambios del sensor, incluidos pendientes anteriores',()=>{
   for(const mode of ['B','C','D','E','F'])for(const reason of ['SENSOR_PRESENCE_CHANGED','MANUAL_PRESENCE_CHANGED']){
