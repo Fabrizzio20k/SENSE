@@ -12,9 +12,10 @@
   const eventNames = {TEMP_RISE:'Subida de temperatura',HUMIDITY_RISE:'Subida de humedad',AQI_WORSENED:'Empeoramiento del AQI ENS160',ECO2_THRESHOLD_CROSSED:'Cruce del umbral de eCO₂ estimado'};
   const scenarioSteps={
     S1:[['0–10 min','Aula vacía','Mantén el aula sin personas.'],['10–15 min','Entra una persona','Registra cuándo ingresó y se sentó.'],['15–30 min','Permanece sentada','Observa si se mantiene la evidencia sin tareas innecesarias.']],
-    S2:[['0–5 min','Aula vacía','Mantén el aula sin personas.'],['5–10 min','Entra una persona','Registra la entrada real.'],['10–15 min','Entran dos personas','Registra la entrada real de otras dos personas.'],['15–20 min','Permanecen tres','Observa sin provocar un nuevo cambio.'],['20–25 min','Salen dos personas','Registra cuándo salen.'],['25–30 min','Sale la última','Registra la salida real.']],
-    S3:[['0–10 min','Condición inicial','Dos personas presentes; observa el ambiente inicial.'],['10–20 min','Cambio de ventilación','Modifica la ventilación de forma segura y registra la acción.'],['20–30 min','Restaurar condición','Restablece la condición inicial y observa la evolución.']]
+    S2:[['0–30 min','Ocupación alta estable','Mantén el aula concurrida; registra solo cambios reales de ocupación.']],
+    S3:[['0–10 min','Condición inicial','Mantén una concurrencia comparable a S2 y observa el ambiente.'],['10–20 min','Cambio ambiental','Modifica la ventilación de forma segura y registra la acción real.'],['20–30 min','Restaurar condición','Restablece la condición inicial y observa la evolución.']]
   };
+  const scenarioStarts={S1:[0,600,900],S2:[0],S3:[0,600,1200]};
   const timeLabel = value => {const date=new Date(value);return value&&!Number.isNaN(date.getTime())?date.toLocaleTimeString():'—';};
   let current = {}, connected = false, pending = false, stopRequested = false, ready = false, sandboxBusy = false, historyKey = '', lastDetails = '', lastInterpretations = '', lastGuidance = '', flow = null, flowPulse = null, fallbackStage = null, selectedState = null, seenTransitionKey;
   const fallbackView={x:0,y:0,scale:1};
@@ -160,7 +161,7 @@
       toggle.onclick=()=>setPresence({mode:'manual',detected:!(current.run?.mode==='B'?current.presence_control?.near:current.presence_control?.detected)});
       control.append(mode,toggle);
     }
-    card.append(title,value,age,status); if(control)card.append(control);if(distance)card.append(distance);card.append(details); byId(['presence','count'].includes(key)?'measurement-presence-readings':'measurement-environment-readings').append(card); cards[key]={title,value,age,status,source,captured,info,details,control,distance};
+    card.append(title,value,age,status); if(control)card.append(control);if(distance)card.append(distance);card.append(details); byId(['presence','count'].includes(key)?'measurement-presence-readings':'measurement-environment-readings').append(card); cards[key]={card,title,value,age,status,source,captured,info,details,control,distance};
   }
   const modeSelect = byId('measurement-mode');
   for(const [mode,label] of Object.entries(modes)){const option=make('option',label);option.value=mode;modeSelect.append(option);}
@@ -291,7 +292,7 @@
   function renderGuidance(run,elapsed){
     const panel=byId('measurement-guidance'),steps=scenarioSteps[run?.scenario_id];panel.hidden=!run?.guided||!steps;
     if(panel.hidden)return;
-    const starts={S1:[0,600,900],S2:[0,300,600,900,1200,1500],S3:[0,600,1200]}[run.scenario_id];
+    const starts=scenarioStarts[run.scenario_id];
     const active=Math.max(0,starts.findLastIndex(second=>elapsed>=second));
     const stage=steps[active],next=steps[active+1];
     text('measurement-scenario-label',run.scenario_id+' · '+(run.repetition?'Repetición '+run.repetition:'Guion'));
@@ -412,7 +413,10 @@
       if(current.error)text('measurement-error',current.error);
       renderDetails(current);
       const blind=!!current.run?.guided&&(current.observer_requests||[]).some(r=>r.fields.includes('visible_people'));
-      cards.count.value.textContent=blind?'Observación pendiente':cards.count.value.textContent;
+      cards.count.value.textContent=blind?'Conteo en verificación':cards.count.value.textContent;
+      cards.count.status.textContent=blind?'Confirmación humana pendiente':cards.count.status.textContent;
+      cards.count.status.dataset.status=blind?'PENDING':cards.count.status.dataset.status;
+      cards.count.card.dataset.blinded=String(blind);
       if(answerNodes.Q2)answerNodes.Q2.article.hidden=blind||!current.answers?.Q2;
       window.experimentation?.render(current,ready,sandboxBusy);
       const nextHistory=(run?.run_id||'')+'/'+(run?.status||'');if(nextHistory!==historyKey){historyKey=nextHistory;if(byId('measurement-history-details').open)history();}

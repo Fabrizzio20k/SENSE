@@ -2,7 +2,7 @@ use crate::{Result, context::timestamp, contracts::*};
 use serde_json::{Value, json};
 pub const PROTOCOL_VERSION: &str = "sense-observer-1";
 pub fn checkpoints() -> Value {
-    json!({"S1":[600,900],"S2":[300,600,900,1200,1500],"S3":[600,1200]})
+    json!({"S1":[600,900],"S2":[],"S3":[]})
 }
 pub fn validate_observation(p: &Value, fields: &[String]) -> Result<()> {
     if !p.is_object() {

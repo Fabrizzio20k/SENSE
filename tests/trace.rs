@@ -63,7 +63,7 @@ fn full_1800_second_run_stops_without_browser_and_exports_csv() {
             .iter()
             .filter(|r| text(&r["reason"]).starts_with("SCENARIO_CHECKPOINT:"))
             .count(),
-        5
+        0
     );
     assert_eq!(requests.last().unwrap()["reason"], "RUN_FINAL");
     assert!(!truth(&q["record_complete"]));

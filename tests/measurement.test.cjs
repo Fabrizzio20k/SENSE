@@ -156,6 +156,21 @@ test('nueva evidencia cambia la respuesta sin consultar ni crear peticiones',()=
   assert.equal(calls.length,0);
 });
 
+test('el conteo permanece identificado durante una confirmación, sin revelar YOLO',()=>{
+  const {ui,get}=fixture();
+  const data={running:true,run:{mode:'C',guided:true,run_id:'run',status:'RUNNING'},observer_requests:[{fields:['visible_people']}],context:{observations:{count:{value:7,status:'VALID',age_seconds:1,region:'camera'}}},answers:{Q2:{question_id:'Q2',question:'Personas visibles',status:'RESOLVED',answer:7}}};
+  ui.render(data,phases,false);
+  const count=get('measurement-presence-readings').children[1];
+  assert.equal(count.children[1].textContent,'Conteo en verificación');
+  assert.equal(count.children[3].textContent,'Confirmación humana pendiente');
+  assert.equal(count.dataset.blinded,'true');
+  assert.equal(get('measurement-answers').children[0].hidden,true);
+  ui.render({...data,observer_requests:[]},phases,false);
+  assert.equal(count.children[1].textContent,'7');
+  assert.equal(count.dataset.blinded,'false');
+  assert.equal(get('measurement-answers').children[0].hidden,false);
+});
+
 test('interpretaciones históricas se conservan al actualizar respuestas y estados son claros',()=>{
   const {ui,get}=fixture();
   const result={interpretation_id:'interpretation',question_id:'Q7',snapshot_id:'original',image_id:'image',completed_at:'2026-10-24T20:00:00Z',validation_status:'VALIDATED',inferences:['Personas aparentemente sentadas.'],unknowns:[],recommendations:[]};
@@ -200,8 +215,8 @@ test('experimentación ofrece los tres guiones y prepara la medición guiada',()
   assert.match(html,/id="experimentation-tab"/);
   assert.match(html,/id="experiment-scenario"/);
   assert.match(html,/S1 · Ambiente y ocupación estables/);
-  assert.match(html,/S2 · Cambios de ocupación/);
-  assert.match(html,/S3 · Cambios ambientales/);
+  assert.match(html,/S2 · Ocupación alta estable/);
+  assert.match(html,/S3 · Ocupación alta \+ cambios ambientales/);
   assert.match(html,/id="experiment-mode"/);
   assert.match(html,/id="experiment-repetition"/);
   assert.match(html,/Repetición 1/);

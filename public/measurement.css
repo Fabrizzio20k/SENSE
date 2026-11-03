@@ -86,9 +86,10 @@
 #experimentation select { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--strong-line); border-radius:6px; padding:10px 12px; min-width:240px; max-width:100% }
 #experimentation select:focus-visible { outline:3px solid var(--measure-active); outline-offset:3px }
 #experimentation .experimentation-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin-bottom:22px }
-#experimentation .experiment-start { display:grid; gap:6px; align-items:end }
+#experimentation .experiment-start { display:flex; gap:10px; align-items:center; padding-bottom:1px }
 #experimentation .experiment-start button { min-height:42px; padding:9px 22px; font-weight:700; letter-spacing:.01em }
-#experimentation .experiment-start p { max-width:185px; color:var(--muted); font-size:12px; line-height:1.25 }
+#experimentation .experiment-start p { max-width:185px; color:var(--muted); font-size:12px; line-height:1.25; margin:0 }
+#measurement-workspace .card[data-blinded="true"] .evidence-status { color:var(--warning); background:var(--warning-bg); border:1px solid var(--warning) }
 #experimentation .experiment-guide,#experimentation .experiment-rules,#experimentation .experiment-summary { padding:22px; border:1px solid var(--line); border-radius:10px; background:var(--panel) }
 #experimentation .experiment-kicker { color:var(--measure-done); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase }
 #experimentation .experiment-guide h2 { margin:5px 0 8px; font-size:20px }
