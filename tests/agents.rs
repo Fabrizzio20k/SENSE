@@ -267,7 +267,6 @@ fn evidence_includes_real_changes_latest_events_quality_and_explicit_people_coun
     obs["humidity"]["captured_at"] = json!(s.created_at);
     obs["aqi"]["status"] = json!("ERROR");
     obs["aqi"]["value"] = json!(99);
-    obs["presence"]["metadata"]["source_kind"] = json!("MANUAL_CONTROL");
     obs["count"] = json!({"value":7,"unit":"persons","status":"VALID","captured_at":utc_now(),"age_seconds":1});
     s.document["session_baseline"]["humidity"] =
         json!({"value":70.,"captured_epoch_s":now-600.,"id":"baseline-id"});
@@ -280,10 +279,7 @@ fn evidence_includes_real_changes_latest_events_quality_and_explicit_people_coun
         let raw = agents::prompt(q, &s);
         let input: Value = serde_json::from_str(&raw).unwrap();
         assert_eq!(input["personas_visibles_en_una_captura"], 7);
-        assert_eq!(
-            input["presencia"]["fuente"],
-            "control manual, no confirma radar"
-        );
+        assert_eq!(input["presencia"]["fuente"], "radar");
         assert!(input["ENS160"]["AQI_actual"].is_null());
         assert_eq!(input["ENS160"]["estados"]["AQI"], "ERROR");
         assert_eq!(

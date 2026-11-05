@@ -102,15 +102,16 @@ exactamente esa misma imagen. La orientación se mantiene mientras el servidor
 esté abierto y queda registrada por ejecución. Se bloquea durante una ejecución
 y mientras terminen sus workers; cambiarla invalida la foto anterior del sandbox.
 
-En B–F, el estado de presencia manual mantenido se muestrea una vez por segundo
-mientras la medición está activa. Su contador muestra la edad de esa muestra,
-no el tiempo desde que se pulsó el botón; los detalles conservan cuándo se fijó
-el control. Se registra como `OperatorControl` / `MANUAL_CONTROL`, nunca como
-lectura física ni confirmación humana nueva. Cada muestra tiene su propio ID y
-se exporta con `PRESENCE_CONTROL_SAMPLED`; no genera cambios de presencia, nuevos
-disparos de YOLO ni solicitudes al observador. La edad y salud del radar real
-siguen independientes. Al volver a Auto se recupera la última lectura física,
-con su antigüedad real (puede estar vencida); al finalizar cesa el muestreo manual.
+En B–F, el control manual aporta el estado de presencia al mismo flujo de datos
+que el radar y se muestrea una vez por segundo mientras la medición está activa.
+Se guarda como `PresenceAgent`, sin etiquetas de origen manual ni eventos de
+muestreo exclusivos; Auto/Manual solo identifica el control en la interfaz.
+Cada muestra tiene su propio ID y hora. Mantener el estado no genera cambios de
+presencia, nuevos disparos de YOLO ni solicitudes al observador. No se inventan
+distancias ni energías. La edad y salud del radar físico siguen independientes.
+Al volver a Auto se recupera la última lectura física con su antigüedad real
+(puede estar vencida); al finalizar cesa el muestreo. Los registros anteriores
+conservan su formato original.
 
 Las fotografías experimentales se guardan en SQLite y se incluyen en el ZIP CSV
 bajo `images/`, con la orientación ya aplicada. Replay muestra la última foto
@@ -154,7 +155,7 @@ Tiempos desconocidos, futuros o inválidos se representan como `null`, no como c
 Los valores inválidos o vencidos se envían como `null`
 con su estado. Un delta de sesión no se presenta como tendencia continua y un
 evento histórico no implica que siga activo. El conteo se identifica como
-personas visibles en una captura; la presencia manual se distingue del radar.
+personas visibles en una captura; la presencia usa el mismo formato con entrada Auto o Manual.
 Se explicita que no hay historial de conteos, datos de ventilación ni referencia
 independiente de CO₂. No se adjuntan datos simulados ni diagnósticos prefabricados.
 

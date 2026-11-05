@@ -108,7 +108,7 @@ fn manual_radar_does_not_hide_physical_source_loss() {
     assert_eq!(s["observations"]["presence"]["status"], "VALID");
     assert_eq!(
         s["observations"]["presence"]["source_agent"],
-        "OperatorControl"
+        "PresenceAgent"
     );
     assert_eq!(h.c.health.components["radar"]["status"], "STALE");
     h.c.set_presence(&Value::Null, h.now + 9., &Value::Null)
@@ -151,8 +151,8 @@ fn held_manual_presence_is_sampled_without_changes_and_auto_restores_real_age() 
                 let presence = &view["context"]["observations"]["presence"];
                 assert_eq!(presence["value"], i32::from(detected));
                 assert_eq!(presence["age_seconds"], 0.5);
-                assert_eq!(presence["source_agent"], "OperatorControl");
-                assert_eq!(presence["metadata"]["source_kind"], "MANUAL_CONTROL");
+                assert_eq!(presence["source_agent"], "PresenceAgent");
+                assert_eq!(presence["metadata"], json!({}));
             }
             assert_eq!(changes(&h), initial_changes);
             assert!(h.captures.lock().unwrap().is_empty());
@@ -164,8 +164,7 @@ fn held_manual_presence_is_sampled_without_changes_and_auto_restores_real_age() 
             assert_eq!(h.c.health.components["radar"]["status"], "STALE");
             let held = &h.c.context.observations["presence"];
             assert_ne!(held["observation_id"], initial["observation_id"]);
-            assert_eq!(held["metadata"]["control_set_at"], initial["captured_at"]);
-            assert_eq!(held["metadata"]["sample_kind"], "HELD_MANUAL_CONTROL");
+            assert_eq!(held["metadata"], json!({}));
             assert!(held["metadata"].get("trigger_distance_cm").is_none());
             let from = sense_people_counter::context::timestamp(&initial["captured_at"]).unwrap();
             let to = sense_people_counter::context::timestamp(&held["captured_at"]).unwrap();
@@ -173,9 +172,12 @@ fn held_manual_presence_is_sampled_without_changes_and_auto_restores_real_age() 
             let samples = h
                 .events()
                 .iter()
-                .filter(|e| e["type"] == "PRESENCE_CONTROL_SAMPLED")
+                .filter(|e| {
+                    e["type"] == "OBSERVATIONS_RECEIVED"
+                        && !e["payload"]["observations"]["presence"].is_null()
+                })
                 .count();
-            assert_eq!(samples, 101);
+            assert_eq!(samples, 102);
 
             h.c.set_presence(&Value::Null, h.now + 102., &Value::Null)
                 .unwrap();
@@ -188,7 +190,8 @@ fn held_manual_presence_is_sampled_without_changes_and_auto_restores_real_age() 
             assert_eq!(
                 h.events()
                     .iter()
-                    .filter(|e| e["type"] == "PRESENCE_CONTROL_SAMPLED")
+                    .filter(|e| e["type"] == "OBSERVATIONS_RECEIVED"
+                        && !e["payload"]["observations"]["presence"].is_null())
                     .count(),
                 samples
             );
@@ -352,7 +355,7 @@ fn manual_controls_available_b_through_f_but_not_a_or_as_ground_truth() {
         h.c.set_presence(&json!(true), h.now, &Value::Null).unwrap();
         assert_eq!(
             h.c.context.observations["presence"]["source_agent"],
-            "OperatorControl"
+            "PresenceAgent"
         );
         assert!(
             h.c.log
@@ -380,7 +383,7 @@ fn manual_controls_available_b_through_f_but_not_a_or_as_ground_truth() {
     assert!(h.c.set_presence(&json!(true), h.now, &Value::Null).is_err());
 }
 #[test]
-fn same_value_with_manual_origin_invalidates_prior_inference_context() {
+fn same_presence_value_reuses_inference_context_across_input_modes() {
     let mut h = harness();
     h.start("F");
     h.ingest(0., None);
@@ -391,7 +394,7 @@ fn same_value_with_manual_origin_invalidates_prior_inference_context() {
         raw["observations"]["presence"]["value"],
         manual["observations"]["presence"]["value"]
     );
-    assert_ne!(
+    assert_eq!(
         sense_people_counter::policy::semantic_key("Q6", &raw, "test", None),
         sense_people_counter::policy::semantic_key("Q6", &manual, "test", None)
     );

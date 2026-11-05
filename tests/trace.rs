@@ -118,33 +118,51 @@ fn gaps_remain_missing_and_retained_readings_age() {
 }
 
 #[test]
-fn sampled_manual_controls_are_exported_with_original_control_time() {
+fn sampled_presence_is_exported_without_manual_tags() {
     let mut h = Harness::new();
     h.disable_models();
     h.start("C");
     h.c.set_presence(&json!(false), h.now, &Value::Null)
         .unwrap();
-    let fixed_at = h.c.context.observations["presence"]["captured_at"].clone();
     h.step(0.);
     h.step(1.);
     h.step(1.5);
     let latest = h.c.context.observations["presence"]["observation_id"].clone();
-    let event = h.event("PRESENCE_CONTROL_SAMPLED");
-    assert_eq!(event["payload"]["observation"]["observation_id"], latest);
+    let event = h.event("OBSERVATIONS_RECEIVED");
+    assert_eq!(
+        event["payload"]["observations"]["presence"]["observation_id"],
+        latest
+    );
     let observations = csv_rows(&h, "observations");
     let row = observations
         .iter()
         .find(|r| r["observation_id"] == latest)
         .unwrap();
     assert_eq!(row["key"], "presence");
-    assert_eq!(row["source_agent"], "OperatorControl");
+    assert_eq!(row["source_agent"], "PresenceAgent");
     let metadata: Value = serde_json::from_str(text(&row["metadata"])).unwrap();
-    assert_eq!(metadata["source_kind"], "MANUAL_CONTROL");
-    assert_eq!(metadata["control_set_at"], fixed_at);
+    assert_eq!(metadata, json!({}));
+    let sample = sense_people_counter::trace::sample_document(&mut h.c, h.now + 1.5);
+    assert_eq!(sample["presence_source"], "RADAR");
+    assert!(sample.get("manual_near").is_none());
+    for table in ["observations", "samples_1s", "events", "question_results"] {
+        let rows = csv_rows(&h, table);
+        let exported = serde_json::to_string(&rows).unwrap();
+        for tag in [
+            "MANUAL_CONTROL",
+            "OperatorControl",
+            "HELD_MANUAL_CONTROL",
+            "PRESENCE_CONTROL_SAMPLED",
+            "control_set_at",
+            "manual_near",
+        ] {
+            assert!(!exported.contains(tag), "{table}: {tag}");
+        }
+    }
     assert_eq!(
         h.events()
             .iter()
-            .filter(|e| e["type"] == "PRESENCE_CONTROL_SAMPLED")
+            .filter(|e| e["type"] == "OBSERVATIONS_RECEIVED")
             .count(),
         1
     );

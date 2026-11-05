@@ -99,15 +99,16 @@ test('control de radar manual aparece desde B y usa endpoint acotado',async()=>{
   assert.equal(control.hidden,true);
 });
 
-test('edad manual sigue muestras del backend y conserva cuando se fijo el control',()=>{
+test('entrada manual muestra lecturas vigentes sin etiqueta distintiva',()=>{
   const {ui,get}=fixture();
-  const observation={value:1,status:'VALID',age_seconds:0.5,captured_at:'2026-11-05T10:02:00Z',metadata:{source_kind:'MANUAL_CONTROL',control_set_at:'2026-11-05T10:00:00Z'}};
+  const observation={value:1,status:'VALID',age_seconds:0.5,captured_at:'2026-11-05T10:02:00Z',metadata:{}};
   const data={running:true,run:{mode:'C',run_id:'run'},presence_control:{mode:'MANUAL',detected:true},context:{observations:{presence:observation}}};
   ui.render(data,phases,false);
   const card=get('measurement-presence-readings').children[0];
   assert.equal(card.children[2].textContent,'0 s');
   const details=card.children.at(-1);
-  assert.match(details.children[3].textContent,/Control actualizado.*fijado a las/);
+  assert.match(details.children[3].textContent,/Lectura/);
+  assert.equal(card.children[3].textContent.includes('Manual'),false);
   observation.age_seconds=1.5;
   ui.render(data,phases,false);
   assert.equal(card.children[2].textContent,'1 s');

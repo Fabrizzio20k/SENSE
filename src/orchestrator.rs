@@ -423,6 +423,7 @@ impl SenseOrchestrator {
         } else {
             None
         };
+        self.policy.reactive_zone_override = self.manual_near;
         let next_value = detected
             .as_bool()
             .map(|v| json!(i32::from(v)))
@@ -453,20 +454,16 @@ impl SenseOrchestrator {
             return Ok(());
         }
         let captured = utc_now();
-        let mut meta = json!({"source_kind":"MANUAL_CONTROL"});
-        if self.run["mode"] == "B" {
-            meta["manual_near"] = json!(self.manual_near);
-        }
         let p = observation(
-            "OperatorControl",
+            "PresenceAgent",
             &captured,
             &captured,
             text(&self.config["regions"]["radar_region"]),
             json!(i32::from(truth(detected))),
             "presence",
-            "operator_control",
+            "coverage_limited",
             "VALID",
-            meta,
+            json!({}),
         );
         self.context.put("presence", p.clone(), now, 0.);
         if self.run["mode"] == "B" {
@@ -1177,14 +1174,13 @@ impl SenseOrchestrator {
                 let captured = chrono::DateTime::from_timestamp_micros((captured * 1e6) as i64)
                     .ok_or("Timestamp de control manual inválido.")?
                     .to_rfc3339_opts(chrono::SecondsFormat::Micros, false);
-                if presence["metadata"].get("control_set_at").is_none() {
-                    presence["metadata"]["control_set_at"] = presence["captured_at"].clone();
-                }
-                presence["metadata"]["sample_kind"] = json!("HELD_MANUAL_CONTROL");
                 presence["observation_id"] = json!(identifier());
                 presence["captured_at"] = json!(captured);
                 presence["received_at"] = presence["captured_at"].clone();
-                self.record("PRESENCE_CONTROL_SAMPLED", &json!({"observation":presence}))?;
+                self.record(
+                    "OBSERVATIONS_RECEIVED",
+                    &json!({"observations":{"presence":presence}}),
+                )?;
                 self.context.put("presence", presence, now, 0.);
             }
         }

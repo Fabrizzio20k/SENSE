@@ -113,12 +113,11 @@ pub fn prompt(question: &str, s: &Snapshot) -> String {
             Value::Null
         }
     };
-    let manual = observations["presence"]["metadata"]["source_kind"] == "MANUAL_CONTROL";
     let mut evidence = json!({
         "personas_visibles_en_una_captura":current_value("count"),
         "estado_conteo":observations["count"].get("status").unwrap_or(&json!("UNKNOWN")),
         "antiguedad_conteo_segundos":observations["count"]["age_seconds"],
-        "presencia":{"valor":current_value("presence"),"fuente":if manual {"control manual, no confirma radar"} else {"radar"},"estado":observations["presence"].get("status").unwrap_or(&json!("UNKNOWN")),"antiguedad_segundos":observations["presence"]["age_seconds"]}
+        "presencia":{"valor":current_value("presence"),"fuente":"radar","estado":observations["presence"].get("status").unwrap_or(&json!("UNKNOWN")),"antiguedad_segundos":observations["presence"]["age_seconds"]}
     });
     for (sensor, label) in [("sht40", "SHT40"), ("ens160", "ENS160")] {
         let health = &d["component_health"][sensor];

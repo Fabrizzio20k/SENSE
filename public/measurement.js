@@ -242,7 +242,7 @@
       nodes.heading.textContent=answer.question_id+' · '+answer.question;
       nodes.value.textContent=answerText(answer);
       nodes.fullAnswer.textContent=answerText(answer);
-      const source=answer.interpretation_id?'Gemma':{Q1:data.context?.observations?.presence?.metadata?.source_kind==='MANUAL_CONTROL'?'Control manual':'Radar',Q2:'YOLO',Q3:'Sensores ambientales',Q4:'Reglas ambientales',Q5:'Reglas de contexto',Q6:'Reglas de contexto',Q7:'Análisis de imagen'}[answer.question_id]||'SENSE';
+      const source=answer.interpretation_id?'Gemma':{Q1:'Radar',Q2:'YOLO',Q3:'Sensores ambientales',Q4:'Reglas ambientales',Q5:'Reglas de contexto',Q6:'Reglas de contexto',Q7:'Análisis de imagen'}[answer.question_id]||'SENSE';
       nodes.status.textContent=(answerStatuses[answer.status]||answer.status||'Sin evaluar')+' · '+source+' · '+timeLabel(answer.evaluated_at);
       nodes.article.dataset.status=answer.status;
       const missing=(answer.pending_information||[]).map(item=>informationNames[item]||item);
@@ -352,12 +352,7 @@
         card.info.textContent='Región · '+(observation?.region||'Sin registrar');
         card.status.textContent=statusLabels[status]||status;card.status.dataset.status=status;
         card.captured.textContent=observation?.captured_at?'Lectura · '+timeLabel(observation.captured_at):'Hora sin registrar';
-        if(observation?.metadata?.source_kind==='MANUAL_CONTROL'){
-          card.source.textContent='Fuente · control manual';
-          card.captured.textContent='Control actualizado · '+timeLabel(observation.captured_at);
-          if(observation.metadata.control_set_at)card.captured.textContent+=' · fijado a las '+timeLabel(observation.metadata.control_set_at);
-        }
-        else if(key==='presence')card.source.textContent='Fuente · radar';
+        if(key==='presence')card.source.textContent='Fuente · radar';
         if(key==='presence'){
           const metadata=observation?.metadata||{},trigger=current.reactive_trigger;
           const source={total_distance_cm:'distancia total',motion_distance_cm:'blanco en movimiento',static_distance_cm:'blanco estático'}[metadata.trigger_distance_source];
@@ -375,18 +370,13 @@
             const [mode,toggle]=card.control.children;
             mode.textContent=manual?'Manual':'Auto';mode.className=manual?'manual':'';
             toggle.textContent=run?.mode==='B'?(current.presence_control?.near?'Dentro de zona':'Fuera de zona'):(current.presence_control?.detected?'Detectada':'No detectada');
-            if(manual){
-              card.status.textContent+=' · Manual';
-              card.info.textContent+='\nControl manual fijado; no es lectura del radar.';
-              if(current.raw_presence)card.info.textContent+='\nÚltimo radar real: '+(current.raw_presence.value==null?'desconocido':current.raw_presence.value?'presencia':'sin presencia')+' · '+timeLabel(current.raw_presence.captured_at);
-            }
           }
         }
       }
       const trigger=current.reactive_trigger,visionDecision=(current.decisions||[]).filter(item=>item.kind==='VISION').at(-1);
       let triggerText='';
       if(current.running&&run?.mode==='B'&&trigger){
-        const rule=trigger.manual?'B manual: señal explícita de presencia/zona; sin distancia simulada.':'B: entrada < '+trigger.enter_below_cm+' cm · salida ≥ '+trigger.exit_at_or_above_cm+' cm · '+trigger.required_samples+' lecturas.';
+        const rule=current.presence_control?.mode==='MANUAL'?'B manual: señal explícita de presencia/zona; sin distancia simulada.':'B: entrada < '+trigger.enter_below_cm+' cm · salida ≥ '+trigger.exit_at_or_above_cm+' cm · '+trigger.required_samples+' lecturas.';
         const reason={RADAR_DISTANCE_UNKNOWN:'Sin distancia válida y vigente; esperando al radar.',RADAR_ZONE_CONFIRMING:'Confirmando zona: '+trigger.confirmed_samples+'/'+trigger.required_samples+'.',
           COOLDOWN_ACTIVE:'Esperando el intervalo mínimo entre capturas.',CAMERA_UNAVAILABLE:'YOLO no está disponible.',DUPLICATE_REQUEST:'Captura visual en curso.',
           INSUFFICIENT_MEMORY:'Captura pospuesta por memoria disponible.',CPU_BUDGET:'Captura pospuesta por carga de CPU.',RATE_LIMIT:'Esperando el presupuesto de activaciones.',

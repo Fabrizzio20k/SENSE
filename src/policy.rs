@@ -51,7 +51,6 @@ pub fn answer_questions(s: &Snapshot, mode: &str, alignment: f64) -> Value {
     let c = &obs["count"];
     let vp = p["status"] == "VALID";
     let vc = c["status"] == "VALID";
-    let manual = p["metadata"]["source_kind"] == "MANUAL_CONTROL";
     let mut out = json!({});
     out["Q1"] = answer(
         s,
@@ -67,11 +66,7 @@ pub fn answer_questions(s: &Snapshot, mode: &str, alignment: f64) -> Value {
             "Radar sin evidencia vigente."
         }),
         &["presence"],
-        &[if manual {
-            "Señal manual del operador; no es medición del radar ni ground truth."
-        } else {
-            "Solo cobertura del radar; no representa toda el aula ni proporciona conteo."
-        }],
+        &["Solo cobertura del radar; no representa toda el aula ni proporciona conteo."],
         if vp {
             json!([])
         } else {
@@ -154,11 +149,6 @@ pub fn answer_questions(s: &Snapshot, mode: &str, alignment: f64) -> Value {
         &["Radar y cámara solo se comparan si su cobertura fue declarada comparable."],
         json!(missing),
     );
-    if manual {
-        out["Q5"]["limitations"].as_array_mut().unwrap().push(json!(
-            "La presencia utilizada es una intervención manual, separada del ground truth."
-        ));
-    }
     let related = !events.is_empty()
         && vc
         && vp
@@ -200,11 +190,6 @@ pub fn answer_questions(s: &Snapshot, mode: &str, alignment: f64) -> Value {
             json!([])
         },
     );
-    if manual {
-        out["Q6"]["limitations"].as_array_mut().unwrap().push(json!(
-            "La señal manual de presencia no confirma ocupación real."
-        ));
-    }
     out["Q7"] = answer(
         s,
         "Q7",
@@ -252,6 +237,7 @@ pub struct PolicyEngine {
     pub reactive_candidate: Option<bool>,
     pub reactive_evidence: VecDeque<Value>,
     pub reactive_last_timestamp: Option<f64>,
+    pub reactive_zone_override: Option<bool>,
     pub last_visual: f64,
     pub visual_requests: VecDeque<f64>,
     pub slm_requests: BTreeMap<String, VecDeque<f64>>,
@@ -270,6 +256,7 @@ impl PolicyEngine {
             reactive_candidate: None,
             reactive_evidence: VecDeque::new(),
             reactive_last_timestamp: None,
+            reactive_zone_override: None,
             last_visual: f64::NEG_INFINITY,
             visual_requests: VecDeque::new(),
             slm_requests: [
@@ -291,7 +278,7 @@ impl PolicyEngine {
             return Ok(vec![]);
         }
         let meta = &o["metadata"];
-        let manual = meta["source_kind"] == "MANUAL_CONTROL";
+        let manual = self.reactive_zone_override.is_some();
         let captured = timestamp(&o["captured_at"])?;
         if !manual {
             if let Some(t) = self.reactive_last_timestamp {
@@ -323,7 +310,7 @@ impl PolicyEngine {
             }],
         );
         let near = if manual {
-            truth(&meta["manual_near"])
+            self.reactive_zone_override.unwrap()
         } else {
             truth(&o["value"]) && number(distance) < threshold
         };
@@ -352,6 +339,7 @@ impl PolicyEngine {
         Ok(vec![ev])
     }
     pub fn reset_reactive(&mut self) {
+        self.reactive_zone_override = None;
         self.reactive_confirmed = None;
         self.reactive_candidate = None;
         self.reactive_pending = Value::Null;
@@ -362,13 +350,9 @@ impl PolicyEngine {
         let o = &s["observations"]["presence"];
         let m = &o["metadata"];
         let modes = &self.config["modes"];
-        if m["source_kind"] == "MANUAL_CONTROL" {
-            let state = if truth(&m["manual_near"]) {
-                "NEAR"
-            } else {
-                "FAR"
-            };
-            return json!({"state":state,"manual":true,"candidate":state,"distance_cm":null,"distance_source":null,"confirmed_samples":1,"required_samples":1,"pending_event":self.reactive_pending,"enter_below_cm":modes["reactive_enter_below_cm"],"exit_at_or_above_cm":modes["reactive_exit_at_or_above_cm"]});
+        if let Some(near) = self.reactive_zone_override {
+            let state = if near { "NEAR" } else { "FAR" };
+            return json!({"state":state,"candidate":state,"distance_cm":null,"distance_source":null,"confirmed_samples":1,"required_samples":1,"pending_event":self.reactive_pending,"enter_below_cm":modes["reactive_enter_below_cm"],"exit_at_or_above_cm":modes["reactive_exit_at_or_above_cm"]});
         }
         let known = ["VALID", "CONFLICTING"].contains(&text(&o["status"]))
             && (o["value"] == 0 || !m["trigger_distance_cm"].is_null());

@@ -315,10 +315,7 @@ impl ContextStore {
             });
             let age = (now - self.received_monotonic[key] + self.age_on_receipt[key]).max(0.);
             obs["age_seconds"] = json!(rounded(age, 2));
-            if obs["status"] == "VALID"
-                && age >= ttl
-                && obs["metadata"]["source_kind"] != "MANUAL_CONTROL"
-            {
+            if obs["status"] == "VALID" && age >= ttl {
                 obs["status"] = json!("STALE");
             }
         }
