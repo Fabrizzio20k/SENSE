@@ -259,9 +259,10 @@
     byId('measurement-interpretations').replaceChildren(...visibleInterpretations.map(result=>{
       if(interpretationNodes.has(result.interpretation_id))return interpretationNodes.get(result.interpretation_id);
       const article=make('article',undefined,'interpretation');
-      article.append(make('strong',result.question_id+' · '+(result.image_id?'Con imagen':'Solo texto')+' · '+(result.validation_status==='VALIDATED'?'Formato validado':'Respuesta rechazada')),make('p','Finalizó a las '+timeLabel(result.completed_at)+' · evidencia histórica','sub'));
+      article.append(make('strong',result.question_id+' · '+(result.image_id?'Con imagen':'Solo texto')+' · '+(result.validation_status==='VALIDATED'?'Formato validado':'Respuesta rechazada')),make('p','Finalizó a las '+timeLabel(result.completed_at)+' · evidencia histórica · las hipótesis requieren verificación','sub'));
       if(result.validation_status==='VALIDATED'){
-        for(const [key,label] of [['inferences','Inferencias'],['unknowns','Desconocidos'],['recommendations','Recomendaciones no críticas']])if(result[key]?.length)article.append(make('p',label+': '+result[key].join(' ')));
+        if(result.summary)article.append(make('p',result.summary));
+        else for(const [key,label] of [['inferences','Inferencias'],['unknowns','Desconocidos'],['recommendations','Recomendaciones no críticas']])if(result[key]?.length)article.append(make('p',label+': '+result[key].join(' ')));
       }else article.append(make('p',result.validation_error||'Respuesta rechazada.'));
       const details=make('details');details.append(make('summary','Registro completo'),make('pre',JSON.stringify(result,null,2)));article.append(details);interpretationNodes.set(result.interpretation_id,article);return article;
     }));
@@ -351,7 +352,11 @@
         card.info.textContent='Región · '+(observation?.region||'Sin registrar');
         card.status.textContent=statusLabels[status]||status;card.status.dataset.status=status;
         card.captured.textContent=observation?.captured_at?'Lectura · '+timeLabel(observation.captured_at):'Hora sin registrar';
-        if(observation?.metadata?.source_kind==='MANUAL_CONTROL')card.source.textContent='Fuente · control manual';
+        if(observation?.metadata?.source_kind==='MANUAL_CONTROL'){
+          card.source.textContent='Fuente · control manual';
+          card.captured.textContent='Control actualizado · '+timeLabel(observation.captured_at);
+          if(observation.metadata.control_set_at)card.captured.textContent+=' · fijado a las '+timeLabel(observation.metadata.control_set_at);
+        }
         else if(key==='presence')card.source.textContent='Fuente · radar';
         if(key==='presence'){
           const metadata=observation?.metadata||{},trigger=current.reactive_trigger;

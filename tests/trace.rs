@@ -116,6 +116,39 @@ fn gaps_remain_missing_and_retained_readings_age() {
     );
     h.event("SAMPLE_GAP");
 }
+
+#[test]
+fn sampled_manual_controls_are_exported_with_original_control_time() {
+    let mut h = Harness::new();
+    h.disable_models();
+    h.start("C");
+    h.c.set_presence(&json!(false), h.now, &Value::Null)
+        .unwrap();
+    let fixed_at = h.c.context.observations["presence"]["captured_at"].clone();
+    h.step(0.);
+    h.step(1.);
+    h.step(1.5);
+    let latest = h.c.context.observations["presence"]["observation_id"].clone();
+    let event = h.event("PRESENCE_CONTROL_SAMPLED");
+    assert_eq!(event["payload"]["observation"]["observation_id"], latest);
+    let observations = csv_rows(&h, "observations");
+    let row = observations
+        .iter()
+        .find(|r| r["observation_id"] == latest)
+        .unwrap();
+    assert_eq!(row["key"], "presence");
+    assert_eq!(row["source_agent"], "OperatorControl");
+    let metadata: Value = serde_json::from_str(text(&row["metadata"])).unwrap();
+    assert_eq!(metadata["source_kind"], "MANUAL_CONTROL");
+    assert_eq!(metadata["control_set_at"], fixed_at);
+    assert_eq!(
+        h.events()
+            .iter()
+            .filter(|e| e["type"] == "PRESENCE_CONTROL_SAMPLED")
+            .count(),
+        1
+    );
+}
 #[test]
 fn observations_are_validated_persisted_and_never_feed_context() {
     let mut h = Harness::new();

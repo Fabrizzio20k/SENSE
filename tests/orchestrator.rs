@@ -110,6 +110,30 @@ fn textual_mode_d_gets_structured_snapshot_without_image() {
     );
     h.finish_lane("gemma", 0.2);
     assert_eq!(*h.completions.lock().unwrap(), vec![None]);
+    let result = h.c.interpretations.back().unwrap();
+    assert_eq!(result["validation_status"], "VALIDATED");
+    assert!(result["summary"].as_str().unwrap().contains("Hipótesis"));
+    let input = h
+        .events()
+        .into_iter()
+        .find(|e| e["type"] == "SLM_INPUT")
+        .unwrap()["payload"]
+        .clone();
+    let evidence: serde_json::Value =
+        serde_json::from_str(input["prompt"].as_str().unwrap()).unwrap();
+    assert!(
+        evidence["preguntas"][0]
+            .as_str()
+            .unwrap()
+            .contains("cambio ambiental")
+    );
+    assert_eq!(input["generation_config"]["temperature"], 0);
+    assert_eq!(input["generation_config"]["max_tokens"], 256);
+    assert!(input["generation_config"].get("response_format").is_none());
+    assert_eq!(
+        input["generation_config"]["system_prompt"],
+        input["system_prompt"]
+    );
 }
 #[test]
 fn single_vision_per_cycle_even_with_conflict() {

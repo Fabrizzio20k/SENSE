@@ -60,7 +60,7 @@ impl Harness {
             completion: Arc::new(move |_, image, _| {
                 completion.lock().unwrap().push(image.map(|b| b.to_vec()));
                 Ok(
-                    json!({"content":"{\"inferences\":[\"Descripción de prueba.\"],\"unknowns\":[],\"recommendations\":[]}"}),
+                    json!({"content":"1. Descripción de prueba.\n2. Hipótesis de prueba sin causalidad.\n3. Verificar evidencia."}),
                 )
             }),
             model: "test".into(),

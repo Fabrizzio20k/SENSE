@@ -99,6 +99,24 @@ test('control de radar manual aparece desde B y usa endpoint acotado',async()=>{
   assert.equal(control.hidden,true);
 });
 
+test('edad manual sigue muestras del backend y conserva cuando se fijo el control',()=>{
+  const {ui,get}=fixture();
+  const observation={value:1,status:'VALID',age_seconds:0.5,captured_at:'2026-11-05T10:02:00Z',metadata:{source_kind:'MANUAL_CONTROL',control_set_at:'2026-11-05T10:00:00Z'}};
+  const data={running:true,run:{mode:'C',run_id:'run'},presence_control:{mode:'MANUAL',detected:true},context:{observations:{presence:observation}}};
+  ui.render(data,phases,false);
+  const card=get('measurement-presence-readings').children[0];
+  assert.equal(card.children[2].textContent,'0 s');
+  const details=card.children.at(-1);
+  assert.match(details.children[3].textContent,/Control actualizado.*fijado a las/);
+  observation.age_seconds=1.5;
+  ui.render(data,phases,false);
+  assert.equal(card.children[2].textContent,'1 s');
+  observation.age_seconds=0.2;
+  observation.captured_at='2026-11-05T10:02:02Z';
+  ui.render(data,phases,false);
+  assert.equal(card.children[2].textContent,'0 s');
+});
+
 test('contenido del modelo es texto y el detalle abierto sobrevive a actualizaciones',()=>{
   const {ui,get}=fixture();
   const answer={question_id:'Q1',question:'Presencia',answer:'<img src=x onerror=alert(1)>',limitations:[],pending_information:[]};
@@ -185,6 +203,17 @@ test('interpretaciones históricas se conservan al actualizar respuestas y estad
   ui.render({...data,run:{...data.run,mode:'B'},interpretations:[]},phases,false);
   assert.equal(get('measurement-interpretations').children.length,0);
   assert.match(get('measurement-interpretations-empty').textContent,/modo B responde mediante reglas/);
+});
+
+test('interpretacion textual nueva se muestra sin etiquetas antiguas ni interpretar HTML',()=>{
+  const {ui,get}=fixture();
+  const summary='1. Humedad elevada.\n2. <img src=x onerror=alert(1)> es texto.\n3. Comparar tiempos.';
+  ui.render({running:true,run:{mode:'E',run_id:'run',status:'RUNNING'},interpretations:[{interpretation_id:'new',question_id:'Q7',image_id:'image',completed_at:'2026-11-05T20:00:00Z',validation_status:'VALIDATED',summary,inferences:[summary],unknowns:[],recommendations:[]}],answers:{}},phases,false);
+  const card=get('measurement-interpretations').children[0];
+  assert.equal(card.children[2].textContent,summary);
+  assert.equal(card.children[2].tagName,'p');
+  assert.match(card.children[1].textContent,/hipótesis requieren verificación/);
+  assert.equal(card.children.filter(child=>child.tagName==='p').length,2);
 });
 
 test('reevaluar es opcional y conserva la autoridad de los endpoints experimentales',async()=>{

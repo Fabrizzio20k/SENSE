@@ -939,7 +939,8 @@ impl SenseOrchestrator {
                 self.policy.accepted_interpretation(kind, now);
                 self.record("COMMAND_ISSUED", &command)?;
                 self.record(&format!("{label}_REQUESTED"),&json!({"command_id":command["command_id"],"question_id":q,"reason":decision.reason}))?;
-                self.record("SLM_INPUT",&json!({"request_id":command["command_id"],"prompt":prompt,"image_id":image_id,"system_prompt":agents::system_prompt(q),"generation_config":budget,"model_id":self.adapters.model,"snapshot_id":s.snapshot_id}))?;
+                let options = agents::interpretation_options(q, &budget);
+                self.record("SLM_INPUT",&json!({"request_id":command["command_id"],"prompt":prompt,"image_id":image_id,"system_prompt":options["system_prompt"],"generation_config":options,"model_id":self.adapters.model,"snapshot_id":s.snapshot_id}))?;
                 if kind == "multimodal" {
                     self.last_multimodal_context = context_key;
                 }
@@ -1167,6 +1168,25 @@ impl SenseOrchestrator {
         }
         if second > self.last_sample_second + 1 {
             self.record("SAMPLE_GAP",&json!({"from_second":self.last_sample_second+1,"to_second":second-1,"reason":"SAMPLER_DELAY"}))?;
+        }
+        if self.running() && self.manual_presence.is_some() {
+            let mut presence = self.context.observations["presence"].clone();
+            let received = self.context.received_monotonic["presence"];
+            if now > received {
+                let captured = timestamp(&presence["captured_at"])? + now - received;
+                let captured = chrono::DateTime::from_timestamp_micros((captured * 1e6) as i64)
+                    .ok_or("Timestamp de control manual inválido.")?
+                    .to_rfc3339_opts(chrono::SecondsFormat::Micros, false);
+                if presence["metadata"].get("control_set_at").is_none() {
+                    presence["metadata"]["control_set_at"] = presence["captured_at"].clone();
+                }
+                presence["metadata"]["sample_kind"] = json!("HELD_MANUAL_CONTROL");
+                presence["observation_id"] = json!(identifier());
+                presence["captured_at"] = json!(captured);
+                presence["received_at"] = presence["captured_at"].clone();
+                self.record("PRESENCE_CONTROL_SAMPLED", &json!({"observation":presence}))?;
+                self.context.put("presence", presence, now, 0.);
+            }
         }
         let mut d = crate::trace::sample_document(self, now);
         d["second"] = json!(second);

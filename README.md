@@ -102,6 +102,16 @@ exactamente esa misma imagen. La orientación se mantiene mientras el servidor
 esté abierto y queda registrada por ejecución. Se bloquea durante una ejecución
 y mientras terminen sus workers; cambiarla invalida la foto anterior del sandbox.
 
+En B–F, el estado de presencia manual mantenido se muestrea una vez por segundo
+mientras la medición está activa. Su contador muestra la edad de esa muestra,
+no el tiempo desde que se pulsó el botón; los detalles conservan cuándo se fijó
+el control. Se registra como `OperatorControl` / `MANUAL_CONTROL`, nunca como
+lectura física ni confirmación humana nueva. Cada muestra tiene su propio ID y
+se exporta con `PRESENCE_CONTROL_SAMPLED`; no genera cambios de presencia, nuevos
+disparos de YOLO ni solicitudes al observador. La edad y salud del radar real
+siguen independientes. Al volver a Auto se recupera la última lectura física,
+con su antigüedad real (puede estar vencida); al finalizar cesa el muestreo manual.
+
 Las fotografías experimentales se guardan en SQLite y se incluyen en el ZIP CSV
 bajo `images/`, con la orientación ya aplicada. Replay muestra la última foto
 analizada disponible hasta el instante seleccionado, sin girarla otra vez. Los
@@ -129,6 +139,53 @@ NCNN anterior frente al modelo ONNX y el soporte de la cámara en Ubuntu requier
 comprobación en la Pi. Esta implementación no permite afirmar igualdad de
 predicciones sin esa comparación real.
 
+## Interpretaciones Q6 y Q7
+
+Q6 recibe evidencia JSON compacta con lecturas vigentes, unidades y edades,
+salud de componentes, diferencias calculadas respecto al inicio de sesión y el
+último evento de cada tipo (hasta cuatro), con edad y estado actual evaluable.
+El contexto y las tres preguntas se envían en español, con lecturas agrupadas
+en `SHT40` y `ENS160` para identificar su origen. Cada grupo incluye salud,
+valores actuales, estados y edades por campo y cambios desde el inicio con valor
+inicial, delta, dirección y duración. Las unidades están en los nombres de campo;
+no se repiten valores actuales ni fechas absolutas en cada cambio. Los estados
+distintos de `HEALTHY` incluyen motivo y antigüedad del estado.
+Tiempos desconocidos, futuros o inválidos se representan como `null`, no como cero.
+Los valores inválidos o vencidos se envían como `null`
+con su estado. Un delta de sesión no se presenta como tendencia continua y un
+evento histórico no implica que siga activo. El conteo se identifica como
+personas visibles en una captura; la presencia manual se distingue del radar.
+Se explicita que no hay historial de conteos, datos de ventilación ni referencia
+independiente de CO₂. No se adjuntan datos simulados ni diagnósticos prefabricados.
+
+Gemma responde en tres puntos de hasta 100 palabras: cambio e interpretación,
+límites de las lecturas de gases y acción ambiental razonable con seguimiento.
+Puede sugerir observaciones o ajustes de bajo riesgo sin demostrar causalidad;
+no debe recomendar reinicios ni manipular conexiones durante la medición.
+`HEALTHY` describe el sensor, no garantiza un ambiente estable o saludable.
+Q7 utiliza la misma
+evidencia más la imagen autorizada de YOLO para interpretar contexto visual,
+distribución u oclusiones pertinentes, en vez de limitarse a describir objetos.
+No sustituye el conteo, identifica personas ni deduce ventilación suficiente o
+causas físicas a partir de una foto. La salud `FAILED` puede reflejar un campo
+inválido, no necesariamente todas las mediciones del componente.
+
+Ambos usan temperatura **0**, **256 tokens** de salida en el piloto y no fuerzan
+`response_format: json_object`. Se conservan políticas, presupuestos y límites
+de imágenes existentes. `SLM_INPUT` registra el prompt y las opciones efectivas.
+La respuesta se guarda como `summary` y también en `inferences` para conservar
+compatibilidad con respuestas, exportaciones y lectores anteriores. El panel
+muestra el texto sin interpretar HTML; los resultados históricos con las tres
+listas antiguas siguen siendo legibles. No hay migración ni borrado de datos.
+
+`VALIDATED` indica únicamente que hay texto admisible y evidencia atribuible,
+no que las hipótesis sean correctas. Se rechazan respuestas vacías, degeneradas,
+JSON de salida inesperado, texto de más de 2.000 caracteres, controles inválidos
+y truncamiento declarado por el servidor (`finish_reason: length`). Si el servidor
+declara `stop` al agotar tokens, no puede garantizarse que el texto esté completo.
+Los ensayos de desarrollo mostraron errores de razonamiento del modelo: las
+interpretaciones requieren evaluación y no son diagnósticos certificados.
+
 ## Pruebas sin hardware
 
 ```sh
@@ -147,8 +204,11 @@ adquisición, contexto y políticas contra resultados capturados de Python. Se
 normalizan los UUID de eventos/snapshots y la hora de creación generados durante
 la prueba; valores, estados, evidencia, decisiones y límites se comparan.
 `tests/fixtures/provenance.json` conserva las huellas de los módulos de referencia.
-También se comparan exactamente los prompts Q6/Q7 y el hash de configuración
-original, restaurando en la prueba su límite histórico de 512 MiB.
+Se conserva la comparación del hash de configuración original, restaurando en
+la prueba su límite histórico de 512 MiB. `tests/fixtures/prompts.json` permanece
+como referencia histórica de Python; los prompts Q6/Q7 actuales evolucionaron
+al contrato textual descrito arriba y se prueban por sus invariantes de evidencia,
+privacidad y generación, no por igualdad con aquella plantilla.
 
 Las demás pruebas trasladan los escenarios de workers, interpretación, API,
 observador, fallas, recuperación, trazabilidad y servidor offline. Incluyen

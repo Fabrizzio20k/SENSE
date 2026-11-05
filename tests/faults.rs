@@ -119,6 +119,90 @@ fn manual_radar_does_not_hide_physical_source_loss() {
     );
 }
 #[test]
+fn held_manual_presence_is_sampled_without_changes_and_auto_restores_real_age() {
+    for mode in ["B", "C", "D", "E", "F"] {
+        for detected in [false, true] {
+            let mut h = harness();
+            h.disable_models();
+            h.start(mode);
+            h.ingest(0., None);
+            h.c.set_presence(&json!(detected), h.now, &Value::Null)
+                .unwrap();
+            let initial = h.c.context.observations["presence"].clone();
+            let raw = h.c.last_raw_presence.clone();
+            let changes = |h: &Harness| {
+                h.events()
+                    .iter()
+                    .filter(|e| {
+                        [
+                            "PRESENCE_CHANGED",
+                            "SENSOR_PRESENCE_CHANGED",
+                            "RADAR_ZONE_ENTERED",
+                            "RADAR_ZONE_EXITED",
+                        ]
+                        .contains(&text(&e["type"]))
+                    })
+                    .count()
+            };
+            let initial_changes = changes(&h);
+            for second in 0..=101 {
+                h.step(second as f64);
+                let view = h.c.view(h.now + second as f64 + 0.5).unwrap();
+                let presence = &view["context"]["observations"]["presence"];
+                assert_eq!(presence["value"], i32::from(detected));
+                assert_eq!(presence["age_seconds"], 0.5);
+                assert_eq!(presence["source_agent"], "OperatorControl");
+                assert_eq!(presence["metadata"]["source_kind"], "MANUAL_CONTROL");
+            }
+            assert_eq!(changes(&h), initial_changes);
+            assert!(h.captures.lock().unwrap().is_empty());
+            assert!(h.completions.lock().unwrap().is_empty());
+            assert_eq!(h.c.last_raw_presence, raw);
+            let view = h.c.view(h.now + 101.5).unwrap();
+            assert!(number(&view["raw_presence"]["age_seconds"]) >= 101.);
+            assert_eq!(view["raw_presence"]["status"], "STALE");
+            assert_eq!(h.c.health.components["radar"]["status"], "STALE");
+            let held = &h.c.context.observations["presence"];
+            assert_ne!(held["observation_id"], initial["observation_id"]);
+            assert_eq!(held["metadata"]["control_set_at"], initial["captured_at"]);
+            assert_eq!(held["metadata"]["sample_kind"], "HELD_MANUAL_CONTROL");
+            assert!(held["metadata"].get("trigger_distance_cm").is_none());
+            let from = sense_people_counter::context::timestamp(&initial["captured_at"]).unwrap();
+            let to = sense_people_counter::context::timestamp(&held["captured_at"]).unwrap();
+            assert!((to - from - 101.).abs() < 0.001);
+            let samples = h
+                .events()
+                .iter()
+                .filter(|e| e["type"] == "PRESENCE_CONTROL_SAMPLED")
+                .count();
+            assert_eq!(samples, 101);
+
+            h.c.set_presence(&Value::Null, h.now + 102., &Value::Null)
+                .unwrap();
+            h.step(102.);
+            let restored =
+                h.c.view(h.now + 102.).unwrap()["context"]["observations"]["presence"].clone();
+            assert_eq!(restored["observation_id"], raw["observation_id"]);
+            assert_eq!(restored["status"], "STALE");
+            assert!(number(&restored["age_seconds"]) >= 102.);
+            assert_eq!(
+                h.events()
+                    .iter()
+                    .filter(|e| e["type"] == "PRESENCE_CONTROL_SAMPLED")
+                    .count(),
+                samples
+            );
+
+            h.c.set_presence(&json!(detected), h.now + 103., &Value::Null)
+                .unwrap();
+            h.c.stop("USER_STOP", h.now + 103.).unwrap();
+            let stopped = h.c.context.observations["presence"].clone();
+            h.step(104.);
+            assert_eq!(h.c.context.observations["presence"], stopped);
+        }
+    }
+}
+#[test]
 fn manual_b_triggers_zone_changes_without_centimeters_or_fake_samples() {
     let mut h = harness();
     h.guided("B", "S1", 1);

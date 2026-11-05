@@ -45,7 +45,7 @@ pub async fn request_completion(
 ) -> Result<Value> {
     let payload = request_payload(model, prompt, image, options);
     tracing::warn!("SENSE_LLM_REQUEST {}", log_payload(&payload));
-    let result=async{let response=reqwest::Client::new().post(url).timeout(std::time::Duration::from_secs_f64(options["timeout_seconds"].as_f64().unwrap_or(180.))).json(&payload).send().await?.error_for_status()?;let body:Value=response.json().await?;let content=body["choices"][0]["message"]["content"].as_str().ok_or("Gemma no devolvió texto.")?;let result=json!({"content":content.trim(),"usage":body["usage"],"model":body.get("model").unwrap_or(&json!(model))});tracing::warn!("SENSE_LLM_RESPONSE {result}");Ok::<_,crate::Error>(result)}.await;
+    let result=async{let response=reqwest::Client::new().post(url).timeout(std::time::Duration::from_secs_f64(options["timeout_seconds"].as_f64().unwrap_or(180.))).json(&payload).send().await?.error_for_status()?;let body:Value=response.json().await?;let content=body["choices"][0]["message"]["content"].as_str().ok_or("Gemma no devolvió texto.")?;let result=json!({"content":content.trim(),"usage":body["usage"],"finish_reason":body["choices"][0]["finish_reason"],"model":body.get("model").unwrap_or(&json!(model))});tracing::warn!("SENSE_LLM_RESPONSE {result}");Ok::<_,crate::Error>(result)}.await;
     if let Err(e) = &result {
         tracing::error!("SENSE_LLM_FAILURE {e}");
     }

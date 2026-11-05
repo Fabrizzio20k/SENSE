@@ -348,6 +348,8 @@ fn export_csv_zip_snapshot(
                 }
             } else if kind == "VISION_OBSERVATION" {
                 add_obs("count", &p["observation"]);
+            } else if kind == "PRESENCE_CONTROL_SAMPLED" {
+                add_obs("presence", &p["observation"]);
             }
             let task_id = command.map(|c| c["command_id"].clone()).unwrap_or_else(|| {
                 ["command_id", "task_id"]

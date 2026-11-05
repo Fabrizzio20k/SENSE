@@ -17,7 +17,20 @@ pub fn semantic_key(
             evidence[key] = json!({"value":v["value"],"status":v["status"],"region":v["region"],"source_agent":v["source_agent"],"source_kind":v["metadata"]["source_kind"]});
         }
     }
-    hash(python_json(&json!({"question":question,"evidence":evidence,"model":model,"image_id":image_id,"episodes":list(&snapshot["environment_events"]).iter().map(|e|e["event_id"].clone()).collect::<Vec<_>>()})).as_bytes())
+    let mut input = json!({"question":question,"evidence":evidence,"model":model,"image_id":image_id,"episodes":list(&snapshot["environment_events"]).iter().map(|e|e["event_id"].clone()).collect::<Vec<_>>()});
+    let mut health = json!({});
+    if let Some(components) = snapshot["component_health"].as_object() {
+        for (name, component) in components
+            .iter()
+            .filter(|(name, _)| name.as_str() != "gemma")
+        {
+            health[name] = json!({"status":component["status"],"reason":component["reason"]});
+        }
+    }
+    if health.as_object().is_some_and(|m| !m.is_empty()) {
+        input["component_health"] = health;
+    }
+    hash(python_json(&input).as_bytes())
 }
 fn answer(
     s: &Snapshot,
