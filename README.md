@@ -142,6 +142,11 @@ predicciones sin esa comparación real.
 
 ## Interpretaciones Q6 y Q7
 
+Gemma procesa Q6 y Q7 en serie. Cada pregunta dispone de su propio timeout
+desde que comienza a ejecutarse (90 segundos para Q6 y 180 para Q7 en el piloto);
+la espera en cola no consume ese plazo. Q7 se descarta si su imagen vence antes
+de empezar. Detener la sesión cancela las solicitudes pendientes.
+
 Q6 recibe evidencia JSON compacta con lecturas vigentes, unidades y edades,
 salud de componentes, diferencias calculadas respecto al inicio de sesión y el
 último evento de cada tipo (hasta cuatro), con edad y estado actual evaluable.

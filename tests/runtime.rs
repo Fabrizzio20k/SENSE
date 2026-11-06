@@ -98,39 +98,86 @@ fn cancellation_keeps_worker_occupied_until_done() {
     assert!(!t.busy());
 }
 #[test]
-fn pending_task_expires_without_running() {
+fn queued_question_gets_full_timeout_after_previous_question_finishes() {
     let mut t = TaskManager::new(1);
-    let (tx, rx) = mpsc::channel();
     t.submit(
         "gemma",
         command("text"),
-        Box::new(move || {
-            rx.recv()?;
-            Ok(json!({}).into())
-        }),
+        Box::new(|| panic!("simulation ran")),
         "one".into(),
         0.,
-        10.,
-        None,
+        2.,
+        Some(json!({"kind":"TIMEOUT"})),
     );
     t.submit(
         "gemma",
-        command("text"),
-        Box::new(|| panic!("queued action ran")),
+        command("multimodal"),
+        Box::new(|| panic!("simulation ran")),
         "two".into(),
         0.,
         1.,
-        None,
+        Some(json!({"kind":"TIMEOUT"})),
     );
-    let events = t.poll(2., false);
-    assert_eq!(t.pending.len(), 0);
+    assert!(
+        t.poll(1.5, true)
+            .iter()
+            .all(|e| e.document["event_type"] != "TASK_TIMEOUT")
+    );
+    assert_eq!(t.pending.len(), 1);
+    t.poll(2., true);
+    let second = t.active["gemma"].as_ref().unwrap();
+    assert_eq!(second.command["parameters"]["question_id"], "Q7");
+    assert_eq!(second.started, 2.);
+    assert_eq!(second.deadline, 3.);
+    assert!(
+        t.poll(2.9, true)
+            .iter()
+            .all(|e| e.document["event_type"] != "TASK_TIMEOUT")
+    );
+    let events = t.poll(3., true);
     assert!(
         events
             .iter()
-            .any(|e| e.document["payload"]["reason"] == "QUEUE_DEADLINE")
+            .any(|e| e.document["event_type"] == "TASK_TIMEOUT"
+                && e.document["payload"]["command"]["parameters"]["question_id"] == "Q7")
     );
-    tx.send(()).unwrap();
-    wait(&mut t, 3.);
+    assert!(!t.busy());
+}
+#[test]
+fn queued_result_uses_execution_duration_when_poll_arrives_late() {
+    let mut t = TaskManager::new(1);
+    t.submit(
+        "gemma",
+        command("text"),
+        Box::new(|| panic!("simulation ran")),
+        "one".into(),
+        0.,
+        1.,
+        Some(json!({"kind":"TIMEOUT"})),
+    );
+    t.submit(
+        "gemma",
+        command("multimodal"),
+        Box::new(|| panic!("simulation ran")),
+        "two".into(),
+        0.,
+        0.5,
+        Some(json!({"kind":"CAMERA_UNAVAILABLE"})),
+    );
+    std::thread::sleep(Duration::from_millis(550));
+    t.poll(1., true);
+    let events = wait(&mut t, 2.);
+    assert!(
+        events
+            .iter()
+            .any(|e| e.document["event_type"] == "TASK_FAILED")
+    );
+    assert!(
+        events
+            .iter()
+            .all(|e| e.document["event_type"] != "TASK_TIMEOUT")
+    );
+    assert_eq!(t.counters["late"], 1); // Only the first, simulated timeout is late.
 }
 #[test]
 fn remote_timeout_does_not_prove_runtime_stopped() {

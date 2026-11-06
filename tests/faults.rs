@@ -563,7 +563,7 @@ fn brief_recovered_blackout_is_not_detected_retroactively() {
     assert!(fault(&h)["detected_at"].is_null());
 }
 #[test]
-fn timeout_expiring_in_queue_is_reported_as_not_executed() {
+fn image_expiring_in_queue_is_reported_as_not_executed() {
     let mut h = harness();
     h.disable_models();
     h.start("F");
@@ -588,6 +588,7 @@ fn timeout_expiring_in_queue_is_reported_as_not_executed() {
     let mut second = first;
     second["command_id"] = json!(identifier());
     second["parameters"]["fault_id"] = f["fault_id"].clone();
+    second["parameters"]["image_expires_monotonic"] = json!(h.now + 1.);
     h.c.tasks.submit(
         "gemma",
         second.clone(),
@@ -600,7 +601,7 @@ fn timeout_expiring_in_queue_is_reported_as_not_executed() {
     h.c.faults.accepted(Some(&f), &second, h.now);
     h.step(2.);
     assert!(h.c.faults.timeouts.is_empty());
-    assert_eq!(fault(&h)["not_executed_reason"], "QUEUE_DEADLINE");
+    assert_eq!(fault(&h)["not_executed_reason"], "IMAGE_EXPIRED_IN_QUEUE");
     assert!(fault(&h)["detected_at"].is_null());
     tx.send(()).unwrap();
     h.finish_lane("gemma", 2.1);

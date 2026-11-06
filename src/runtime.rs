@@ -36,6 +36,7 @@ pub struct Task {
     pub key: String,
     pub enqueued: f64,
     pub deadline: f64,
+    timeout: f64,
     pub started: f64,
     pub expired: bool,
     pub cancelled: bool,
@@ -110,6 +111,7 @@ impl TaskManager {
             key,
             enqueued: now,
             deadline: now + timeout,
+            timeout,
             started: 0.,
             expired: false,
             cancelled: false,
@@ -130,6 +132,11 @@ impl TaskManager {
     }
     fn start(&mut self, lane: &str, mut task: Task, now: f64) {
         task.started = now;
+        task.deadline = now + task.timeout;
+        task.command["deadline"] = json!(
+            (chrono::Utc::now() + chrono::Duration::milliseconds((task.timeout * 1000.) as i64))
+                .to_rfc3339_opts(chrono::SecondsFormat::Micros, false)
+        );
         let simulated = task.simulation.is_some();
         let command = task.command.clone();
         let key = task.key.clone();
@@ -197,7 +204,8 @@ impl TaskManager {
             }
             let in_time = e
                 .completed
-                .is_some_and(|t| t - task.enqueued_monotonic < task.deadline - task.enqueued);
+                .zip(e.started)
+                .is_some_and(|(end, start)| end - start < task.timeout);
             if !task.expired && !task.cancelled && now >= task.deadline && !in_time {
                 task.expired = true;
                 self.inc("timed_out");
@@ -263,9 +271,9 @@ impl TaskManager {
         let mut retained = VecDeque::new();
         while let Some(task) = self.pending.pop_front() {
             let expiry = task.command["parameters"]["image_expires_monotonic"].as_f64();
-            if now >= task.deadline || expiry.is_some_and(|t| now >= t) {
+            if expiry.is_some_and(|t| now >= t) {
                 self.inc("timed_out");
-                events.push(TaskEvent{document:event(text(&task.command["command_id"]),text(&task.command["target_agent"]),"TASK_TIMEOUT",json!({"command":task.command,"queue_seconds":now-task.enqueued,"semantic_key":task.key,"reason":if expiry.is_some_and(|t|now>=t){"IMAGE_EXPIRED_IN_QUEUE"}else{"QUEUE_DEADLINE"}}),None),image:None});
+                events.push(TaskEvent{document:event(text(&task.command["command_id"]),text(&task.command["target_agent"]),"TASK_TIMEOUT",json!({"command":task.command,"queue_seconds":now-task.enqueued,"semantic_key":task.key,"reason":"IMAGE_EXPIRED_IN_QUEUE"}),None),image:None});
             } else {
                 retained.push_back(task);
             }
