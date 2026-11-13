@@ -1,0 +1,3746 @@
+{
+  "schema": "sense-rubric.v1",
+  "date": "2026-11-12",
+  "source": {
+    "path": "SENSE_evaluacion_Gemma.pdf",
+    "sha256": "9ad61190970e580cea796de4c4a4bbad8803045d056d64e8b1eb37eba8d5e07f",
+    "pages": 156,
+    "methodology_page": 2,
+    "provenance_page": 6,
+    "provenance": "Evaluación posterior asistida por IA consignada en el informe aportado"
+  },
+  "reference_doi": "10.3390/aisens2020007",
+  "adaptation": "Tres criterios propios de SENSE adaptados de las cinco dimensiones del artículo; escala de 1 a 5 y promedio simple por respuesta.",
+  "criteria": {
+    "accuracy": "Exactitud",
+    "relevance": "Pertinencia",
+    "support": "Sustento"
+  },
+  "records": [
+    {
+      "case_id": "C001",
+      "task_id": "a286d025dd85426db6b65e954c91b47b",
+      "run_id": "f5906f087e5a4666bc36d4b89f1f771b",
+      "scenario": "S1",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 8,
+      "response_sha256": "a29be3cebfab72a809bdb057632b64c0734c682ac7c127a42d0083db11d403ed",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 5
+      },
+      "reported_quality": 5.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Presencia, conteo y eventos coinciden con la entrada.",
+        "relevance": "Cumple la plantilla textual solicitada y el seguimiento pedido.",
+        "support": "Explicita ausencia de causalidad y de ocupación total verificable."
+      },
+      "evidence": "Entrada: presencia=1; conteo=1; ECO2_THRESHOLD_CROSSED y HUMIDITY_RISE."
+    },
+    {
+      "case_id": "C002",
+      "task_id": "3035c08ae83f4e0c9210d912d06fecdc",
+      "run_id": "b24a5892c76349319bc187ac4e775c3b",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 11,
+      "response_sha256": "67b41184adbf8c0e0268517fa73e5216d3f4cb9179b3e1bacec25dcde35b5a65",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 5
+      },
+      "reported_quality": 5.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "La imagen muestra silla amarilla, persona sentada y superficie blanca.",
+        "relevance": "Aporta la observación visual breve solicitada.",
+        "support": "No identifica personas ni atribuye causas; limita localización exacta."
+      },
+      "evidence": "Imagen: silla amarilla vacía a la izquierda; persona sentada a la derecha junto a mesa blanca."
+    },
+    {
+      "case_id": "C003",
+      "task_id": "48aacb905b2844d1bfd522771787c22a",
+      "run_id": "b24a5892c76349319bc187ac4e775c3b",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 12,
+      "response_sha256": "9ea9c36bb1dd5aa35cc54e8ad61e50842aab5f5f8e1a48ed6656f70e1534634e",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Temperatura 24.21 y silla amarilla izquierda coinciden con la evidencia.",
+        "relevance": "La observación visual aparece en un campo adicional; mezcla información sensorial y visual.",
+        "support": "No inventa causas; la recomendación de iluminación carece de necesidad explícita."
+      },
+      "evidence": "Entrada: temperatura=24.21. Imagen: silla amarilla izquierda y escena bien visible."
+    },
+    {
+      "case_id": "C004",
+      "task_id": "6baa1d431c12454084dfc33bcf35c0d1",
+      "run_id": "b24a5892c76349319bc187ac4e775c3b",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 9,
+      "response_sha256": "3d84599980cb09a7a95ff948addb0ebc47120934169f8b2f903ce7b41b1cc8ca",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 5
+      },
+      "reported_quality": 5.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Reproduce presencia, conteo y tres eventos sin alterarlos.",
+        "relevance": "Cumple la plantilla y la recomendación prevista.",
+        "support": "No presenta coincidencia temporal como causalidad."
+      },
+      "evidence": "Entrada: presencia=1, conteo=1; HUMIDITY_RISE, AQI_WORSENED y ECO2_THRESHOLD_CROSSED."
+    },
+    {
+      "case_id": "C005",
+      "task_id": "d8137bde6f214ca8b35b87bbeaef387b",
+      "run_id": "b24a5892c76349319bc187ac4e775c3b",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 10,
+      "response_sha256": "7f965b9a315aa20e5b0b52d1912da6b4e42b3ed3cda9bbc51d74dea619fb9c4c",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 5
+      },
+      "reported_quality": 5.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Las dos sillas de colores distintos son visibles.",
+        "relevance": "Describe una observación visual concreta, como pide S1.",
+        "support": "Distingue lo visible de magnitudes ambientales que la foto no mide."
+      },
+      "evidence": "Imagen: silla amarilla izquierda y silla gris derecha, sin persona visible."
+    },
+    {
+      "case_id": "C006",
+      "task_id": "12e86bf4cf1f430b865adad06b2abdd4",
+      "run_id": "e22af1a210c043e1b56c71a20b632168",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 13,
+      "response_sha256": "4fee93c8f8e32b33cfdf05ff929dbd6a5152e4dd9bf36f5da2c8d2faa670958a",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las sillas son correctas, pero denomina sensor a Gemma.",
+        "relevance": "Incluye observación visual, aunque desvía la recomendación al supuesto sensor.",
+        "support": "Deduce una revisión de configuración a partir de UNKNOWN sin evidencia de avería."
+      },
+      "evidence": "Imagen: dos sillas. Gemma es el intérprete; el contexto solo declara gemma=UNKNOWN."
+    },
+    {
+      "case_id": "C007",
+      "task_id": "325cbdb277954b68b54b9ffaf7a51a0b",
+      "run_id": "e22af1a210c043e1b56c71a20b632168",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 14,
+      "response_sha256": "ff6e399421087e671953a84bc6a19bb0d4a1be9c95ce4c940dd7ded02363cbba",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 4
+      },
+      "reported_quality": 4.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Las dos sillas descritas se ven en la fotografía.",
+        "relevance": "Responde con la observación visual breve solicitada.",
+        "support": "No inventa causas; revisar iluminación es una sugerencia poco motivada por la imagen."
+      },
+      "evidence": "Imagen: silla amarilla y silla gris claramente visibles."
+    },
+    {
+      "case_id": "C008",
+      "task_id": "5e6876b707ea4daaa6d6fb20c29dbed2",
+      "run_id": "e22af1a210c043e1b56c71a20b632168",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 15,
+      "response_sha256": "39761053c592b712f5e4b37273724cd53aeab89c59a0e91602128413a2b1843e",
+      "scores": {
+        "accuracy": 1,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 2.33,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "La persona está en la silla gris; la silla amarilla está vacía.",
+        "relevance": "Intenta responder la observación visual pedida, pero falla su relación principal.",
+        "support": "Presenta una asociación persona-silla no respaldada por la imagen."
+      },
+      "evidence": "Imagen: persona sentada a la derecha en silla gris; silla amarilla vacía a la izquierda."
+    },
+    {
+      "case_id": "C009",
+      "task_id": "0691dd079ee74e4ab28da738f09cb3e6",
+      "run_id": "70fdd6217c8f4d5fa7d40d96f8316a82",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 19,
+      "response_sha256": "2751f39eca02bd1be3a4f6872183871ed4791a26b4cee4e8459927ef6f1a933f",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 5
+      },
+      "reported_quality": 5.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "La silla amarilla se encuentra en el lado izquierdo.",
+        "relevance": "Ofrece una observación espacial específica, suficiente para este prompt.",
+        "support": "No atribuye causas ni identifica la actividad como un hecho."
+      },
+      "evidence": "Imagen: silla amarilla izquierda; persona a la derecha."
+    },
+    {
+      "case_id": "C010",
+      "task_id": "136672d868c147758e227555fdadfa3b",
+      "run_id": "70fdd6217c8f4d5fa7d40d96f8316a82",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 16,
+      "response_sha256": "dec2cfbad0967a4841bdcca5a26e81d41a4e6a01ab7f23de6745e00c230b65c0",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "El tono de la pared es plausible, pero niega información sobre objetos claramente visibles.",
+        "relevance": "La descripción es parcial y el comentario sobre falta de objetos no aprovecha las sillas.",
+        "support": "La afirmación amplia de falta de información visual excede lo que muestra la foto."
+      },
+      "evidence": "Imagen: dos sillas y mesas identificables; entrada gemma=UNKNOWN."
+    },
+    {
+      "case_id": "C011",
+      "task_id": "481f300fe11f4f3dbc9cf9339f5e0ee0",
+      "run_id": "70fdd6217c8f4d5fa7d40d96f8316a82",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 18,
+      "response_sha256": "72804956bd3610337016c9e4018427da6b4d7aa8e56eaa26ac03f129d2ead252",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 5,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Persona, mesa y silla amarilla son visibles; trabajando es una interpretación de postura.",
+        "relevance": "Aporta la observación visual solicitada.",
+        "support": "La actividad se afirma con más certeza de la que permite una captura."
+      },
+      "evidence": "Imagen: persona con brazos sobre mesa blanca; silla amarilla izquierda."
+    },
+    {
+      "case_id": "C012",
+      "task_id": "8c702d3543844e598bc0ed624163ff62",
+      "run_id": "70fdd6217c8f4d5fa7d40d96f8316a82",
+      "scenario": "S1",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 17,
+      "response_sha256": "bfce62beca6e01c1fbdd4fda34a1e81f689d5bb131bb8b8642024a93cf032cae",
+      "scores": {
+        "accuracy": 1,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 2.33,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Repite que la persona está en silla amarilla, aunque ocupa la silla gris.",
+        "relevance": "La respuesta aborda la observación pedida, con relación visual incorrecta.",
+        "support": "La relación persona-color de silla se presenta como hecho sin respaldo."
+      },
+      "evidence": "Imagen: persona en silla gris derecha; silla amarilla izquierda vacía."
+    },
+    {
+      "case_id": "C013",
+      "task_id": "931c58c5a65c45e6b703032b262bf2ef",
+      "run_id": "dabebbd594e14921a75141eccbe7203c",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 21,
+      "response_sha256": "7f89358d302ec31d3dc2958402e09ff90b33a6cbb61d4d07658414210ff0dee7",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 5
+      },
+      "reported_quality": 4.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "23.79 coincide y la persona sentada junto a mesa blanca es visible.",
+        "relevance": "Incluye la observación requerida en un campo adicional junto a temperatura.",
+        "support": "La comprobación del estado Gemma es compatible con FAILED y no afirma reparación."
+      },
+      "evidence": "Entrada: temperatura=23.79 y gemma=FAILED. Imagen: persona junto a mesa blanca."
+    },
+    {
+      "case_id": "C014",
+      "task_id": "b0882e15fd3448f7a4e94943b7244727",
+      "run_id": "dabebbd594e14921a75141eccbe7203c",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 22,
+      "response_sha256": "9ae129a52342a6fc654f77bda29e779f4e8c03a977aeadc51b67f79cf8fd8529",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 5,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Persona y superficie blanca se ven; trabajando interpreta una actividad.",
+        "relevance": "Responde la observación breve que exige el prompt.",
+        "support": "La actividad debería formularse como apariencia, sin mayor atribución causal."
+      },
+      "evidence": "Imagen: persona sentada con brazos próximos a una mesa blanca."
+    },
+    {
+      "case_id": "C015",
+      "task_id": "cc919ec2b94a4fab803e63018f580256",
+      "run_id": "dabebbd594e14921a75141eccbe7203c",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 20,
+      "response_sha256": "3915c421eb44e6edce22f24e4085b61d13164f73cdb75647b600c8c87ea7d4e4",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Reconoce las sillas, pero después niega información sobre objetos específicos.",
+        "relevance": "La observación principal es pertinente; la negativa posterior la debilita.",
+        "support": "La limitación declarada es excesiva ante objetos identificables."
+      },
+      "evidence": "Imagen: sillas amarilla y gris claramente visibles; no se requiere contar personas."
+    },
+    {
+      "case_id": "C016",
+      "task_id": "781530e3869749c78199192ff37ae21f",
+      "run_id": "a340ae64b31d49ec8f0f60623b8b2c96",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 26,
+      "response_sha256": "8d61844ef29822a3b0e22bcab0d569006bba3f5d40efda5d1e60c05afa8a746c",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "24.15 coincide y la silla amarilla está a la izquierda.",
+        "relevance": "La observación visual aparece en un campo adicional y se mezcla con temperatura.",
+        "support": "La ubicación exacta no se determina; revisar iluminación tiene sustento limitado."
+      },
+      "evidence": "Entrada temperatura=24.15; imagen con silla amarilla izquierda."
+    },
+    {
+      "case_id": "C017",
+      "task_id": "86799b206f1e420689002557a044c626",
+      "run_id": "a340ae64b31d49ec8f0f60623b8b2c96",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 24,
+      "response_sha256": "f3ac522dcc4e82d2afee44c095c262674c1ad928c491f148eb7f4b7b33660087",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 5
+      },
+      "reported_quality": 5.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "La pared gris clara es visible.",
+        "relevance": "La observación simple cumple el alcance visual de S1.",
+        "support": "Aclara que la imagen no mide temperatura, humedad ni gases; no inventa causas."
+      },
+      "evidence": "Imagen: pared de concreto gris; contexto gemma=UNKNOWN."
+    },
+    {
+      "case_id": "C018",
+      "task_id": "aafbf5c4f55d41658aef02f99b15440a",
+      "run_id": "a340ae64b31d49ec8f0f60623b8b2c96",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 23,
+      "response_sha256": "2de0cc20a4fff68030f2c67d0e0b0156c60ba2c6bdfde220957fcd960a4f1f23",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 5
+      },
+      "reported_quality": 5.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Reproduce los tres eventos, presencia y conteo de la entrada.",
+        "relevance": "Cumple la plantilla y seguimiento solicitados.",
+        "support": "Conserva expresamente los límites de causalidad y ocupación."
+      },
+      "evidence": "Entrada: presencia=1, conteo=1; AQI_WORSENED, HUMIDITY_RISE y ECO2_THRESHOLD_CROSSED."
+    },
+    {
+      "case_id": "C019",
+      "task_id": "d42bd8094a8c48d9847ca8ffc9c77eb1",
+      "run_id": "a340ae64b31d49ec8f0f60623b8b2c96",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 25,
+      "response_sha256": "77b0577eb1807fe16bee2f900fa6650a1d406ea520265438dc8b7cac28415849",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "23.96 coincide y la orientación de la cabeza hacia arriba es visible.",
+        "relevance": "Incluye una observación específica en un campo adicional.",
+        "support": "No infiere identidad; revisar TVOC es poco explicado, sin inventar una causa."
+      },
+      "evidence": "Entrada temperatura=23.96. Imagen: persona con cabeza orientada hacia arriba."
+    },
+    {
+      "case_id": "C020",
+      "task_id": "d72f84ba44834703bb27d6c4ff176fa5",
+      "run_id": "a340ae64b31d49ec8f0f60623b8b2c96",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 27,
+      "response_sha256": "faee65274c32270c50b866521b97332096560727452d717e5f3db27ae6478f3a",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 1,
+        "support": 5
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "24.37, AQI no disponible y ENS160 fallando coinciden con la entrada.",
+        "relevance": "No aporta ninguna observación visual pese a disponer de fotografía.",
+        "support": "Reconoce AQI ausente y no inventa valores ni causas."
+      },
+      "evidence": "Entrada: temperatura=24.37, aqi=null/ERROR, ens160=FAILED; imagen muestra persona y mobiliario."
+    },
+    {
+      "case_id": "C021",
+      "task_id": "18f14c30bd32436fa3500a32a92e6cf5",
+      "run_id": "fe4b6571733a4c2ea566c8158f5d7bec",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 28,
+      "response_sha256": "5f651afdcde9dd8a72edffc01049522bfcc06ac0bb7b3dcc45c603972d4985e9",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 5,
+        "support": 5
+      },
+      "reported_quality": 4.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "La superficie gris verdosa aparece curvada por la perspectiva de la imagen.",
+        "relevance": "Ofrece una observación visual suficiente para el prompt breve.",
+        "support": "No deduce condiciones ambientales de la fotografía."
+      },
+      "evidence": "Imagen: pared y tablero de vidrio curvos en la proyección; sillas visibles."
+    },
+    {
+      "case_id": "C022",
+      "task_id": "1f99ae7c4ae347e1a26dd380f11d91cc",
+      "run_id": "fe4b6571733a4c2ea566c8158f5d7bec",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 31,
+      "response_sha256": "17db1c5c6b3f3d4431ac0bd7093463f3c31ddac718dd17bb47c43c47cf4fa123",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 1,
+        "support": 5
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "La temperatura 23.25 coincide con el contexto.",
+        "relevance": "Sustituye la observación visual por información de temperatura.",
+        "support": "No inventa una causa y propone comprobar la lectura frente a eventos."
+      },
+      "evidence": "Entrada temperatura=23.25. Imagen con persona y sillas que la respuesta no describe."
+    },
+    {
+      "case_id": "C023",
+      "task_id": "7c8a652cfabc469aa93c88e50428523c",
+      "run_id": "fe4b6571733a4c2ea566c8158f5d7bec",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 29,
+      "response_sha256": "a44745c9d70ec164d9a85ea428936a5040fffa49303978f003e8f9d61e4fa45e",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 1,
+        "support": 5
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "23.8 coincide y el radar aparece STALE.",
+        "relevance": "No describe la fotografía, que era la tarea solicitada.",
+        "support": "Sugiere revisar estado sin afirmar una causa o una avería física."
+      },
+      "evidence": "Entrada temperatura=23.8, radar=STALE; la fotografía contiene una persona y mobiliario."
+    },
+    {
+      "case_id": "C024",
+      "task_id": "a2ee3c78a64643a1b6742483bc41b9b2",
+      "run_id": "fe4b6571733a4c2ea566c8158f5d7bec",
+      "scenario": "S1",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 30,
+      "response_sha256": "e6629427a94b7fb3204742c4942453f2fbd3fdff080ca42f95bd36a3586ecea4",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 4
+      },
+      "reported_quality": 4.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Interior, superficies curvas en la proyección y persona son visibles.",
+        "relevance": "Responde al pedido de una observación visual breve.",
+        "support": "No deduce temperatura de la imagen; la necesidad de mejorar calidad se explica poco."
+      },
+      "evidence": "Imagen: persona sentada, mesas y pared en perspectiva curva; entrada temperatura=24.04."
+    },
+    {
+      "case_id": "C025",
+      "task_id": "0f69ea1893d84cadbe92fbd674e1f2ee",
+      "run_id": "efbe297caeac47388295874ac1afd604",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 33,
+      "response_sha256": "a9ddafec101dc68910606cb5872826973e963175b9df6cdf7289de2cb796ff3b",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los cambios -1.04 y +1.64 y el conteo coinciden; ambiente saludable no está demostrado.",
+        "relevance": "Responde las tres partes, con recomendación de seguimiento poco específica.",
+        "support": "Confunde funcionamiento HEALTHY con una conclusión de salubridad ambiental."
+      },
+      "evidence": "Temperatura 23.60→22.56; humedad 72.23→73.87; HEALTHY no certifica ambiente saludable."
+    },
+    {
+      "case_id": "C026",
+      "task_id": "236db71df5594dd3a289ff8bf47f5daf",
+      "run_id": "efbe297caeac47388295874ac1afd604",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 35,
+      "response_sha256": "94eb8e1091b5955655c408ddd623f7af923217fd423a6064c9cda526a549ace9",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Las disminuciones, 13 personas, AQI=2 y TVOC=78 coinciden.",
+        "relevance": "Aborda cambios, gases y observación posterior; poco detalle del efecto esperado.",
+        "support": "Relaciona los cambios con salud del sensor sin que esos cambios prueben funcionamiento."
+      },
+      "evidence": "Temperatura 23.60→22.23; humedad 72.23→69.95; TVOC 48→78."
+    },
+    {
+      "case_id": "C027",
+      "task_id": "4385e346f44e4e16b854e3eb496fad29",
+      "run_id": "efbe297caeac47388295874ac1afd604",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 36,
+      "response_sha256": "a298e62e3a4d785a0720ee680894cfff4381b10ade9b9b787db99835d310b600",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las dos disminuciones y aumentos respecto de la base son correctos; no hay tendencia continua demostrada.",
+        "relevance": "La limitación de gases omite la estimación de eCO2 y su dependencia con TVOC.",
+        "support": "Asocia variaciones con salud del sensor y presenta cambios entre extremos como tendencia."
+      },
+      "evidence": "Temperatura delta=-1.21; humedad=-1.30; AQI 1→2 y TVOC 48→79, solo comparación de extremos."
+    },
+    {
+      "case_id": "C028",
+      "task_id": "4dd7939e0c6b4aa68d05498a6a076c31",
+      "run_id": "efbe297caeac47388295874ac1afd604",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 34,
+      "response_sha256": "edf894de2df4c254c1270a62e7f8268fb4f3b2aa6098c41fcf52f9244f914c00",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Temperatura y humedad disminuyen, y el conteo declarado es 13.",
+        "relevance": "Cubre las tres preguntas; la acción se limita a observar disponibilidad.",
+        "support": "La alineación entre variaciones y salud del sensor y la tendencia continua no quedan demostradas."
+      },
+      "evidence": "Temperatura 23.60→22.22; humedad 72.23→69.94; no se suministra serie continua."
+    },
+    {
+      "case_id": "C029",
+      "task_id": "af7e94ca2ef04e3681ce99e07c2eb25a",
+      "run_id": "efbe297caeac47388295874ac1afd604",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 37,
+      "response_sha256": "c1fdcb5278b65c7862a39b384f3245e5307452fa2849b367418cfec621112659",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las disminuciones y empeoramiento de AQI son correctos; ambiente saludable carece de referencia.",
+        "relevance": "Responde las tres partes, aunque no concreta qué medir después.",
+        "support": "Deriva salubridad ambiental de cambios y del estado del componente."
+      },
+      "evidence": "Temperatura delta=-1.18; humedad=-0.42; AQI 1→2; ninguna referencia de ambiente saludable."
+    },
+    {
+      "case_id": "C030",
+      "task_id": "c2bdd6f2e89c4757a246d6387aa6f930",
+      "run_id": "efbe297caeac47388295874ac1afd604",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 32,
+      "response_sha256": "9bb267e6d9989ed2d2d6e89d149fab6c468c154f9e3fc3a58d06dfaebdd7a390",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Transcribe los cambios y FAILED/ERROR correctamente, pero declara ambiente saludable.",
+        "relevance": "Reconoce el fallo parcial de ENS160 y propone seguimiento.",
+        "support": "La salubridad ambiental no se deduce de HEALTHY ni de esas magnitudes."
+      },
+      "evidence": "Temperatura -1.04; humedad +6.64; ENS160 FAILED y AQI ERROR, TVOC=1821 y eCO2=1182."
+    },
+    {
+      "case_id": "C031",
+      "task_id": "50afee969ce546e8957a5aadf8790cf2",
+      "run_id": "097c1149d8d64325b18f4d5120e068d2",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 38,
+      "response_sha256": "1fd2c36795cb7b9edfde3a2bbf756fe8e41f476b3d9041a3b85e9e66ed9ac8d1",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Cambios -0.20 y +8.49 y conteo 11 coinciden; ambiente saludable no está validado.",
+        "relevance": "Incluye límites instrumentales y seguimiento condicional.",
+        "support": "La calificación ambiental saludable excede la evidencia de funcionamiento."
+      },
+      "evidence": "Humedad 72.38→80.87; temperatura 22.70→22.50; HEALTHY solo es estado de componente."
+    },
+    {
+      "case_id": "C032",
+      "task_id": "9825ace833454fbd8a560740b7d5216b",
+      "run_id": "097c1149d8d64325b18f4d5120e068d2",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 40,
+      "response_sha256": "db481cec512240d417bb5865c4d12ca493b0f4d1247e5727ddf7efcebd9e0993",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las disminuciones y 16 personas son correctas; no se demuestra ambiente saludable.",
+        "relevance": "Cubre cambios y gases; el seguimiento es genérico.",
+        "support": "Confunde condición ambiental con salud operacional y llama tendencia a diferencias de extremos."
+      },
+      "evidence": "Temperatura delta=-0.33; humedad=-2.77; la entrada no contiene certificación de salubridad."
+    },
+    {
+      "case_id": "C033",
+      "task_id": "acc5824eac19430abed0ecc9381e8b48",
+      "run_id": "097c1149d8d64325b18f4d5120e068d2",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 39,
+      "response_sha256": "9eb2f60bb75589513c8c0e6392b387686b7fadd4e4a8c868d6fde310b5d9a906",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Las dos disminuciones y las limitaciones instrumentales coinciden.",
+        "relevance": "Atiende las tres partes, sin justificar una intervención concreta.",
+        "support": "Presenta disminuciones como consistencia del sensor y espera estabilización no demostrada, aunque sin causa de ocupación."
+      },
+      "evidence": "Temperatura 22.70→22.43; humedad 72.38→71.92; ENS160 HEALTHY."
+    },
+    {
+      "case_id": "C034",
+      "task_id": "d23e10439554458f8c6a3a485a523983",
+      "run_id": "097c1149d8d64325b18f4d5120e068d2",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 41,
+      "response_sha256": "86d276f4fa13e43a86b1b60d173af68c650f57ef23fb5891662301c9710dd131",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 5
+      },
+      "reported_quality": 4.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "La temperatura baja y la humedad sube respecto de la base.",
+        "relevance": "Responde las tres partes; seguimiento de humedad apropiado aunque poco específico.",
+        "support": "Distingue causalidad y limitación de eCO2/TVOC sin atribuciones nuevas."
+      },
+      "evidence": "Temperatura delta=-0.32 y humedad=+1.42; eCO2 estimado y dependencia indicados en prompt."
+    },
+    {
+      "case_id": "C035",
+      "task_id": "20ed63c0cdfe41ffafd891cae95e3512",
+      "run_id": "3be9a5e22938470383d4dacdd9d2fd49",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 42,
+      "response_sha256": "b4f268867fc14c255880f26f1179410638ade9d60a4b58de809b51cc4842e244",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 4
+      },
+      "reported_quality": 4.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Las direcciones de temperatura y humedad coinciden.",
+        "relevance": "Responde cambios, límite de gases y ajuste condicional con observación posterior.",
+        "support": "La ventilación se plantea condicionalmente, aunque su capacidad para estabilizar humedad no está comprobada."
+      },
+      "evidence": "Temperatura 23.36→22.32; humedad 73.39→81.29; ventilación disponible desconocida."
+    },
+    {
+      "case_id": "C036",
+      "task_id": "9f7c0dd458024bd699a4d6050f684271",
+      "run_id": "3be9a5e22938470383d4dacdd9d2fd49",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 43,
+      "response_sha256": "78d6576e7a2f115562f191e7faf9f1a8556b98b206acd0a292d55245f2451148",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "-1.17 y +1.33 son correctos; ambiente saludable no está demostrado.",
+        "relevance": "Aborda las tres preguntas, con observación general como acción.",
+        "support": "Convierte un estado de sensor en una conclusión ambiental saludable."
+      },
+      "evidence": "Temperatura 23.36→22.19; humedad 73.39→74.72; falta referencia de salubridad."
+    },
+    {
+      "case_id": "C037",
+      "task_id": "e9313b24472d44f5996fe59d72b74e1d",
+      "run_id": "3be9a5e22938470383d4dacdd9d2fd49",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 45,
+      "response_sha256": "cca2a2dd5a092a17a660afcad6cb5c174f537441cac06c5a95792fef49669ec8",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "La temperatura baja, la humedad sube y el conteo de entrada es 10.",
+        "relevance": "Cubre cambios, limitación de gases y observación posterior.",
+        "support": "No afirma causa de ocupación; la relación con salud del sensor y el efecto de ventilación quedan poco precisos."
+      },
+      "evidence": "Temperatura delta=-0.30; humedad=+6.52; conteo de entrada=10."
+    },
+    {
+      "case_id": "C038",
+      "task_id": "fca67d334b2c4b9495452890fb228816",
+      "run_id": "3be9a5e22938470383d4dacdd9d2fd49",
+      "scenario": "S2",
+      "mode": "D",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 44,
+      "response_sha256": "2998b33f8db5a7a37a8e51b0b7e96607552559054121123c22aea3763d6dbb96",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas y FAILED coinciden, pero añade el motivo INVALID_READING no incluido en el prompt.",
+        "relevance": "Responde las tres partes y limita la confianza en gases.",
+        "support": "Introduce una etiqueta de motivo no proporcionada y vincula variaciones a salud sin demostrarla."
+      },
+      "evidence": "Entrada: temperatura=-0.27, humedad=+7.17, ENS160 FAILED y AQI ERROR; no contiene el campo motivo INVALID_READING."
+    },
+    {
+      "case_id": "C039",
+      "task_id": "1dd61dadc59342aea8c38d499c2991dc",
+      "run_id": "1fa0dc3e051c4b248081521aad2c086b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 49,
+      "response_sha256": "ecd5ab24b0e84869272b00b9ea940db971f873ae675197f293ad5e63f23b8910",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 4
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior, personas y mobiliario coinciden; la fotografía sí permite describir su distribución.",
+        "relevance": "La respuesta declara falta de información espacial y no describe la disposición visible.",
+        "support": "No atribuye causa ambiental; la referencia a ventana abierta debe mantenerse como principio, no observación confirmada."
+      },
+      "evidence": "Imagen: mesas compartidas, sillas y personas en varios planos; los sensores no verifican flujo de aire."
+    },
+    {
+      "case_id": "C040",
+      "task_id": "642b08249cc8470488a84d4f7ac4f81c",
+      "run_id": "1fa0dc3e051c4b248081521aad2c086b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 50,
+      "response_sha256": "c194c3200c5e6de9bede69f7c13220e600e0b30b974b3db53ce71b0627591427",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 2,
+        "support": 3
+      },
+      "reported_quality": 2.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Reconoce interior y personas, pero omite la oclusión evidente en primer plano.",
+        "relevance": "No responde qué limita el conteo ni aprovecha la interferencia cercana a la cámara.",
+        "support": "Afirma posibilidad de correlación sin delimitar tiempos y se limita a observación general."
+      },
+      "evidence": "Imagen: prenda o cuerpo ocupa una franja grande a la derecha; mesas y personas quedan parcialmente ocultas."
+    },
+    {
+      "case_id": "C041",
+      "task_id": "9ebb73d03bac4cd1ba824e4dd71c604c",
+      "run_id": "1fa0dc3e051c4b248081521aad2c086b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 46,
+      "response_sha256": "0abac09394ec8e4f7699cf9457d3193ead755de8b6db101d3690449811ab43e6",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "HEALTHY está en la entrada, pero no se deduce de que temperatura y humedad cambien.",
+        "relevance": "Responde gases y seguimiento, sin describir la dirección ni magnitud de los cambios pedidos.",
+        "support": "Explica causalmente la salud del sensor mediante variaciones, contrario al alcance de HEALTHY."
+      },
+      "evidence": "SHT40 HEALTHY; temperatura +0.09 y humedad +10.66. El estado no está definido como función de esos cambios."
+    },
+    {
+      "case_id": "C042",
+      "task_id": "efe6b3f6bce6484a9d38234ef501ecfd",
+      "run_id": "1fa0dc3e051c4b248081521aad2c086b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 48,
+      "response_sha256": "91bc7bf94e3b8810c5d1d8451125fba475fdf5b21059bc590a40a196e02c24b8",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y mobiliario coinciden; una ventana abierta no se establece claramente en la imagen.",
+        "relevance": "No describe la distribución visible ni límites concretos del conteo.",
+        "support": "La ventana se afirma como observada sin evidencia visual inequívoca y la relación sensorial es genérica."
+      },
+      "evidence": "Imagen: mesas, sillas y personas en profundidad; no se identifica inequívocamente una hoja de ventana abierta."
+    },
+    {
+      "case_id": "C043",
+      "task_id": "fb944825aecb4d26a88dfaef743074b1",
+      "run_id": "1fa0dc3e051c4b248081521aad2c086b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 47,
+      "response_sha256": "fbf738781da5f2780524a63b74cb8a05b912c7c06cdbf965ea524d3bb45e8a11",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "-0.06 y +12.0 coinciden; ambiente saludable no queda demostrado.",
+        "relevance": "Cubre cambios, gases y seguimiento, con acción condicional pertinente.",
+        "support": "Califica el ambiente como saludable a partir de estado funcional y cambios."
+      },
+      "evidence": "Temperatura 22.80→22.74 y humedad 73.44→85.44; falta referencia de salubridad."
+    },
+    {
+      "case_id": "C044",
+      "task_id": "1fffb8863c0c408c94b9c69401071d0a",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 57,
+      "response_sha256": "5cb285c0eb242344fd4426d83e38eb4cab3399bb829924ed29460889af681428",
+      "scores": {
+        "accuracy": 2,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.33,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Describe mobiliario y personas, pero equipara CO2 con eCO2 y descarta límites visuales sin justificarlos.",
+        "relevance": "Ofrece una descripción general, sin analizar la disposición real y las limitaciones de la captura.",
+        "support": "Afirma influencia de personas en ventilación y contaminantes sin demostrarla con la evidencia."
+      },
+      "evidence": "Imagen: mesas entre cámara y personas, cuerpos parcialmente ocultos; la entrada define eCO2 equivalente estimado."
+    },
+    {
+      "case_id": "C045",
+      "task_id": "200689a2e97e49a0a0f56b7738104e34",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 54,
+      "response_sha256": "9a2b77b10cbc3e6df77697f0b16fb0903379d198ff0091b9afd49898ec168aa0",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas -0.04 y +2.78 coinciden; vincularlos con salud del sensor es poco preciso.",
+        "relevance": "La segunda respuesta omite los límites instrumentales de gases que se preguntaron.",
+        "support": "Conserva ausencia de causalidad, pero no trata eCO2 ni dependencia con TVOC."
+      },
+      "evidence": "SHT40 HEALTHY; temperatura 22.93→22.89 y humedad 74.59→77.37; prompt pide límites de gases."
+    },
+    {
+      "case_id": "C046",
+      "task_id": "2a1f1ba1d784442b92f09b08c4ab2a63",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 60,
+      "response_sha256": "af545fe73094034d9dbe13db2ce1ee9d69beb468e82a59a7f59d2eb77d3d773e",
+      "scores": {
+        "accuracy": 2,
+        "relevance": 2,
+        "support": 2
+      },
+      "reported_quality": 2.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "22.89 y 77.37 coinciden, pero decir que no hay objetos relevantes contradice la escena de personas y mesas.",
+        "relevance": "No explica distribución u oclusiones pese a tener elementos claros para hacerlo.",
+        "support": "Niega información visual disponible y no delimita adecuadamente el aporte ambiental."
+      },
+      "evidence": "Imagen: personas sentadas a mesas; entrada temperatura=22.89 y humedad=77.37."
+    },
+    {
+      "case_id": "C047",
+      "task_id": "46e4565169e643c082497234629d2a80",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 56,
+      "response_sha256": "20dda7b8612ddd59b805fadb0d2921d0c75b5959158c680cc7e1c42bffc0b287",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Personas sentadas en mesas y conteo YOLO=10 son correctos; las mesas sí ocultan partes de cuerpos.",
+        "relevance": "Describe la distribución general y propone seguimiento, con poco detalle de límites del conteo.",
+        "support": "La ausencia de oclusiones se refiere a distribución general, no prueba exhaustividad de YOLO."
+      },
+      "evidence": "Imagen: personas en varias mesas y planos; cuerpos parcialmente tapados por tableros. Conteo proporcionado=10."
+    },
+    {
+      "case_id": "C048",
+      "task_id": "6947f81fdfe940eab49aab847737f635",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 58,
+      "response_sha256": "ef7b891f5d385e4bc5a6ba12eb0fdaa4a4b0a85e18ba5a4c1d37e7bbc8538c19",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Personas sentadas y una de pie se ven; persisten oclusiones por mobiliario.",
+        "relevance": "Responde distribución y observación posterior de ventilación, con límites del conteo poco desarrollados.",
+        "support": "La influencia ambiental y la correlación se formulan con más amplitud de la demostrable en una captura."
+      },
+      "evidence": "Imagen: persona de pie derecha y otras sentadas; solo una captura y mediciones puntuales, sin relación causal verificada."
+    },
+    {
+      "case_id": "C049",
+      "task_id": "9d04f48d2e59430da412dd6c47e8c4c4",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 55,
+      "response_sha256": "418af0dd3774358df9af4599ae53c482b5d82cf096814819e03421266177f64b",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "La distribución general y YOLO=8 coinciden, sin certificar ausencia de oclusiones para contar.",
+        "relevance": "Describe escena pero deja genérica la limitación de relacionarla con sensores.",
+        "support": "Introduce evaluación de condiciones óptimas sin criterios ni referencia ambiental independiente."
+      },
+      "evidence": "Imagen: personas detrás de mesas; conteo de entrada=8; no existen umbrales de condiciones óptimas en el prompt."
+    },
+    {
+      "case_id": "C050",
+      "task_id": "9e607fe6fee54f6692788ef56c45d7c5",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 51,
+      "response_sha256": "adc82c349ad12c5ce3bebd91ffc9c79a44060ab0b8fd1ad3b1c7b45b3aa47115",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas y FAILED coinciden; la afirmación de ambiente saludable no está sustentada.",
+        "relevance": "Aborda cambios, eCO2 estimado, fallo y seguimiento.",
+        "support": "El ambiente no puede calificarse saludable a partir de estos estados y lecturas."
+      },
+      "evidence": "Temperatura -0.46; humedad +4.33; ENS160 FAILED con AQI ERROR."
+    },
+    {
+      "case_id": "C051",
+      "task_id": "a2e29bdb0bde44aa92674e0d8bb09871",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 53,
+      "response_sha256": "21e087c4b70dfccf427d3977005b939a0ea9e707446219d4c68ee4c9c7d92301",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Deltas, 79.27% y 22.51°C son correctos.",
+        "relevance": "Incluye límites de gases y seguimiento, aunque la tendencia AQI no se conoce continuamente.",
+        "support": "Relaciona cambios con salud del sensor y presupone tendencia a partir de comparación inicial-actual."
+      },
+      "evidence": "Temperatura -0.42 y humedad +4.68; AQI 2→1 solo entre extremos."
+    },
+    {
+      "case_id": "C052",
+      "task_id": "c2e7f96431c24fa59f18afd18bb2ce17",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 52,
+      "response_sha256": "bf007c924c8ba9195a604d1a3e413d12ba863fe8093c91746d244fce80abf586",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 3,
+        "support": 4
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "La temperatura baja y la humedad sube como indica la entrada.",
+        "relevance": "La segunda parte responde límites de la captura, no los límites instrumentales de gases solicitados.",
+        "support": "Evita causalidad, aunque trata salud del sensor de forma poco específica."
+      },
+      "evidence": "Temperatura delta=-0.47; humedad=+4.81; faltan eCO2 estimado y relación TVOC/eCO2 en la respuesta."
+    },
+    {
+      "case_id": "C053",
+      "task_id": "f955c0b916a44d73aacef2d6c08e0ff1",
+      "run_id": "e422f5c7610e4ba08affa9b2487ba22b",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 59,
+      "response_sha256": "8dea7e810097072aec52ed8216b20b176466abfa4e6fca1ae73f6f8cd6a6d54b",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Las oclusiones por mobiliario y perspectiva son visibles y YOLO=8 coincide.",
+        "relevance": "Contesta el aporte visual, pero la complementación ambiental permanece general.",
+        "support": "La influencia humana se expresa como posibilidad; no actuar de inmediato requiere vigilar sin certificar seguridad."
+      },
+      "evidence": "Imagen: mesas y personas superpuestas en profundidad; entrada conteo=8, sin referencia causal independiente."
+    },
+    {
+      "case_id": "C054",
+      "task_id": "1954bbfcd8f448009ac80eda19706be2",
+      "run_id": "6930cf1455e046c9894c04473024d5ba",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 65,
+      "response_sha256": "83b92d8fb6cd6115e8033ecfb04b5eca6465aefb34a70fda0582796810e6832d",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Estanterías y mobiliario coinciden; omite personas y limitaciones de visualización entre muebles.",
+        "relevance": "Aporta organización espacial general, pero no usa el fallo ENS160 ni el AQI ausente.",
+        "support": "Asocia falta de ventilación visible con capacidad del sensor sin evidencia y no delimita fallo parcial."
+      },
+      "evidence": "Imagen: estanterías, sillones y personas al fondo; ENS160 FAILED, AQI ERROR, TVOC=1008 y eCO2=1004."
+    },
+    {
+      "case_id": "C055",
+      "task_id": "244f02ac0e894f11b28fb6582dbd456c",
+      "run_id": "6930cf1455e046c9894c04473024d5ba",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 66,
+      "response_sha256": "31fff75528026cb26f96d3a68f267846069bfd58efc05345dbb45335e465a7a9",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 4
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior, estanterías, personas y ventanas son visibles.",
+        "relevance": "Declara falta de información de distribución pese a la separación entre estanterías, asientos y mesas.",
+        "support": "No afirma ventilación suficiente; los rangos esperados no están definidos."
+      },
+      "evidence": "Imagen: estanterías izquierda, asientos en primer plano y personas en mesas al fondo; no hay rangos ambientales de referencia."
+    },
+    {
+      "case_id": "C056",
+      "task_id": "568cef82d06c446dba4f5840349e29f3",
+      "run_id": "6930cf1455e046c9894c04473024d5ba",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 64,
+      "response_sha256": "ea55a65b0df9c66bcdc3c807d7e95b48e01391d0820bda67cde4b5d7d6a554d7",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 2,
+        "support": 3
+      },
+      "reported_quality": 2.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Hay mobiliario y estanterías, pero también personas y relaciones espaciales útiles que la respuesta descarta.",
+        "relevance": "No responde la distribución u oclusiones solicitadas.",
+        "support": "La falta de objetos relevantes no se sustenta; evita afirmar ventilación suficiente."
+      },
+      "evidence": "Imagen: personas al fondo tras estanterías y mesas, además de sillones en primer plano."
+    },
+    {
+      "case_id": "C057",
+      "task_id": "71a5d5a6e52e457b83afc336153309cc",
+      "run_id": "6930cf1455e046c9894c04473024d5ba",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 61,
+      "response_sha256": "25537a206cefdd7c9ef9664fd0e7ef7c2218a706c716fb8cf29005bd2b8ac577",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las pequeñas subidas coinciden, pero los rangos saludables no se proporcionaron.",
+        "relevance": "Cubre las tres preguntas con seguimiento, aunque la recomendación es general.",
+        "support": "Justifica salud del sensor por rangos ambientales saludables inexistentes en la evidencia."
+      },
+      "evidence": "Temperatura +0.35 y humedad +0.31; no hay umbrales de salubridad en la entrada."
+    },
+    {
+      "case_id": "C058",
+      "task_id": "82f7913e9b6e4e939a8e65a7ff7b2e21",
+      "run_id": "6930cf1455e046c9894c04473024d5ba",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 63,
+      "response_sha256": "f35448a0a40a0e2d99d72c0d957a5c07acf9208f19dd8cfbc6201dcfb19ff3b2",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 2,
+        "support": 3
+      },
+      "reported_quality": 2.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Describe interior, pero niega el aporte de distribución porque no es imagen de detección, lo que no es válido.",
+        "relevance": "No usa personas, estanterías y mesas para responder la pregunta visual.",
+        "support": "Confunde imagen sin anotaciones con falta de evidencia visual relevante."
+      },
+      "evidence": "Fotografía original con personas, mesas y estanterías; no hacen falta cajas YOLO para examinar oclusiones."
+    },
+    {
+      "case_id": "C059",
+      "task_id": "872f1dbad2cd481899cce7249a8c1956",
+      "run_id": "6930cf1455e046c9894c04473024d5ba",
+      "scenario": "S2",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 62,
+      "response_sha256": "417c3374d814400462f9b79a32ce71058e03959692761708e72a7c655bd40e89",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas y FAILED/ERROR son correctos, pero ambiente saludable no está demostrado.",
+        "relevance": "Incluye los cambios, la limitación de gases y seguimiento.",
+        "support": "La afirmación de salubridad excede el alcance de las mediciones y la salud operacional."
+      },
+      "evidence": "Temperatura -1.27; humedad +5.62; ENS160 FAILED, AQI ERROR."
+    },
+    {
+      "case_id": "C060",
+      "task_id": "0a53d64df4fc41f8bcfbb70a76bdb1e4",
+      "run_id": "a5a6181a63bd4cfe8302e2b4bc90be62",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 68,
+      "response_sha256": "28b396646229b2eee77ccc1c1a4bdd69859d3f2ac77365bf1ac3d078befe817d",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 3,
+        "support": 4
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior, asientos y entrada de luz por ventanas son visibles.",
+        "relevance": "La descripción sigue siendo general y no explica las oclusiones o distribución concreta.",
+        "support": "No certifica ventilación; la relación con sensores carece de límites temporales explícitos."
+      },
+      "evidence": "Imagen: sillones delante, mesas al fondo y ventanas elevadas; personas parcialmente ocultas por mobiliario."
+    },
+    {
+      "case_id": "C061",
+      "task_id": "13919d8cf3fb4723aa231fc07bb77518",
+      "run_id": "a5a6181a63bd4cfe8302e2b4bc90be62",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 71,
+      "response_sha256": "7589408f08f78d35d0bc5a0fb6055a518c60147ce70690dae7ed1391b3ca72a2",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Estanterías, asientos y YOLO=5 coinciden; distribución general visible no implica conteo sin límites.",
+        "relevance": "Responde de manera general, sin un seguimiento ambiental claramente vinculado a las mediciones.",
+        "support": "La suficiencia de luz natural no permite evaluar ventilación como propone."
+      },
+      "evidence": "Imagen: ventanas altas iluminadas; conteo de entrada=5. La luz no mide renovación de aire."
+    },
+    {
+      "case_id": "C062",
+      "task_id": "1f85cea697a2484aaee4a3d79e212171",
+      "run_id": "a5a6181a63bd4cfe8302e2b4bc90be62",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 67,
+      "response_sha256": "94389d95e6c1f30f9dae0aaabea0a70f582c2578062099bb1f3eb736884570cc",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Temperatura y humedad aumentan y ENS160/AQI constan FAILED/ERROR.",
+        "relevance": "Cubre las tres partes, aunque ajustar humedad no especifica un mecanismo.",
+        "support": "No atribuye el cambio a personas; expresión de calentamiento describe extremos, no tendencia continua comprobada."
+      },
+      "evidence": "Temperatura 21.32→22.89; humedad 69.66→77.10; ENS160 FAILED y AQI ERROR."
+    },
+    {
+      "case_id": "C063",
+      "task_id": "416b7265a8ae417a93c25c550b720467",
+      "run_id": "a5a6181a63bd4cfe8302e2b4bc90be62",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 70,
+      "response_sha256": "e2d26d6d0bf9c66a1ceb3ea09cb3b23692153426087b73bb4c61429f7420192a",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Estanterías y mobiliario coinciden; sí existe distribución espacial aprovechable.",
+        "relevance": "No analiza límites del conteo ni utiliza cambios ambientales concretos.",
+        "support": "Presupone rangos esperados sin definirlos y la relación con sensores es genérica."
+      },
+      "evidence": "Imagen: sillones en primer plano, personas detrás de mesas/estanterías; no hay rangos operativos del espacio."
+    },
+    {
+      "case_id": "C064",
+      "task_id": "c97de28cd029439faabb3fc3818af89e",
+      "run_id": "a5a6181a63bd4cfe8302e2b4bc90be62",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 69,
+      "response_sha256": "8a96648723fc669026a46b3c59ea6ab2731bd3a9c0586d5f9ef352eeca37ea96",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y YOLO=3 coinciden; se refiere a valores actuales aunque ambos sensores están STALE y nulos.",
+        "relevance": "Omite como límite central la ausencia de mediciones ambientales vigentes.",
+        "support": "Sugiere ventilación a partir de iluminación y personas sin demostrarla."
+      },
+      "evidence": "SHT40 y ENS160 STALE; temperatura, humedad y gases actuales=null; imagen muestra ventanas y mobiliario."
+    },
+    {
+      "case_id": "C065",
+      "task_id": "df9078627c4449058342b94967c315e4",
+      "run_id": "a5a6181a63bd4cfe8302e2b4bc90be62",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 72,
+      "response_sha256": "8bcb932f35bb164ff4a1696c3a7d889043117c797159ac53f7cf19f72e83f92a",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "84.55 y 23.23 coinciden; la imagen sí muestra distribución de muebles y personas.",
+        "relevance": "No aprovecha distribución/oclusiones ni explicita ENS160 STALE.",
+        "support": "No inventa gases, pero trata genéricamente su interpretación sin aclarar falta de vigencia."
+      },
+      "evidence": "SHT40: humedad=84.55, temperatura=23.23; ENS160 STALE con valores nulos."
+    },
+    {
+      "case_id": "C066",
+      "task_id": "093896e4d9c248c8a2eaef332b64e5c1",
+      "run_id": "a630b0cbfc3b4411a081cab2049818de",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 73,
+      "response_sha256": "1fb2984a3de3a393bd2f504c54b824e48008e1225b8828247f5b3caab8b8e812",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y ventanas coinciden; no se justifica negar información espacial.",
+        "relevance": "No describe el aporte de las estanterías y muebles al campo de visión.",
+        "support": "Propone correlacionar condiciones ambientales con salud funcional de sensores sin sustento específico."
+      },
+      "evidence": "Imagen: sillones y mesas en planos distintos; HEALTHY corresponde al componente, no al entorno."
+    },
+    {
+      "case_id": "C067",
+      "task_id": "125692b04f0740de8ebd7952e6c6cf17",
+      "run_id": "a630b0cbfc3b4411a081cab2049818de",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 74,
+      "response_sha256": "4d2c5f8b1c860239f1111e48acc7e2494b7eb177ea73f10049f38b40b642a3dc",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 2,
+        "support": 3
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior, mobiliario y luz son visibles; los gases no están vigentes.",
+        "relevance": "Omite ENS160 STALE y no analiza el aporte espacial pedido.",
+        "support": "La independencia de los sensores respecto de configuración visual no elimina sus límites de ubicación o cobertura."
+      },
+      "evidence": "ENS160 STALE; AQI, TVOC y eCO2=null; imagen con estanterías y personas al fondo."
+    },
+    {
+      "case_id": "C068",
+      "task_id": "eb26106121854ca6acb5ab16896a3a35",
+      "run_id": "a630b0cbfc3b4411a081cab2049818de",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 75,
+      "response_sha256": "74b105b9251e8c15678db028571f2781253703ac8798afa69a936c86efab125f",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las direcciones de temperatura/humedad y ENS160 STALE coinciden; ventilación inadecuada no se demuestra.",
+        "relevance": "Reconoce algunos muebles y el fallo de vigencia, con análisis de oclusiones insuficiente.",
+        "support": "Afirma ventana abierta y falta de ventilación adecuada sin evidencia inequívoca ni medición de flujo."
+      },
+      "evidence": "Temperatura delta=-1.00, humedad=+11.38; ENS160 STALE; ventanas visibles no verifican ventilación."
+    },
+    {
+      "case_id": "C069",
+      "task_id": "5949d183200e4bf0ac22e1445d48d997",
+      "run_id": "c02f661431b148d59acb6749effa3abd",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 76,
+      "response_sha256": "6920d40159cfab144c2f340aafbbeda353a41b9afac48e3d184d08025ea843d5",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 2,
+        "support": 2
+      },
+      "reported_quality": 2.33,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y mobiliario se ven, pero ventana abierta y correlación con salud de sensores no están establecidas.",
+        "relevance": "No analiza distribución ni oclusiones y no concreta vínculo ambiental sustentado.",
+        "support": "Confunde información de ambiente con salud operacional e infiere ventilación a partir de una abertura no confirmada."
+      },
+      "evidence": "Imagen con ventanas altas, mesas y estanterías; HEALTHY no define confort ni renovación del aire."
+    },
+    {
+      "case_id": "C070",
+      "task_id": "f3f8289e72f242f6a1d5645542b94380",
+      "run_id": "c02f661431b148d59acb6749effa3abd",
+      "scenario": "S2",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 77,
+      "response_sha256": "e69a0bfe13c9d45dadb1de930e228cf9704e5c3302a5dfe6fa7807bacfac6d9f",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Mobiliario, personas al fondo y YOLO=2 coinciden.",
+        "relevance": "Descripción general sin tratar ENS160 STALE ni los límites de relacionar imagen con gases.",
+        "support": "Atribuye influencia en ventilación y contaminantes y usa iluminación para evaluarla sin evidencia suficiente."
+      },
+      "evidence": "Entrada ENS160 STALE y gases=null; fotografía sin medición de flujo o fuente emisora."
+    },
+    {
+      "case_id": "C071",
+      "task_id": "100c23ecac7b4d4a9f21e0961db03f54",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 86,
+      "response_sha256": "37c0182803f1538e9274315210ab647d068b150acf4392168019afa2e8863af6",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Temperatura baja y humedad sube; la consistencia con salud funcional no se demuestra por esos cambios.",
+        "relevance": "La pregunta sobre gases se sustituye por límites de una captura.",
+        "support": "Evita causalidad de personas pero no explica límites instrumentales de ENS160."
+      },
+      "evidence": "Temperatura -0.39; humedad +15.51; prompt pregunta por limitaciones de gases, no solo ocupación."
+    },
+    {
+      "case_id": "C072",
+      "task_id": "1a4e4e16fdeb4aae9b4d6b942f93959d",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 84,
+      "response_sha256": "9d362cf9fa3c6c0a3c1e9bfc259a8a03ab19012c02242dd1d456e5034eb366b1",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 4
+      },
+      "reported_quality": 4.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Las direcciones de temperatura y humedad y límites de gases coinciden.",
+        "relevance": "Responde las tres preguntas y propone observar humedad/temperatura.",
+        "support": "No atribuye causa; la evolución continua no está demostrada y se plantea como seguimiento."
+      },
+      "evidence": "Temperatura 23.83→22.77; humedad 71.10→82.55; eCO2 es estimado."
+    },
+    {
+      "case_id": "C073",
+      "task_id": "505803990a1e4b388a5b40878d74547f",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 83,
+      "response_sha256": "ee8ecf93ed58cbb0164dce18ca2f78e79b6cefd8f36dbcf49d3031863039a849",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "71.10→82.55 y conteo=13 coinciden.",
+        "relevance": "Cubre cambios, gases y acción; omite descenso de temperatura y antigüedad del conteo.",
+        "support": "La posible influencia humana es hipótesis, pero afirmar relación observada no se demuestra con una captura."
+      },
+      "evidence": "Humedad +11.45; una captura con 13 personas, sin historial de personas ni causa independiente."
+    },
+    {
+      "case_id": "C074",
+      "task_id": "739a891da8e24af880d3ff5f3db7197e",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 78,
+      "response_sha256": "8a0bc639f3334169455dcd3405aa53be73b9e6952f6a96e08dc9c043b8dce9d0",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las dos variables aumentan; ligarlas a salud del sensor es poco preciso.",
+        "relevance": "La segunda parte no responde los límites instrumentales de gases.",
+        "support": "Conserva ausencia de causalidad, pero no distingue eCO2 estimado ni relación con TVOC."
+      },
+      "evidence": "Temperatura +0.13; humedad +7.86; faltan límites del ENS160 solicitados."
+    },
+    {
+      "case_id": "C075",
+      "task_id": "8dc3631ec7904f0a9438b78e6e77b191",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 80,
+      "response_sha256": "230370a6958ede44d381adf73dbf2eae3db72871a6bc5979fe3f0e47384d6da0",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "-0.56, +12.36, conteo=8 y ENS160 FAILED coinciden.",
+        "relevance": "Reconoce la limitación por fallo y propone seguimiento de los cambios.",
+        "support": "Evita causa de ocupación; el efecto de ventilación sobre humedad se mantiene condicional."
+      },
+      "evidence": "Temperatura 23.83→23.27; humedad 71.10→83.46; ENS160 FAILED/AQI ERROR."
+    },
+    {
+      "case_id": "C076",
+      "task_id": "94cf5a276aa04ae8896af7f4b35c6250",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 82,
+      "response_sha256": "ffdc84e3883aba91e7b463adf05bf45aab419165e811bae81eed6e30f78517fe",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las direcciones son correctas; secado o cambio de ventilación no están registrados.",
+        "relevance": "Omite límites de gases y añade una explicación física no sustentada.",
+        "support": "La humedad relativa y temperatura no bastan para establecer secado ni modificación de ventilación."
+      },
+      "evidence": "Temperatura 23.83→22.84; humedad 71.10→84.13; ventilación e historial causal desconocidos."
+    },
+    {
+      "case_id": "C077",
+      "task_id": "9e7a191edba845a2870c1559314bff5f",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 81,
+      "response_sha256": "4583e31dd81580e64ef2883e994996b20bbb143d74e7cc2c9b245a19a841158b",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 5,
+        "support": 3
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "-0.85, +13.96 y descenso TVOC 74→69 coinciden.",
+        "relevance": "Contesta cambios, instrumentos y seguimiento con variables concretas.",
+        "support": "Relaciona deltas con salud funcional sin demostración, aunque no atribuye causa a personas."
+      },
+      "evidence": "Temperatura -0.85; humedad +13.96; TVOC inicial=74, actual=69."
+    },
+    {
+      "case_id": "C078",
+      "task_id": "c307d0a196ab46208b9f49e5cc5e51b9",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 79,
+      "response_sha256": "3051c651ae213b70e11dda3b05d30284c5ad00d3c2dd1b8ae00e4a91521fe31f",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Deltas y descensos de gases son correctos; salud del sensor no se debe a esos cambios.",
+        "relevance": "Responde las tres preguntas, con recomendación general.",
+        "support": "Explica HEALTHY mediante variaciones ambientales como causa, fuera del alcance del estado."
+      },
+      "evidence": "Temperatura +0.29, humedad +16.39; AQI 2→1, TVOC 74→57 y eCO2 504→472."
+    },
+    {
+      "case_id": "C079",
+      "task_id": "d08ead33b8094c1b91472e4dfae15052",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 87,
+      "response_sha256": "560ede7b20d9402f7bf327684c5211c6648058683785d5c34b79ae5fb19433b5",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas coinciden, pero ambiente saludable no está demostrado.",
+        "relevance": "La pregunta sobre gases se responde solo con límites de ocupación.",
+        "support": "Declara salubridad ambiental sin referencia y omite la limitación instrumental."
+      },
+      "evidence": "Temperatura -0.44; humedad +12.61; no hay datos de salubridad ambiental independientes."
+    },
+    {
+      "case_id": "C080",
+      "task_id": "d93ec6f1b74c425589d70c8e64fb8732",
+      "run_id": "b9658045a26348c6b8b9b52b7d936863",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 85,
+      "response_sha256": "4a2f193056facc49d6dc5badc980a9138f9e3f4a1533795a79b67927227c5d42",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 5,
+        "support": 4
+      },
+      "reported_quality": 4.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Humedad 71.10→88.62 y conteo=16 coinciden con el episodio.",
+        "relevance": "Atiende las tres partes y vincula seguimiento con humedad/AQI.",
+        "support": "No afirma causalidad; asegurar ventilación debe seguir condicionado a su disponibilidad."
+      },
+      "evidence": "Humedad +17.52 y HUMIDITY_RISE ACTIVE; AQI actual=3; ventilación disponible desconocida."
+    },
+    {
+      "case_id": "C081",
+      "task_id": "3b3e55d076854557a06eada11f4f91b2",
+      "run_id": "1cbec964cc6c4380b2cbb97ce5d2e8e2",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 89,
+      "response_sha256": "ca5240263057fc81341c90533673b37c45c30c05b5247c4f7336964e8d534ef4",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Ambas variables suben; describir toda la subida como ligera reduce detalle del +4.22 de humedad.",
+        "relevance": "Cubre gases y seguimiento, aunque sin dependencia TVOC/eCO2 explícita.",
+        "support": "La alineación entre deltas y estado funcional no se demuestra."
+      },
+      "evidence": "Temperatura +0.20; humedad +4.22; sensor HEALTHY es estado operativo."
+    },
+    {
+      "case_id": "C082",
+      "task_id": "458cd78138064fca8a8694d7376ee63e",
+      "run_id": "1cbec964cc6c4380b2cbb97ce5d2e8e2",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 88,
+      "response_sha256": "ca8a8046ebf5d035e5c685425b0e74714ed38ac284bd0dd20f6f36010a770fd4",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "+0.16 y +9.33 coinciden; INVALID_READING no aparece como motivo en el prompt.",
+        "relevance": "Responde cambios, fallo y observación posterior.",
+        "support": "Añade una causa o etiqueta del fallo no suministrada, pese a reconocer la limitación."
+      },
+      "evidence": "Prompt: ENS160 FAILED, AQI ERROR; no incluye motivo INVALID_READING."
+    },
+    {
+      "case_id": "C083",
+      "task_id": "4de918e73f854ad6aec39b4ea540a614",
+      "run_id": "1cbec964cc6c4380b2cbb97ce5d2e8e2",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 94,
+      "response_sha256": "11ac0b2f9ae15880c50fd924a99566cea13074033cec9c8bceba5f110a50beee",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "-0.15, +3.86 y FAILED coinciden; motivo INVALID_READING no se entrega en el prompt.",
+        "relevance": "Contesta las tres preguntas con acción condicional.",
+        "support": "La explicación de la causa del fallo excede el dato operativo disponible."
+      },
+      "evidence": "Temperatura -0.15; humedad +3.86; ENS160 FAILED y AQI ERROR sin motivo detallado en entrada."
+    },
+    {
+      "case_id": "C084",
+      "task_id": "501cf2ca6b7b497eb09105c14307f8d3",
+      "run_id": "1cbec964cc6c4380b2cbb97ce5d2e8e2",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 91,
+      "response_sha256": "dce54fe3beff0a82942e8e331ebd17a7218f962e51148d627c9593069cdd6058",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las disminuciones son correctas; ACTIVE corresponde al evento AQI_WORSENED, no al estado de la lectura AQI.",
+        "relevance": "Cubre cambios, gases y seguimiento de AQI/TVOC.",
+        "support": "Mezcla estado de episodio con estado de medición y asocia cambios con salud funcional."
+      },
+      "evidence": "AQI actual=2 y estado VALID; evento AQI_WORSENED ACTIVE; temperatura -0.17 y humedad -3.43."
+    },
+    {
+      "case_id": "C085",
+      "task_id": "70b0a402872a4528aea6d8794cd47a67",
+      "run_id": "1cbec964cc6c4380b2cbb97ce5d2e8e2",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 95,
+      "response_sha256": "1dcb592044c40246d39fc9ee7c7ce5e1a6dc3e3065fd4bc7e0ff29fc8bcbea25",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Subidas y error AQI coinciden; llamar ligera a humedad +7.49 es poco preciso.",
+        "relevance": "Cubre las tres partes y reconoce el fallo parcial.",
+        "support": "No atribuye causa humana; mitigar humedad con ventilación requiere condiciones exteriores desconocidas."
+      },
+      "evidence": "Temperatura +0.02; humedad +7.49; ENS160 FAILED y AQI ERROR."
+    },
+    {
+      "case_id": "C086",
+      "task_id": "94210c03751b49fd8fc0d3720eb4f955",
+      "run_id": "1cbec964cc6c4380b2cbb97ce5d2e8e2",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 92,
+      "response_sha256": "a47a0d7d8bdf502842c5d8350d7f23420db724d2e49fb9c6cb665c71d64115a4",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Temperatura baja, humedad sube y conteo=10 coinciden; ambiente saludable no se demuestra.",
+        "relevance": "Cubre cambios, eCO2/TVOC y observación posterior.",
+        "support": "La afirmación de salubridad ambiental excede la evidencia instrumental."
+      },
+      "evidence": "Temperatura -0.07, humedad +5.74, AQI=3; HEALTHY solo describe funcionamiento."
+    },
+    {
+      "case_id": "C087",
+      "task_id": "99e782ba39c94be8b8adde811270c89e",
+      "run_id": "1cbec964cc6c4380b2cbb97ce5d2e8e2",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 93,
+      "response_sha256": "efcdb663c7943e0130a7d601ca0021357fc4251c823d0e22a6a16ccf17ba6b8f",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Los deltas y aumentos TVOC/eCO2 son correctos.",
+        "relevance": "Responde las tres partes con seguimiento algo general.",
+        "support": "Relaciona cambios con salud funcional sin demostrar esa dependencia."
+      },
+      "evidence": "Temperatura -0.17; humedad +0.80; TVOC 87→91 y eCO2 526→535."
+    },
+    {
+      "case_id": "C088",
+      "task_id": "d75618624fe24b11b059623c1cd7a4b1",
+      "run_id": "1cbec964cc6c4380b2cbb97ce5d2e8e2",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 90,
+      "response_sha256": "2d1ecd312c5fe278d1069a4ebcd942819cbb1fb4fbc8110873e5b20cb2eab53a",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas coinciden; ACTIVE es estado del evento AQI_WORSENED, no de la lectura AQI.",
+        "relevance": "Incluye límites instrumentales y seguimiento de AQI/humedad.",
+        "support": "Mezcla estado de evento con medición y sugiere alineación entre cambios y salud del sensor."
+      },
+      "evidence": "AQI actual=2, estado VALID, igual a base=2; evento AQI_WORSENED ACTIVE."
+    },
+    {
+      "case_id": "C089",
+      "task_id": "60270ebfe8f84180ad2fd2f17198695d",
+      "run_id": "e9042a3396a94195982ba1c462b1a91c",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 99,
+      "response_sha256": "6870d414e44a0a9409ab29fc6ca2c9ed412ad940cfad41380502f015e7b160c1",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Deltas y FAILED/ERROR coinciden; INVALID_READING no está en el prompt y los eventos no están activos.",
+        "relevance": "Propone seguimiento, pero interpreta los eventos históricos como observaciones actuales.",
+        "support": "Añade motivo de fallo y empeoramiento AQI cuando la lectura actual es desconocida."
+      },
+      "evidence": "HUMIDITY_RISE NORMAL, AQI_WORSENED UNKNOWN, AQI=null/ERROR; no se proporciona motivo INVALID_READING."
+    },
+    {
+      "case_id": "C090",
+      "task_id": "669d3d13294a4564975b79e3b5336fde",
+      "run_id": "e9042a3396a94195982ba1c462b1a91c",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 96,
+      "response_sha256": "e591b390437296972e4f86ca4eaf7d99a76c6b4c46aa8d635d279b104795cf96",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "+0.10 y +8.56 y conteo=8 coinciden.",
+        "relevance": "Cubre las tres partes y seguimiento, sin más detalle de mecanismo.",
+        "support": "La compatibilidad de cambios con HEALTHY no prueba salud funcional, aunque evita causalidad humana."
+      },
+      "evidence": "Temperatura 24.01→24.11; humedad 76.17→84.73; ENS160 HEALTHY."
+    },
+    {
+      "case_id": "C091",
+      "task_id": "9c95c7f666df428eaa78c960e68c63ad",
+      "run_id": "e9042a3396a94195982ba1c462b1a91c",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 97,
+      "response_sha256": "84e98139c5e79dfaa4a92e0e953af338bdddb4a8f20403307d70e6a478a5af0e",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "-0.35 y +10.73 coinciden; motivo INVALID_READING no aparece en el prompt.",
+        "relevance": "Responde cambios, fallo y seguimiento condicional.",
+        "support": "Introduce una causa de FAILED que no fue entregada y presupone efecto estabilizador de ventilación."
+      },
+      "evidence": "ENS160 FAILED/AQI ERROR; temperatura -0.35, humedad +10.73, sin motivo detallado del fallo."
+    },
+    {
+      "case_id": "C092",
+      "task_id": "f3f3d1bf7178460291a2947500f5cfee",
+      "run_id": "e9042a3396a94195982ba1c462b1a91c",
+      "scenario": "S3",
+      "mode": "D",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 98,
+      "response_sha256": "94b269b9eb925b41406f373fee9fc1d688f92ac9943d48a3e655a090a0743c30",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas, 85.65%, 23.33°C y AQI ERROR coinciden; INVALID_READING no está en entrada.",
+        "relevance": "Cubre tres preguntas con seguimiento concreto de variables.",
+        "support": "Añade el motivo de fallo y liga variación a salud funcional sin evidencia suficiente."
+      },
+      "evidence": "Temperatura -0.68, humedad +9.48; ENS160 FAILED; no incluye motivo INVALID_READING en prompt."
+    },
+    {
+      "case_id": "C093",
+      "task_id": "1cf2cd825d5e4e3a907cca24719a8b62",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 104,
+      "response_sha256": "8ea85d7ae7afcc2fa4b996ea34ad2e8c4f778a5fd676967eb96e91bfb0b7aca1",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "70.13→82.95 y conteo=12 son correctos; una relación con personas no se demuestra.",
+        "relevance": "Aborda cambios, límite instrumental y seguimiento, omitiendo el cambio de temperatura.",
+        "support": "Afirma relación con presencia sin historial ni contraste causal."
+      },
+      "evidence": "Humedad +12.82; temperatura +0.19; una captura de 12 personas no explica la variación."
+    },
+    {
+      "case_id": "C094",
+      "task_id": "242ded9c0fa84c139af11e1c8758332c",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 107,
+      "response_sha256": "1f21af67b6b10c594739b711eac7700a4f8bf590c8f66d61c6b9286f82294fa0",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y YOLO=13 coinciden; rangos saludables y oclusiones por techo no están demostrados.",
+        "relevance": "Describe poco la distribución y no delimita la relación con las mediciones.",
+        "support": "Afirma salubridad y correlación con actividad humana sin referencias suficientes."
+      },
+      "evidence": "Imagen: personas y mesas en varios planos, sin prueba de oclusión de personas por techo; no hay rangos de salud."
+    },
+    {
+      "case_id": "C095",
+      "task_id": "2deb58bac0174eb0ad3a751be3ccedb7",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 106,
+      "response_sha256": "69047a4d9aa16281923c1eb614a1410cff05ea1768bd698e02511f4d17fe6f68",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "La persona próxima y otras figuras generan oclusiones parciales; YOLO=17 coincide.",
+        "relevance": "Responde aporte espacial y acción, pero no explica bien límites del vínculo ambiental.",
+        "support": "La correlación con actividad y la garantía de circulación por ventanas exceden lo demostrado."
+      },
+      "evidence": "Imagen: figura con mochila en primer plano oculta parcialmente mesa/personas; conteo proporcionado=17."
+    },
+    {
+      "case_id": "C096",
+      "task_id": "30de362bbea74567a04e4a3c7c358ce3",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 102,
+      "response_sha256": "223e231701d51ccadbdcdb18c6dd39203eb8a1ee00440adda9597037584278cb",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los extremos de humedad coinciden; salud del sensor no se debe a cambios medibles.",
+        "relevance": "Cubre las tres partes y seguimiento de humedad.",
+        "support": "Convierte existencia de cambios en causa de HEALTHY, pese a limitar causalidad humana."
+      },
+      "evidence": "Humedad 70.13→86.42; SHT40 HEALTHY es dato operativo independiente de la variación."
+    },
+    {
+      "case_id": "C097",
+      "task_id": "5a4f1d0ade2142b3806e718c7b2ed079",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 103,
+      "response_sha256": "814e5a3c6d560adb84cd3fefef25ff9b9f1f4e552bcfedc2948d5ae685241dfe",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Ambas variables aumentan; los cambios no explican la salud del sensor.",
+        "relevance": "Responde tres partes con seguimiento genérico.",
+        "support": "La relación causal entre cambios y estado HEALTHY no está sustentada."
+      },
+      "evidence": "Temperatura +0.30; humedad +21.03; la entrada no define salud funcional mediante esos deltas."
+    },
+    {
+      "case_id": "C098",
+      "task_id": "60d4703805ee4ad9865d9aedee697d0b",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 108,
+      "response_sha256": "5c36860c5cd1511d5b108b533f88b048c80e0289c9a2536251c9e819769a2f62",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior, mesas, iluminación y personas coinciden; techo como oclusor y actividad específica no se justifican.",
+        "relevance": "Aporta una descripción genérica y deja sin tratar los límites del conteo.",
+        "support": "La correlación con actividad y los rangos seguros carecen de referencia."
+      },
+      "evidence": "Imagen: personas sentadas ante mesa y equipos; no hay datos de actividad causal ni límites ambientales seguros."
+    },
+    {
+      "case_id": "C099",
+      "task_id": "69df56e0c3d84a1db6ce5f3ea9e499b8",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 100,
+      "response_sha256": "4bd1bd848bf32c27c54aae2eeff2c3b4ba646d43d4baae4da3cd46f816b3fb9e",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "+0.72 y +17.47 son correctos; relación con salud funcional poco precisa.",
+        "relevance": "La limitación de gases queda genérica, sin eCO2 estimado ni dependencia con TVOC.",
+        "support": "Evita causa humana, pero no fundamenta vínculo entre cambios y HEALTHY."
+      },
+      "evidence": "Temperatura 24.20→24.92; humedad 70.13→87.60; ENS160 HEALTHY."
+    },
+    {
+      "case_id": "C100",
+      "task_id": "70b8b78ad2f34697a882540ec9075e24",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 105,
+      "response_sha256": "08438ab4c445f910ed2940455b9f644459fa3a0a126aebb56b2a01ce7717d232",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 2,
+        "support": 3
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Personas y techo iluminado son visibles; existen disposiciones y oclusiones por mesas que no analiza.",
+        "relevance": "Niega información específica en vez de describir la escena requerida.",
+        "support": "La correlación con ambiente no queda delimitada y no se demuestra efecto de ajustar ventilación."
+      },
+      "evidence": "Imagen: personas en mesa próxima y asientos al fondo, cuerpos parcialmente tapados por tableros."
+    },
+    {
+      "case_id": "C101",
+      "task_id": "7170ed37252d4cc8afdda4c756e8eef0",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 101,
+      "response_sha256": "34fb1167fbf33ba970b47e544425274a1f9b20a8c18995f2f2d78b9669436786",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Aumentos de humedad, TVOC y eCO2 coinciden; HEALTHY no se debe a los cambios.",
+        "relevance": "La limitación de gases se sustituye por límites de ocupación y causalidad.",
+        "support": "Explica salud del sensor por variaciones ambientales y omite la estimación del ENS160."
+      },
+      "evidence": "Temperatura +0.73, humedad +16.93, TVOC +131, eCO2 +167; sin fundamento causal de salud funcional."
+    },
+    {
+      "case_id": "C102",
+      "task_id": "d401c79f9de446d2ada716dc28c6dea5",
+      "run_id": "508f0b6ca482496fbfbc3594834553c7",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 109,
+      "response_sha256": "813e98df6507df4d5b51658d969121a7454b7b5d28aab4a04b8c23ef48037106",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "YOLO=8 y aumento de humedad coinciden; oclusiones por techo son inespecíficas.",
+        "relevance": "Responde de modo general sin concretar distribución y límites temporales del vínculo sensorial.",
+        "support": "La imagen no elimina límites de relación con sensores, aunque la intervención se formula condicionalmente."
+      },
+      "evidence": "Imagen: personas alrededor de mesa próxima; humedad 70.13→81.67; no hay medición de ventilación."
+    },
+    {
+      "case_id": "C103",
+      "task_id": "27695d4889784f168e9cf0c609de43c5",
+      "run_id": "420694c893f94e04a064be19922eb3e3",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 115,
+      "response_sha256": "fb99f0f04ee913adfac56faee3933099917335f88857db2466e87476c28e8726",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Personas, mesas y YOLO=8 coinciden; la apertura de ventana no es inequívoca.",
+        "relevance": "Aporta distribución general y propone verificar ventilación.",
+        "support": "Iluminación y disposición no permiten establecer distribución de gases; lo causal se limita expresamente."
+      },
+      "evidence": "Imagen: mesas, asientos y ventanas/blindajes al fondo; conteo de entrada=8."
+    },
+    {
+      "case_id": "C104",
+      "task_id": "58b343dff7cd4ce6a06ee82b4c38f366",
+      "run_id": "420694c893f94e04a064be19922eb3e3",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 110,
+      "response_sha256": "de2fc1687d5f4548ca4594504d35f1ea8619321d721844ebc7d0a7195480d40b",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Las subidas son correctas; calificarlas ligeramente es poco específico y no explican HEALTHY.",
+        "relevance": "Cubre las tres partes, con seguimiento general.",
+        "support": "Deriva salud funcional de que cambiaron temperatura y humedad."
+      },
+      "evidence": "Temperatura +1.06 y humedad +5.62; HEALTHY no depende de que existan cambios."
+    },
+    {
+      "case_id": "C105",
+      "task_id": "71b369e4261a45f19d9fabc4ad3e3d70",
+      "run_id": "420694c893f94e04a064be19922eb3e3",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 116,
+      "response_sha256": "e4812a83cab85b8a6a05ee76a070fce674cacb67124c6c4c8bf8e42d0d57d8f1",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y circulación general visibles; no se verifica ventana abierta ni ausencia de límites del conteo.",
+        "relevance": "Omite ENS160 FAILED/AQI ERROR al explicar relación con sensores.",
+        "support": "Relaciona cambios con actividad humana y asegurar habitabilidad sin referencia independiente."
+      },
+      "evidence": "ENS160 FAILED/AQI ERROR; imagen de mesas con personas parcialmente ocultas y sin flujo de aire medido."
+    },
+    {
+      "case_id": "C106",
+      "task_id": "a6f7e9616e7e4a6384254d8e1e00ffea",
+      "run_id": "420694c893f94e04a064be19922eb3e3",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 111,
+      "response_sha256": "13f355977e4a29b687fd623448f05b1f6f6ce8847351e5eff7c7608299f11911",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas y FAILED coinciden; condiciones saludables e INVALID_READING no están sustentados por el prompt.",
+        "relevance": "Incluye cambios, fallo y propuesta de observar recuperación de validez.",
+        "support": "Confunde salud funcional con ambiental e introduce motivo del fallo no entregado."
+      },
+      "evidence": "Temperatura +1.27, humedad +2.54; ENS160 FAILED/AQI ERROR sin campo de motivo en la entrada."
+    },
+    {
+      "case_id": "C107",
+      "task_id": "bf6657dd59244d298ba9153c613fc4bf",
+      "run_id": "420694c893f94e04a064be19922eb3e3",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 117,
+      "response_sha256": "0c7f6ec11c4da1917522b4d5eaeb8928bf67e2cebbba15a5d23ae0798c31e409",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Interior, personas y YOLO=16 coinciden; oclusiones de cuerpos por mobiliario subsisten.",
+        "relevance": "Describe distribución general pero no especifica bien límites del conteo y del vínculo ambiental.",
+        "support": "Fuente emisora se propone como potencial, pero relacionarla con cambios de gases sigue sin demostrarse."
+      },
+      "evidence": "Imagen: personas ante mesas en planos distintos; TVOC y eCO2 aumentan sin fuente física comprobada."
+    },
+    {
+      "case_id": "C108",
+      "task_id": "dc216f959d1e41fcb0b6f70102fd8240",
+      "run_id": "420694c893f94e04a064be19922eb3e3",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 112,
+      "response_sha256": "feb5bbc90e13007d98eff565014ffc64b415f2294c4032250460317121a6076e",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "73.69→84.50 y 24.42→24.83 coinciden; las relaciones causales nuevas no están demostradas.",
+        "relevance": "Cubre tres preguntas y seguimiento de humedad.",
+        "support": "Atribuye salud funcional a cambios y afirma relación con 16 personas sin historial suficiente."
+      },
+      "evidence": "Temperatura +0.41; humedad +10.81; captura con conteo=16, sin referencia causal."
+    },
+    {
+      "case_id": "C109",
+      "task_id": "e4faa992396d4e2f9f9e36f039243a8d",
+      "run_id": "420694c893f94e04a064be19922eb3e3",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 113,
+      "response_sha256": "2ae9e5e082be9200e9fb4ac899375f95867fac12e67f04dee27a74aee0e2c268",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y mobiliario son visibles; oclusión por techo y restricciones del conteo son genéricas.",
+        "relevance": "No describe posiciones concretas ni límites de la captura.",
+        "support": "Habla de asegurar condiciones óptimas sin criterio y permite correlación no establecida."
+      },
+      "evidence": "Imagen: mesa próxima vacía y personas en asientos al fondo; no hay rangos de condiciones óptimas."
+    },
+    {
+      "case_id": "C110",
+      "task_id": "ee01c9552e3943c79becb95d8cf7dc83",
+      "run_id": "420694c893f94e04a064be19922eb3e3",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 114,
+      "response_sha256": "428a5871b83088281fa25180ef69f77847a5dfb1ee15dfe694efcf130356d03d",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 2,
+        "support": 3
+      },
+      "reported_quality": 2.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Hay personas, muebles y estructuras de ventana visibles; no se confirma apertura.",
+        "relevance": "Descarta información espacial disponible y omite cambios medidos.",
+        "support": "Sugiere correlación con salud de sensores sin sustento, aunque evita inferir ventilación suficiente."
+      },
+      "evidence": "Imagen: personas y mesas en varios planos, ventanas/persianas al fondo; HEALTHY es estado del componente."
+    },
+    {
+      "case_id": "C111",
+      "task_id": "1740555d39be46f7a4b2a2284683cb84",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 118,
+      "response_sha256": "ece4912ed59c3176bc3ceb36f96063319e9e9fcf1d3cb0605fd324a1ba4f4938",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "+0.49 y +4.48 coinciden; compatibilidad con salud funcional es poco precisa.",
+        "relevance": "No responde límites instrumentales de gases ni qué variable observar después.",
+        "support": "Evita causalidad humana, pero omite las restricciones del ENS160."
+      },
+      "evidence": "Temperatura +0.49, humedad +4.48; pregunta 2 sobre gases y pregunta 3 sobre observación posterior."
+    },
+    {
+      "case_id": "C112",
+      "task_id": "3a55a3c7c87d4f7ea80df7cb40cca556",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 127,
+      "response_sha256": "2ccbd97d24fc2405c794ccb21d7d398d4824ea10f70dc3159ad18257ecc2275f",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Personas y mesas visibles, pero sí hay distribución y oclusiones; CO2 no se mide directamente.",
+        "relevance": "No aprovecha disposición concreta ni delimita relación con sensores.",
+        "support": "Infiere demanda y generación de CO2 a partir de una escena y vincula ENS160 sin separar eCO2 estimado."
+      },
+      "evidence": "Imagen: personas próximas ocultan otras figuras; ENS160 aporta eCO2 equivalente, no CO2 medido."
+    },
+    {
+      "case_id": "C113",
+      "task_id": "4e5c2eb8ccfa436c9149ad56b96dc006",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 119,
+      "response_sha256": "d3866583c2981ec2b0c263c8a468522a8c3fcfef608bb55970b4dfb4e25688d2",
+      "scores": {
+        "accuracy": 1,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 2.33,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Invierte tres cambios centrales: AQI, TVOC y eCO2 aumentan, no disminuyen.",
+        "relevance": "Responde las tres partes, pero su interpretación de los cambios de gases es incorrecta.",
+        "support": "Además explica HEALTHY por cambios y presenta las comparaciones erróneas como hechos."
+      },
+      "evidence": "AQI 2→3; TVOC 107→385; eCO2 561→830. Temperatura +0.72 y humedad +1.52 sí coinciden."
+    },
+    {
+      "case_id": "C114",
+      "task_id": "620fe4350fa04d6faf1b8f8fa102096a",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 125,
+      "response_sha256": "83143723685cf68609bdbdd8a31e8e068d6f1b5d2ded100b71fbe0199daf206e",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "YOLO=5 y escena general coinciden; estabilidad y rangos no están dados.",
+        "relevance": "Aporta distribución general pero no fundamenta límites de la relación ambiental.",
+        "support": "Deriva distribución de gases de ocupación y justifica no actuar por estabilidad inexistente en la referencia."
+      },
+      "evidence": "Humedad 76.72→70.80; temperatura +0.58; no hay umbrales de estabilidad ni distribución medida de CO2."
+    },
+    {
+      "case_id": "C115",
+      "task_id": "6c373bd3a1854f63824b05931a8f13e8",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 124,
+      "response_sha256": "733143946929762a8f39d16bdbaf70117095af247edfabf52f826dc21117ee3c",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 4
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior, iluminación y YOLO=4 coinciden; hay cuerpos parcialmente ocultos por personas y mesas.",
+        "relevance": "La distribución y recomendación son generales, sin aprovechar datos ambientales concretos.",
+        "support": "La climatización se formula condicionalmente sin declarar necesidad ni causa demostrada."
+      },
+      "evidence": "Imagen: grupo ante mesa próxima y personas al fondo; temperatura 24.50 y humedad 74.16, sin umbrales externos."
+    },
+    {
+      "case_id": "C116",
+      "task_id": "6ee255e76d1a4503ac6f23f97519a90c",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 122,
+      "response_sha256": "77d1ba2debdb649bb7e9dab09af3040db6938bda98d9265f70afd4bdc295d993",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Escena general y YOLO=9 coinciden; ventilación insuficiente no está medida.",
+        "relevance": "Contesta en general sin límites concretos del conteo o vínculo ambiental.",
+        "support": "Concluye falta de ventilación porque una ventana abierta no garantiza suficiencia, inferencia inválida."
+      },
+      "evidence": "No hay medición de renovación de aire; una ventana visible no demuestra suficiencia ni insuficiencia."
+    },
+    {
+      "case_id": "C117",
+      "task_id": "70d74754549b42628e5df66919c35b69",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 121,
+      "response_sha256": "54739420ff628ead7731ff2445713e51565c896ff3302196fddfc8a7a9238f77",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "YOLO=9 y personas ante mesas coinciden; apertura e insuficiencia de ventilación no quedan demostradas.",
+        "relevance": "Descripción y acción generales, sin delimitar aporte espacial.",
+        "support": "Deduce posible falta de ventilación a partir de ventana abierta sin evidencia de flujo."
+      },
+      "evidence": "Imagen: personas en mesa próxima, ventanas/persianas al fondo; no hay datos de renovación del aire."
+    },
+    {
+      "case_id": "C118",
+      "task_id": "9eba71f8cff24402843d64cb49dc572c",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 128,
+      "response_sha256": "3540185e1d875d4e73c1c1743e93b4fc1250ea439e99aa8c87e6026c079db956",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Personas, mobiliario y YOLO=7 coinciden; la vista general no acredita ausencia de oclusiones para contar.",
+        "relevance": "Aporta distribución general y seguimiento de ventilación, con límites poco desarrollados.",
+        "support": "Emisión humana se expresa como potencial, sin que la imagen confirme una fuente o relación con eCO2."
+      },
+      "evidence": "Imagen: personas en mesas y asientos; eCO2 es estimado y no localiza fuentes de CO2."
+    },
+    {
+      "case_id": "C119",
+      "task_id": "cc5a23d9c7dc41bfa81c6e97dcc74b88",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 126,
+      "response_sha256": "207c9957e0db2e1b9b28db2c3d19718550cb09311db0a63c0a4af09bfa732d75",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Las superposiciones por perspectiva y proximidad son plausibles en la imagen.",
+        "relevance": "Reconoce oclusiones, pero la complementación con sensores y el seguimiento son generales.",
+        "support": "Ver aperturas o ventiladores no confirma por sí solo ventilación efectiva."
+      },
+      "evidence": "Imagen: personas próximas y mesa ocultan partes del fondo; no se dispone de flujo de aire medido."
+    },
+    {
+      "case_id": "C120",
+      "task_id": "e0f78ba205994b52b29700c68287aaa8",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 120,
+      "response_sha256": "ece978f8cb60af344af5889c6b02322a32f737157ffc5968d059265da5c113df",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "+0.83 y -1.32 y conteo=7 coinciden.",
+        "relevance": "Cubre las tres preguntas y observación de variables, con acción general.",
+        "support": "Relaciona cambios con salud funcional y denomina tendencia una comparación de extremos."
+      },
+      "evidence": "Temperatura 24.23→25.06; humedad 76.72→75.40; ENS160 HEALTHY."
+    },
+    {
+      "case_id": "C121",
+      "task_id": "ead6a02772524874bbf12f14f0895aec",
+      "run_id": "4f987a4db205497dad5bee4f24a11677",
+      "scenario": "S3",
+      "mode": "E",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 123,
+      "response_sha256": "ee769186ac275e1d5164c78e69afae50571388066d077c5ae1e1be620d1d6b9b",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Personas sentadas y de pie visibles; no puede descartarse efecto de oclusiones sobre YOLO.",
+        "relevance": "La distribución y el vínculo ambiental son generales, con poca explicación de límites.",
+        "support": "Calificar condiciones óptimas requiere criterios ausentes; la intervención se plantea condicional."
+      },
+      "evidence": "Imagen: figuras próximas y mesa ocultan partes del fondo; humedad actual=77.97 y no hay rangos óptimos."
+    },
+    {
+      "case_id": "C122",
+      "task_id": "1bd29c18ae1c4309ac58da09e36e937e",
+      "run_id": "5ab5ff40a5f9425bb9a0e4db67e7cf2c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 129,
+      "response_sha256": "1b094c09ec62458603013b8baae8ef7e2e7cd8586fd9e183fb995a7eb6bf38d7",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "-0.65 y +6.59 coinciden; alineación con salud funcional poco precisa.",
+        "relevance": "La segunda parte no responde el límite instrumental de gases.",
+        "support": "No afirma causa humana, pero omite eCO2 estimado y dependencia con TVOC."
+      },
+      "evidence": "Temperatura 25.07→24.42; humedad 70.59→77.18; pregunta 2 pide límites de gases."
+    },
+    {
+      "case_id": "C123",
+      "task_id": "353a5ad6f2854fb6bd510a6ffa20e9fc",
+      "run_id": "5ab5ff40a5f9425bb9a0e4db67e7cf2c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 132,
+      "response_sha256": "a1dc9e714d32dcef8e25ccda471741219875fea5b620b03efd36fdbc907925d1",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 2,
+        "support": 2
+      },
+      "reported_quality": 2.67,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior, mesas, luces y YOLO=5 coinciden.",
+        "relevance": "No explica distribución u oclusiones concretas ni qué variable ambiental seguir.",
+        "support": "La suficiencia de iluminación artificial no permite evaluar calidad del aire como propone."
+      },
+      "evidence": "Imagen de personas ante mesas y luces; no hay medición óptica de gases ni vínculo entre intensidad de luz y calidad del aire."
+    },
+    {
+      "case_id": "C124",
+      "task_id": "38eefe337414419d96d9831a84f9204b",
+      "run_id": "5ab5ff40a5f9425bb9a0e4db67e7cf2c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 134,
+      "response_sha256": "10dafb4f1ac99f82f14c37ac9bef1b5a0adf1c2409d8c57b9c4159fd64483395",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "La proximidad de personas y superposiciones son visibles; YOLO=10 coincide.",
+        "relevance": "Contesta aporte espacial y seguimiento, con límite ambiental poco explícito.",
+        "support": "La ventilación se formula condicionalmente y no se atribuye una causa física a la escena."
+      },
+      "evidence": "Imagen: espalda próxima a la cámara tapa parte de la mesa y otras figuras; humedad=77.18 y aumento desde base."
+    },
+    {
+      "case_id": "C125",
+      "task_id": "7685d6061f2f4e02bc8bee710012f63e",
+      "run_id": "5ab5ff40a5f9425bb9a0e4db67e7cf2c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 130,
+      "response_sha256": "d8b32f3cb5af33c6ba856d986de60c235901b78c884c6d41bb76d912153510be",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los deltas y conteo=10 coinciden; ambiente saludable no se demuestra.",
+        "relevance": "Cubre cambios, gases y seguimiento.",
+        "support": "Califica la condición ambiental como saludable a partir de estado operativo."
+      },
+      "evidence": "Temperatura -0.60 y humedad +5.69; no existe referencia de salubridad del entorno."
+    },
+    {
+      "case_id": "C126",
+      "task_id": "7aeee09412f442ac934345f789621dc9",
+      "run_id": "5ab5ff40a5f9425bb9a0e4db67e7cf2c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q6",
+      "pdf_page": 131,
+      "response_sha256": "5b8afcc9bdcf5f4ba2b7110e4b83b56a46de5ee3b992e9c6102e342cd56a6927",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "TVOC y eCO2 aumentan y ENS160 HEALTHY/VALID coinciden; rangos válidos no son umbrales físicos.",
+        "relevance": "Responde con la fuente vigente, pero no explicita que SHT40 está STALE.",
+        "support": "Distingue eCO2 de CO2 real y evita causa de ocupación; falta aclarar el dato ambiental ausente."
+      },
+      "evidence": "SHT40 STALE con valores nulos; ENS160 AQI=2, TVOC 89→94 y eCO2 531→539."
+    },
+    {
+      "case_id": "C127",
+      "task_id": "98e170d149c642c8983d1ef455c3d8a3",
+      "run_id": "5ab5ff40a5f9425bb9a0e4db67e7cf2c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 136,
+      "response_sha256": "98ae517e1de27b3bfdc04d8c2ad665d9d3c08303626bdc248b37ae0d5e2b4e7a",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Oclusiones por personas próximas y YOLO=10 coinciden; apertura de ventana no se confirma inequívocamente.",
+        "relevance": "Aporta una limitación visual concreta y propone verificar ventilación.",
+        "support": "Ventana abierta no demuestra necesidad de mejorar ventilación; la emisión se mantiene solo como posibilidad."
+      },
+      "evidence": "Imagen: figura próxima oculta parte del centro-derecha; no se mide flujo de aire ni se confirma apertura de ventana."
+    },
+    {
+      "case_id": "C128",
+      "task_id": "a308495e0c214f2b9f659d97287834bf",
+      "run_id": "5ab5ff40a5f9425bb9a0e4db67e7cf2c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 135,
+      "response_sha256": "d2e4ac9d1b7a7a9c1f8ba1aaf3aa9e79aa85b60ae6e027de5c6d7575d5934d71",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 2,
+        "support": 4
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Personas, luces y mobiliario se ven; la imagen sí contiene oclusiones importantes por proximidad.",
+        "relevance": "No aprovecha la oclusión de la figura en primer plano y deriva a iluminación.",
+        "support": "Reconoce que no hay correlación directa con mediciones, sin atribuir causa ambiental."
+      },
+      "evidence": "Imagen: espalda de una persona ocupa gran parte del sector derecho y oculta mesa/personas."
+    },
+    {
+      "case_id": "C129",
+      "task_id": "e90324d372de48b8800f1e609df89909",
+      "run_id": "5ab5ff40a5f9425bb9a0e4db67e7cf2c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 1,
+      "question_id": "Q7",
+      "pdf_page": 133,
+      "response_sha256": "aef70d6350fed889dc6f9160244d2a80001b34006c45802ff32a62148c8c3bc5",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y personas coinciden, pero mesas y figuras sí generan límites del conteo.",
+        "relevance": "No describe distribución concreta ni explicita SHT40 STALE.",
+        "support": "La relación entre datos de gases y ventilación se formula de modo impreciso, sin demostrarla."
+      },
+      "evidence": "Imagen: mesa y figuras próximas superpuestas; SHT40 STALE y ENS160 vigente."
+    },
+    {
+      "case_id": "C130",
+      "task_id": "07c2dbfe115c47dd879f87f06bea1dd4",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 147,
+      "response_sha256": "5f1e344c7e1a95ae2853757655643a2c11a8bc0798cbc1d462dec919f1b12a73",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 3,
+        "support": 4
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Puertas de vidrio, mesas y YOLO=4 coinciden.",
+        "relevance": "Aporta elementos espaciales generales, sin detallar oclusiones ni SHT40 STALE.",
+        "support": "No inventa temperatura o humedad, pero el límite por falta de datos queda implícito."
+      },
+      "evidence": "Imagen: puertas de vidrio al fondo y mesa con sofás delante; SHT40 STALE con temperatura/humedad nulas."
+    },
+    {
+      "case_id": "C131",
+      "task_id": "0eb9cb547c3a4c33a9e0a05a3bdf25d3",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 141,
+      "response_sha256": "65cd3eb1789b61d93bd3ed9821e4902d888dd48f04c7e2f52ca8bd40038b5cf6",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "AQI, TVOC y eCO2 aumentan y ENS160 HEALTHY/VALID coincide.",
+        "relevance": "Omite eCO2 estimado y la falta de datos SHT40 al responder límites.",
+        "support": "Afirma relación con personas a pesar de que la captura no prueba esa asociación temporal o causal."
+      },
+      "evidence": "ENS160: AQI 1→2, TVOC 42→216, eCO2 441→713; SHT40 STALE; una captura con conteo=5."
+    },
+    {
+      "case_id": "C132",
+      "task_id": "19a19c19887644ac914be97034ec9965",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 148,
+      "response_sha256": "a88ac8789eaf386e3221f264dc31aa7cb8a82bebbe3aedc0b0ef95af97e2c87e",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 2,
+        "support": 4
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior, mobiliario y luces visibles, pero la fotografía tiene distribución aprovechable.",
+        "relevance": "No describe posiciones concretas, oclusiones ni falta de mediciones SHT40.",
+        "support": "Evita correlación directa con sensores e inventar valores, aunque no explicita la caducidad."
+      },
+      "evidence": "Imagen: mesa próxima, sofás, puertas de vidrio y personas a los lados; SHT40 STALE."
+    },
+    {
+      "case_id": "C133",
+      "task_id": "42fe3242f7ce4f329d63024e2e0380b8",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 145,
+      "response_sha256": "9e713555bb3b62cdd4ae7acf441cf47e5905c9c45380c3c082339087fbb1b4ea",
+      "scores": {
+        "accuracy": 2,
+        "relevance": 3,
+        "support": 1
+      },
+      "reported_quality": 2.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior coincide; HEALTHY no indica condiciones saludables y los gases no mejoran por aumentar sus indicadores.",
+        "relevance": "La respuesta aborda las tres partes, con interpretación ambiental equivocada.",
+        "support": "Afirma ventilación insuficiente por ausencia de garantía y convierte salud funcional en salubridad."
+      },
+      "evidence": "AQI 1→2, TVOC 42→83, eCO2 441→520; no hay medición de ventilación ni referencia de ambiente saludable."
+    },
+    {
+      "case_id": "C134",
+      "task_id": "45f18133ead04a3b8c36988207d5e9e6",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 138,
+      "response_sha256": "bdd731e7225303829b2a7a003da03f3b325049f2cc3573a38e5ede566d027d59",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Temperatura y humedad suben y las limitaciones instrumentales coinciden.",
+        "relevance": "Contesta las tres partes con seguimiento, aunque la acción es general.",
+        "support": "El vínculo entre variación y estado saludable no está demostrado; monitorear no asegura estabilidad."
+      },
+      "evidence": "Temperatura +0.90; humedad +7.38; HEALTHY describe el componente."
+    },
+    {
+      "case_id": "C135",
+      "task_id": "5d0e5387e6da481ab668687c9179d891",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 146,
+      "response_sha256": "181b8940e2f9a229f656b08dc19140c5302e5176c1d0630d7ceb7f61fd65ca45",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 2,
+        "support": 3
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "El aumento de indicadores ENS160 es correcto, pero omite la gran oclusión de la imagen.",
+        "relevance": "No identifica el brazo próximo que tapa una parte extensa del campo visual.",
+        "support": "Ventanas abiertas no aseguran ventilación adecuada y SHT40 STALE no se explicita."
+      },
+      "evidence": "Imagen: brazo en primer plano cubre centro/derecha; SHT40 STALE; AQI 1→3, TVOC 42→300, eCO2 441→801."
+    },
+    {
+      "case_id": "C136",
+      "task_id": "67b837a42489420aadc4cf4313bd9a52",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 142,
+      "response_sha256": "c8007918da08245be4d0d2d1f9bec4e5d67cb96d937456e037a2c4977b4d69ab",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "+3.53, -9.49 y empeoramiento de AQI coinciden; los cambios no explican salud del sensor.",
+        "relevance": "Responde las tres preguntas, sin especificar bien observación posterior.",
+        "support": "Deriva HEALTHY de variaciones ambientales, aunque no atribuye causa a personas."
+      },
+      "evidence": "Temperatura 24.13→27.66 y humedad 73.07→63.58; HEALTHY no está causado por los deltas."
+    },
+    {
+      "case_id": "C137",
+      "task_id": "7d25758f69f14760ad04b8c30c35cd44",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 137,
+      "response_sha256": "d017ebb8fc9daa0d522f7134d8d39aeb02b2c180d8a1525cf53428ca4ad8e830",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los cambios de temperatura/humedad son pequeños, pero no respaldan por sí mismos salud del sensor.",
+        "relevance": "Cubre gases y seguimiento de AQI/TVOC.",
+        "support": "Presenta poca variación como prueba de salud funcional, inferencia no sustentada."
+      },
+      "evidence": "Temperatura -0.10; humedad +0.11; no existe prueba diagnóstica del sensor a partir de estabilidad ambiental."
+    },
+    {
+      "case_id": "C138",
+      "task_id": "81a291d19a8340859be3e26b8a4954e2",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 140,
+      "response_sha256": "2f898937fe8954d815970895966f8a4978e9b3bd6973a5ff39b4e2ff63fc494d",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "AQI=2, TVOC=75, eCO2=506 y dirección de los tres aumentos coinciden.",
+        "relevance": "Contesta con el sensor vigente y limita eCO2; falta explicitar SHT40 STALE.",
+        "support": "Evita causalidad y diferencia estimación; llama tendencia a la comparación entre extremos."
+      },
+      "evidence": "AQI 1→2; TVOC 42→75; eCO2 441→506; SHT40 STALE."
+    },
+    {
+      "case_id": "C139",
+      "task_id": "83aca3c7ca044e488451c01683db7cb6",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 143,
+      "response_sha256": "0c6e85206443996e412480eea331ff7c5cd9c9b458d5167921aaea0422a5e18d",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 2,
+        "support": 4
+      },
+      "reported_quality": 3.33,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y luces coinciden; la fotografía borrosa aún aporta distribución y un límite de nitidez.",
+        "relevance": "No identifica el desenfoque ni describe posiciones pese al pedido visual.",
+        "support": "No atribuye causalidad a personas, aunque independencia de escena y mediciones se formula demasiado ampliamente."
+      },
+      "evidence": "Imagen: borrosidad visible en personas y puerta del fondo; disposición de mesa próxima, sofás y mesas laterales."
+    },
+    {
+      "case_id": "C140",
+      "task_id": "88ecd7400c0e498f99020001b9c61e24",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q7",
+      "pdf_page": 144,
+      "response_sha256": "570b5a353c1f65e2b0dac32781f10100fe7bd6a9f296600d0f4338bb96cc1da8",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Identifica correctamente borrosidad y apertura hacia otra área; la abertura principal es puerta, no ventana.",
+        "relevance": "Reconoce un límite visual concreto y propone verificar la apertura.",
+        "support": "Trata eCO2 como contaminante y permite correlaciones sin explicar evidencia temporal."
+      },
+      "evidence": "Imagen: puerta de vidrio hacia pasillo y desenfoque general; eCO2 es indicador equivalente estimado."
+    },
+    {
+      "case_id": "C141",
+      "task_id": "8a511096e0064ce396520ab0aaabc767",
+      "run_id": "dddfe1b0efdb4857999559ebc586898c",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 2,
+      "question_id": "Q6",
+      "pdf_page": 139,
+      "response_sha256": "b99130bd98dbb65614d9b6131098acff4666e79a1934e450d19f3aa019b317c7",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Los cuatro valores iniciales/actuales coinciden; ambiente saludable no queda demostrado.",
+        "relevance": "Cubre cambios, estimación instrumental y observación posterior.",
+        "support": "Califica salubridad ambiental sin referencia, a pesar de distinguir causalidad humana."
+      },
+      "evidence": "Temperatura 24.13→28.04 y humedad 73.07→65.36; no hay referencia de salubridad."
+    },
+    {
+      "case_id": "C142",
+      "task_id": "13aa922aab014536818336d6d62eb62a",
+      "run_id": "66b3a9fd7de44611bf5c90db4f2fefe7",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 150,
+      "response_sha256": "7ad3ae5b3264c0010732acda8ab8f9649fe385572e360f8c8793e38d64804056",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "-0.35, +6.24 y fallo parcial coinciden; ambiente saludable no se demuestra.",
+        "relevance": "Responde las tres partes y seguimiento de variables.",
+        "support": "La conclusión de salubridad excede la evidencia; reconoce correctamente ENS160 FAILED/AQI ERROR."
+      },
+      "evidence": "Temperatura -0.35, humedad +6.24; ENS160 FAILED y AQI ERROR."
+    },
+    {
+      "case_id": "C143",
+      "task_id": "22f761d6031b4cb6871f4db1ebb0e203",
+      "run_id": "66b3a9fd7de44611bf5c90db4f2fefe7",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 156,
+      "response_sha256": "f5bdba5caacf2d0858e91faa6c4f9d3c6355a51a1ea48f7bb555028035c267db",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Puerta hacia pasillo y YOLO=2 coinciden; la vista general no certifica límites del conteo.",
+        "relevance": "Describe un rasgo espacial específico y propone verificar flujo.",
+        "support": "Puerta abierta e iluminación no bastan para sugerir adecuación de ventilación; la distribución de gases no se mide."
+      },
+      "evidence": "Imagen: apertura central al pasillo; no existe medición de flujo o dispersión de gases."
+    },
+    {
+      "case_id": "C144",
+      "task_id": "5685bc6ae5174619bcfeee163b181adb",
+      "run_id": "66b3a9fd7de44611bf5c90db4f2fefe7",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 154,
+      "response_sha256": "37abd9d84c3a80d0f46d9b27659a035d57c5451ca049810e535d10580ace3515",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 3,
+        "support": 4
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Muebles y puerta de vidrio coinciden; lo situado fuera es pasillo, no necesariamente exterior.",
+        "relevance": "Niega información espacial disponible, aunque propone seguimiento de un evento registrado.",
+        "support": "La intervención es condicional y AQI_WORSENED sí está ACTIVE; no certifica ventilación."
+      },
+      "evidence": "Imagen: mesas laterales y abertura central hacia pasillo; evento AQI_WORSENED ACTIVE."
+    },
+    {
+      "case_id": "C145",
+      "task_id": "5ab1d900fe674c3eb302c5c43e568dc5",
+      "run_id": "66b3a9fd7de44611bf5c90db4f2fefe7",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 152,
+      "response_sha256": "294a1da50c91dad115e4939603033b7c1dbb96c8c96d754e7631f45ce144e123",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.0,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "Interior y personas coinciden; la apertura principal es puerta hacia pasillo, no ventana confirmada.",
+        "relevance": "No describe distribución concreta ni límites de la captura.",
+        "support": "La relación con presencia/ambiente y necesidad de revisar ventilación carecen de justificación específica."
+      },
+      "evidence": "Imagen: puerta central de vidrio hacia circulación y personas en mesas laterales; sin flujo de aire medido."
+    },
+    {
+      "case_id": "C146",
+      "task_id": "85c47c8f82f54b6489d62e6b242d1042",
+      "run_id": "66b3a9fd7de44611bf5c90db4f2fefe7",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 149,
+      "response_sha256": "2944ae27558a9887c4986070eaea23b61fc3c49de3a0ac37a700218a86810614",
+      "scores": {
+        "accuracy": 4,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.0,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Describe cambios sin invertirlos y distingue el estado saludable del sensor.",
+        "relevance": "Cubre límites de gases y seguimiento, pero no dice qué variable sube o baja.",
+        "support": "No presenta causalidad humana ni salubridad ambiental; el grado ligero es poco específico."
+      },
+      "evidence": "Temperatura -0.33 y humedad +3.50; SHT40 HEALTHY; ENS160 estima eCO2."
+    },
+    {
+      "case_id": "C147",
+      "task_id": "8f489850fe19416aa1e43ad44c6c4ed9",
+      "run_id": "66b3a9fd7de44611bf5c90db4f2fefe7",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 153,
+      "response_sha256": "dbac34412a4ce17ad29cf3b341b5a2e65ea6abc158f3e020435704ada38d7926",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 4,
+        "support": 4
+      },
+      "reported_quality": 4.33,
+      "critical_error": false,
+      "task_success": true,
+      "justifications": {
+        "accuracy": "Abertura hacia pasillo, mobiliario y YOLO=9 coinciden.",
+        "relevance": "Aporta distribución general, con límites del conteo y vínculo ambiental poco desarrollados.",
+        "support": "Plantea comprobación de ventilación condicional sin afirmar suficiencia, aunque una ventana no basta para evaluarla."
+      },
+      "evidence": "Imagen: abertura central hacia pasillo y persona en primer plano; conteo de entrada=9."
+    },
+    {
+      "case_id": "C148",
+      "task_id": "cdd76ccab7b345b799a65a8644ca7d01",
+      "run_id": "66b3a9fd7de44611bf5c90db4f2fefe7",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q6",
+      "pdf_page": 151,
+      "response_sha256": "e5c37d409f5286a7dc1dd9ceffca9ef58ad8937ae6f8a739d47d8b359c3aad26",
+      "scores": {
+        "accuracy": 3,
+        "relevance": 4,
+        "support": 2
+      },
+      "reported_quality": 3.0,
+      "critical_error": true,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "24.18→31.87 y descenso de humedad coinciden; condiciones saludables no están demostradas.",
+        "relevance": "Cubre cambios, eCO2 estimado y observación posterior.",
+        "support": "Convierte salud del SHT40 en condiciones ambientales saludables sin referencia."
+      },
+      "evidence": "Temperatura +7.69 y humedad -20.54; HEALTHY es un estado del sensor y no del entorno."
+    },
+    {
+      "case_id": "C149",
+      "task_id": "fde649f6c57748318b3e242d8c0a73b8",
+      "run_id": "66b3a9fd7de44611bf5c90db4f2fefe7",
+      "scenario": "S3",
+      "mode": "F",
+      "repetition": 3,
+      "question_id": "Q7",
+      "pdf_page": 155,
+      "response_sha256": "0a098c2df552fd45e7febb5376f87bd7896cf0696509dd178a82a5f5a591c814",
+      "scores": {
+        "accuracy": 5,
+        "relevance": 3,
+        "support": 3
+      },
+      "reported_quality": 3.67,
+      "critical_error": false,
+      "task_success": false,
+      "justifications": {
+        "accuracy": "La silla amarilla cercana limita parte del primer plano y YOLO=11 coincide.",
+        "relevance": "Identifica una limitación visual concreta, pero repite observación sin seguimiento ambiental específico.",
+        "support": "Generación de contaminantes se plantea como posible, pero no demuestra fuente ni relación con eCO2; omite SHT40 STALE."
+      },
+      "evidence": "Imagen: respaldo amarillo corta parte del primer plano; ENS160 vigente y SHT40 STALE, sin fuente emisora identificada."
+    }
+  ]
+}

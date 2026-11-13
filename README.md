@@ -33,6 +33,45 @@ página cerrada no se pueden iniciar descargas; al volver a conectarse se revisa
 la ejecución actual. Las ejecuciones anteriores siguen descargables desde el
 historial. La UI `/offline` reproduce este recorrido con datos simulados.
 
+## Datos y análisis reproducible de la campaña
+
+El código y las instrucciones se mantienen en este repositorio; el corpus se
+distribuye en el [depósito de datos de SENSE en Google Drive](https://drive.google.com/drive/folders/1pedwShJWKiap6f1jQOfRwp1lWyXoSPRF?usp=sharing).
+[scripts/README.md](scripts/README.md) documenta los métodos y resultados.
+
+Antes de ejecutar el análisis:
+
+1. Descarga `DATA-SENSE` del depósito y descomprime los ZIP si Drive los genera.
+2. Coloca sus carpetas `E1`, `E2` y `E3` directamente en `data/` de SENSE.
+   Deben resultar rutas como `data/E1/A/R1/metadata.json`, conservando las
+   54 exportaciones y sus imágenes. Evita añadir un nivel `data/DATA-SENSE/`.
+3. Conserva en la raíz los complementos pequeños del repositorio:
+   `SENSE_evaluacion_Gemma.pdf`, `preguntas_aclaracion_campana_SENSE.txt` y
+   `preguntas_complementarias_SENSE.txt`. La rúbrica transcrita y las
+   rectificaciones se encuentran en `scripts/`.
+
+Con Python 3.14 y uv, desde la raíz:
+
+```sh
+uv sync --project scripts --locked
+uv run --locked --project scripts scripts/main.py
+uv run --locked --project scripts python -m unittest discover -s scripts -p "test_*.py" -v
+```
+
+El análisis genera:
+
+- `scripts/resultados/`: informe, tablas CSV/JSON, corpus de interpretaciones,
+  visor local, evidencia y manifiesto de integridad.
+- `images/resultados/`: 76 figuras en PNG y PDF, incluidas las 54 cronologías.
+- `secciones/resultados/` y `secciones/anexos/`: tablas LaTeX generadas.
+
+`data/`, las descargas del corpus, `scripts/resultados/` y la codificación local
+`scripts/revision_ia.csv` permanecen excluidos de Git. El depósito de Drive
+distribuye los datos de campaña; GitHub contiene el flujo y los complementos
+documentales. Los originales se mantienen intactos y los derivados identifican
+sus fuentes mediante SHA-256. Una generación válida debe finalizar con
+`scripts/resultados/manifest.json` en estado `COMPLETED`.
+
 ## Compilar y ejecutar
 
 Requiere Rust 1.92+, Cargo, herramientas de compilación C y acceso a Internet para

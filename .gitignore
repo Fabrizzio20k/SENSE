@@ -24,3 +24,9 @@ rustc-ice-*.txt
 #.idea/
 *.onnx
 data
+# Corpus externo: descargas y carpetas sin reorganizar
+/DATA-SENSE/
+/SENSE-DATA/
+/DATA-SENSE*.zip
+/SENSE-DATA*.zip
+/data.zip
